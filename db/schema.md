@@ -22,6 +22,9 @@
 - `experiments`: dataset revision과 evaluator set을 대상으로 수행하는 평가 실험의 상태와 예산을 담는다.
 - `human_reviews`: 두 실험 실행을 사람이 비교한 선호, 보정 출력, 사유를 담는다.
 - `prompt_fragment_definitions`: backend와 agent에 속한 prompt fragment의 식별 정보와 코드 이름을 담는다.
+- `prompt_fragment_versions`: fragment 정의 하나가 갖는 판의 내용과 해시와 placeholder를 담는다.
+- `prompt_fragment_bindings`: fragment가 채우는 템플릿 자리와 코드가 담은 기본 판을 담는다.
+- `prompt_fragment_channels`: 채널마다 지금 실행에 쓰이는 fragment 판을 가리킨다.
 
 ## 설정 도메인
 
