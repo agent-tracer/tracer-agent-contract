@@ -16,6 +16,8 @@ tags:
     description: 잡 에이전트 실행의 접수와 취소
   - name: setting
     description: 에이전트 실행에 쓰는 설정값의 조회와 저장과 삭제
+  - name: prompt
+    description: 파일이 정본인 프롬프트와 그 조각의 등록과 해소
   - name: health
     description: 신원 없이 열리는 프로브
 
@@ -159,6 +161,84 @@ paths:
                         description: 중단된 잡의 상태를 싣는다
         "404":
           $ref: "#/components/responses/JobNotFound"
+
+  /internal/prompts/fragments/register-and-resolve:
+    post:
+      operationId: registerAndResolvePromptFragments
+      tags: [prompt]
+      summary: 부팅 시 자기 파일 프롬프트 조각을 등록하고 이번 실행이 쓸 판을 받는다
+      description: >-
+        배포 단위 사이에서만 오가는 창구라 게이트웨이가 바깥에 열지 않는다. 워커가 자기 파일의 조각을
+        전부 싣고, 응답이 실린 조각만 그 판으로 돌며 실리지 않은 조각은 파일 기본값으로 돈다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [profile, manifest]
+              properties:
+                profile:
+                  type: string
+                  minLength: 1
+                  description: 이 배포가 고른 채널을 가르는 이름이다
+                manifest:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/PromptFragmentManifestEntry"
+      responses:
+        "200":
+          description: 이번 실행이 쓸 조각을 실었다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ResolvedPromptFragment"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+
+  /internal/prompts/python/register:
+    post:
+      operationId: registerPrompt
+      tags: [prompt]
+      summary: 부팅 시 자기 파일 프롬프트의 판과 해시를 등록한다
+      description: 배포 단위 사이에서만 오가는 창구라 게이트웨이가 바깥에 열지 않는다.
+      parameters:
+        - $ref: "#/components/parameters/UserHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, agentName, language, version]
+              properties:
+                name: { type: string, minLength: 1 }
+                agentName: { type: string, minLength: 1 }
+                language: { type: string, minLength: 1 }
+                version:
+                  $ref: "#/components/schemas/PromptVersionInput"
+      responses:
+        "201":
+          description: 등록한 정의와 판과 채널을 실었다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        required: [definition, version, channel]
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
 
   /api/agent/settings:
     get:
@@ -404,6 +484,83 @@ components:
           type: string
           minLength: 1
           maxLength: 200
+
+    PromptBackend:
+      type: string
+      enum: [python, claude-sdk]
+
+    PromptFragmentManifestEntry:
+      type: object
+      required:
+        - backend
+        - agentName
+        - language
+        - codeName
+        - definitionKey
+        - fragmentName
+        - defaultVersion
+        - defaultContent
+        - toolContractVersion
+        - outputSchemaVersion
+        - bindings
+      properties:
+        backend:
+          $ref: "#/components/schemas/PromptBackend"
+        agentName: { type: string, minLength: 1 }
+        language: { type: string, minLength: 1 }
+        codeName:
+          type: string
+          minLength: 1
+          description: 조각을 담은 코드 상수의 이름이며 사람이 자리를 찾는 데 쓴다
+        definitionKey:
+          type: string
+          minLength: 1
+          description: 조각 정의 하나를 가리키는 키이며 배포를 건너 같은 값이다
+        fragmentName: { type: string, minLength: 1 }
+        defaultVersion:
+          type: string
+          minLength: 1
+          description: 파일이 담은 판이며 데이터베이스에 그 판이 없으면 이 값으로 심는다
+        defaultContent:
+          type: string
+          minLength: 1
+        toolContractVersion: { type: string, minLength: 1 }
+        outputSchemaVersion: { type: string, minLength: 1 }
+        bindings:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [templateKey, fragmentSlot]
+            properties:
+              templateKey: { type: string, minLength: 1 }
+              fragmentSlot: { type: string, minLength: 1 }
+
+    ResolvedPromptFragment:
+      type: object
+      required: [templateKey, fragmentSlot, definitionId, versionId, content, contentHash]
+      properties:
+        templateKey: { type: string }
+        fragmentSlot: { type: string }
+        definitionId: { type: string }
+        versionId: { type: string }
+        content: { type: string }
+        contentHash:
+          type: string
+          description: 정규화한 내용의 sha256이며 규칙과 예시는 agent/shared/prompt.fragment.integrity.json이 갖는다
+
+    PromptVersionInput:
+      type: object
+      required: [semanticVersion, content, toolContractVersion, outputSchemaVersion]
+      properties:
+        semanticVersion: { type: string, minLength: 1 }
+        content: { type: string, minLength: 1 }
+        contentHash:
+          type: string
+          minLength: 1
+          description: 주어지지 않으면 서버가 내용에서 계산한다
+        toolContractVersion: { type: string, minLength: 1 }
+        outputSchemaVersion: { type: string, minLength: 1 }
 
     SettingKey:
       type: string

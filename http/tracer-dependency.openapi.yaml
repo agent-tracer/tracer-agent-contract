@@ -13,8 +13,6 @@ servers:
 tags:
   - name: envelope
     description: 실행 시도 하나가 쓸 모델과 자격과 단가와 한도
-  - name: prompt
-    description: 파일이 정본인 프롬프트 조각의 등록과 해소
   - name: execution
     description: 대화 실행의 문맥 되읽기와 누적 답변 통지와 확인 대기 행
   - name: tool
@@ -58,46 +56,6 @@ paths:
               required: [userId]
               properties:
                 userId: { type: string, minLength: 1 }
-      responses:
-        "2XX":
-          $ref: "#/components/responses/Success"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-
-  /internal/prompts/fragments/register-and-resolve:
-    post:
-      operationId: registerAndResolvePromptFragments
-      tags: [prompt]
-      summary: 부팅 시 자기 파일 프롬프트 조각을 등록하고 이번 실행이 쓸 판을 받는다
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              description: 조각의 정의 키와 기본 내용과 해시를 싣는다
-      responses:
-        "2XX":
-          $ref: "#/components/responses/Success"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-
-  /internal/prompts/python/register:
-    post:
-      operationId: registerPrompt
-      tags: [prompt]
-      summary: 부팅 시 자기 파일 프롬프트의 해시를 등록한다
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              description: 프롬프트의 식별자와 내용 해시를 싣는다
       responses:
         "2XX":
           $ref: "#/components/responses/Success"
