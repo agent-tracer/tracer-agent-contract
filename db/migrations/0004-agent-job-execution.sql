@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS "graph_job_executions" (
     "budget_usd" double precision NOT NULL,
     "cost_usd" double precision,
     "error" text,
+    "task_id" text,
+    "result" jsonb,
     "created_at" TIMESTAMP WITH TIME ZONE NOT NULL,
     "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL,
     "started_at" TIMESTAMP WITH TIME ZONE,
@@ -21,3 +23,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS "graph_job_executions_idempotency"
 
 CREATE INDEX IF NOT EXISTS "graph_job_executions_kind_status"
     ON "graph_job_executions" ("kind", "status");
+
+CREATE INDEX IF NOT EXISTS "graph_job_executions_user_kind_task"
+    ON "graph_job_executions" ("user_id", "kind", "task_id");
