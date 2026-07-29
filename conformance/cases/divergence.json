@@ -48,15 +48,6 @@
             "resolution": "rule.generation을 어느 구현체가 소유할지 정한다"
         },
         {
-            "id": "job.enqueue.backend",
-            "area": "job",
-            "summary": "접수 본문의 agentBackend를 한쪽만 받는다",
-            "canonical": "typescript",
-            "typescript": "본문의 agentBackend로 실행 백엔드를 고른다",
-            "python": "알지 못하는 필드로 보고 거절한다",
-            "resolution": "실행 백엔드 선택을 본문과 쿼리 파라미터 중 하나로 모은다"
-        },
-        {
             "id": "job.queues",
             "area": "workflow",
             "summary": "잡 큐의 수가 다르다",

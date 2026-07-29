@@ -974,7 +974,6 @@ paths:
               properties:
                 kind: {}
                 input: {}
-                agentBackend: {}
       responses:
         "2XX":
           $ref: "#/components/responses/Success"

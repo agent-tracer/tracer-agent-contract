@@ -434,9 +434,7 @@
                     "kind",
                     "input"
                 ],
-                "optional": [
-                    "agentBackend"
-                ],
+                "optional": [],
                 "mutation": true,
                 "kind": {
                     "values": [
@@ -444,12 +442,6 @@
                         "recipe.scan",
                         "task.cleanup",
                         "rule.generation"
-                    ]
-                },
-                "agentBackend": {
-                    "values": [
-                        "python",
-                        "claude-sdk"
                     ]
                 }
             }
@@ -1123,8 +1115,7 @@
             },
             "enqueue_job": {
                 "kind": "Which job to launch: title.suggestion, recipe.scan, task.cleanup, or rule.generation.",
-                "input": "JSON object carrying what that kind needs, for example {\"taskId\":\"...\"} for title.suggestion and recipe.scan.",
-                "agentBackend": "Force the executor to python or claude-sdk. Omit to let the server pick the default."
+                "input": "JSON object carrying what that kind needs, for example {\"taskId\":\"...\"} for title.suggestion and recipe.scan."
             }
         },
         "descriptions": {
@@ -1165,7 +1156,7 @@
             "dismiss_cleanup": "PROPOSAL (requires user confirmation): dismiss a task-cleanup suggestion by suggestionId. Queued until the user approves.",
             "upsert_setting": "PROPOSAL (requires user confirmation): set an application setting. key is one of anthropic.api_key/anthropic.model/ruleGen.maxRulesPerTask/taskCleanup.maxSuggestions/claude.outputLanguage; value is the new string value. Queued until the user approves.",
             "delete_setting": "PROPOSAL (requires user confirmation): clear an application setting by key (one of anthropic.api_key/anthropic.model/ruleGen.maxRulesPerTask/taskCleanup.maxSuggestions/claude.outputLanguage). Queued until the user approves.",
-            "enqueue_job": "PROPOSAL (requires user confirmation, and running it starts a real, metered agent run that costs money): launch an AI job. kind is one of title.suggestion (auto-title a task), recipe.scan (distill a recipe from a task), task.cleanup (suggest cleanup across tasks), or rule.generation (draft verification rules for a task). input is a JSON object with the fields that kind needs: title.suggestion takes {\"taskId\":\"...\"}; recipe.scan takes {\"taskId\":\"...\"} plus optional userPrompt, language, and trigger (dashboard/session); task.cleanup takes {} or {\"filters\":{\"maxSuggestions\":N}}; rule.generation requires {\"taskId\":\"...\",\"anchorEventId\":\"...\"} and may also include focus (recent), maxRules, and intent describing what to verify. agentBackend optionally forces python or claude-sdk instead of the default. Queued until the user approves — never claim the job has started yet."
+            "enqueue_job": "PROPOSAL (requires user confirmation, and running it starts a real, metered agent run that costs money): launch an AI job. kind is one of title.suggestion (auto-title a task), recipe.scan (distill a recipe from a task), task.cleanup (suggest cleanup across tasks), or rule.generation (draft verification rules for a task). input is a JSON object with the fields that kind needs: title.suggestion takes {\"taskId\":\"...\"}; recipe.scan takes {\"taskId\":\"...\"} plus optional userPrompt, language, and trigger (dashboard/session); task.cleanup takes {} or {\"filters\":{\"maxSuggestions\":N}}; rule.generation requires {\"taskId\":\"...\",\"anchorEventId\":\"...\"} and may also include focus (recent), maxRules, and intent describing what to verify. Queued until the user approves — never claim the job has started yet."
         }
     },
     "bindings": {
@@ -1606,8 +1597,7 @@
                 "query": {},
                 "body": {
                     "kind": "kind",
-                    "input": "input",
-                    "agentBackend": "agentBackend"
+                    "input": "input"
                 },
                 "bodyConstants": {}
             },
