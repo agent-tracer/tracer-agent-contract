@@ -1,0 +1,732 @@
+{
+    "id": "task-cleanup",
+    "jobKind": "task.cleanup",
+    "route": "/agents/task-cleanup",
+    "prompt": {
+        "fragments": {
+            "reviewGuarantee": [
+                "You do not execute anything: the user reviews every suggestion and approves or dismisses it.",
+                "Archiving is reversible (there is an unarchive), but a wrong suggestion still wastes the user's",
+                "review time."
+            ],
+            "reviewerSourcing": [
+                "You do NOT open tasks yourself. Reviewers already read each assigned candidate's events in their own",
+                "isolated contexts and reported a verdict (archivable or keep), a reason, and the event IDs that back",
+                "it. You write suggestions only from those reports; a candidate no reviewer reported on is not yours",
+                "to propose."
+            ],
+            "evidenceDiscipline": [
+                "  - Propose a candidate only when a reviewer reported it archivable. A reviewer that found",
+                "    substantive work (real user requests, file edits, commands, a conclusion) means keep the task, no",
+                "    matter how stale or placeholder-like its title looked.",
+                "  - A reviewer that opened a task and found no events reports it archivable with no cited events;",
+                "    that is an empty shell and needs no citation.",
+                "  - Never claim a fact no reviewer reported. evidenceEventIds must be exactly the event IDs the",
+                "    reviewer cited for that task; any other ID is rejected and the suggestion is dropped."
+            ],
+            "suggestionRules": [
+                "  - One suggestion per task id, and only task ids a reviewer reported on. Never invent an id.",
+                "  - Quality over quantity. Returning an empty list is a correct answer when every reviewed candidate",
+                "    turns out to hold real work.",
+                "  - rationale: one sentence, under 500 chars, restating what the reviewer found (e.g. \"no events",
+                "    since creation\", \"only a Read with no edits and no conclusion\").",
+                "  - evidenceEventIds: up to ${maxEvidenceEventIds} IDs, exactly as the reviewer cited them.",
+                "  - Task ids and the \"kind\" enum stay literal; only the rationale follows the output language."
+            ],
+            "redispatchProtocol": [
+                "When a reviewer report is missing or too thin to judge a candidate you believe matters, you may ask",
+                "for one more round of review instead of deciding. Return a redispatch request — a list of",
+                "{taskId, weight} entries naming candidates to (re)inspect — and leave suggestions empty; those",
+                "candidates are reopened and their reports come back to you. You get at most ${maxRedispatchRounds} such",
+                "round; after it, decide from what you have. Redispatch only for a candidate a reviewer can actually",
+                "settle, not to re-read a report you already hold. Return either suggestions or a redispatch request,",
+                "never both."
+            ],
+            "repairDirective": [
+                "Preserve the task and event IDs the reviewers cited. Remove any suggestion that cannot be grounded in",
+                "a reviewer report. Then return the complete repaired suggestion list."
+            ],
+            "candidateFields": [
+                "You see the qualified candidates and nothing else. The server has already excluded hidden tasks,",
+                "tasks with an active child, tasks created by the server's own agents, and anything touched recently.",
+                "Each candidate's fields are computed by the server; trust them and do not re-derive them:",
+                "  - hasEvents: whether this task has any recorded event at all.",
+                "  - lastEventAt: timestamp of its most recent event (null when hasEvents is false).",
+                "  - candidateReasons: the server-detected signal(s): \"no-events\" (zero events since creation),",
+                "    \"stale\" (running/waiting with no recent activity), \"duplicate-title\" (another candidate in this",
+                "    batch has the same title), \"placeholder-title\" (a generic title like \"test\" / \"fix bug\" /",
+                "    \"정리해줘\")."
+            ],
+            "triagePolicy": [
+                "A title or a signal is a hint, not a verdict: a task titled \"test\" or \"정리해줘\" can still hold real",
+                "work, and only a reviewer that reads its events can tell. A candidate is proposed for archival only",
+                "if a reviewer reports on it, so assign every candidate that may be archivable — a reviewer confirms",
+                "or rejects each one. Do not assign candidates that clearly hold real work; assigning nothing ends the",
+                "scan with no suggestions, and candidates you leave unassigned are picked up by a future scan."
+            ],
+            "inspectWeighting": [
+                "Give each assignment a weight from 1 to ${maxInspectWeight} reflecting how much scrutiny it deserves:",
+                "a long-running one deserves more, and a hasEvents=false shell just 1, since its reviewer only has to",
+                "confirm the shell is empty. Weight sets each reviewer's share of the inspection budget; weights are",
+                "relative to each other, not a count you can run out of or ask more of than exists."
+            ],
+            "reviewerCharter": [
+                "Read the task's events and decide whether it can be archived. Report the event IDs that back your",
+                "judgement — the coordinator cannot see what you read, and a task with events may only be proposed for",
+                "archival when its own events are cited. If the task turns out to hold real work, say so; refusing to",
+                "archive is as useful an answer as approving it."
+            ]
+        }
+    },
+    "tools": {
+        "outputKinds": [
+            "archive"
+        ],
+        "limits": {
+            "maxSuggestions": 50,
+            "maxEvidenceEventIds": 100
+        },
+        "orchestration": {
+            "workerMaxTurns": 4,
+            "maxRedispatchRounds": 1,
+            "coordinatorTools": [],
+            "emptyAssignmentEndsEmpty": true,
+            "roles": {
+                "cleanup-candidate-reviewer": [
+                    "get_task_events"
+                ]
+            },
+            "workerReport": {
+                "required": [
+                    "taskId",
+                    "archivable",
+                    "reason",
+                    "citedEventIds"
+                ]
+            },
+            "redispatchRequest": {
+                "required": [
+                    "taskId",
+                    "weight"
+                ],
+                "maxTasks": 50
+            }
+        },
+        "tools": {
+            "list_candidate_tasks": {
+                "required": [],
+                "optional": [
+                    "limit",
+                    "cursor"
+                ],
+                "limit": {
+                    "default": 30,
+                    "min": 1,
+                    "max": 100
+                }
+            },
+            "get_task_events": {
+                "required": [
+                    "taskId"
+                ],
+                "optional": [
+                    "limit",
+                    "cursor",
+                    "order"
+                ],
+                "limit": {
+                    "default": 100,
+                    "min": 1,
+                    "max": 300
+                },
+                "order": {
+                    "default": "asc",
+                    "values": [
+                        "asc",
+                        "desc"
+                    ]
+                }
+            }
+        },
+        "responses": {
+            "list_candidate_tasks": {
+                "page": [
+                    "candidates",
+                    "truncated",
+                    "nextCursor",
+                    "total",
+                    "moreCandidatesOutsideBatch"
+                ],
+                "item": [
+                    "id",
+                    "visibleTitle",
+                    "status",
+                    "lastEventAt",
+                    "hasEvents",
+                    "activeChildCount",
+                    "candidateReasons"
+                ]
+            },
+            "get_task_events": {
+                "page": [
+                    "events",
+                    "truncated",
+                    "nextCursor",
+                    "total"
+                ],
+                "item": [
+                    "id",
+                    "seq",
+                    "kind",
+                    "title",
+                    "body",
+                    "toolName",
+                    "filePaths",
+                    "occurredAt"
+                ]
+            }
+        },
+        "failures": {
+            "toolFailed": "Tool {tool} failed: {reason}. Do not call it again more than once. Continue with the evidence you already have, and state in your rationale which evidence you could not check.",
+            "workerFailed": "Investigation failed: {reason}"
+        },
+        "argDescriptions": {
+            "list_candidate_tasks": {
+                "limit": "Max candidates in this page (default 30, hard cap 100)",
+                "cursor": "Opaque cursor from a previous call's nextCursor. Omit to start from the first candidate."
+            },
+            "get_task_events": {
+                "taskId": "The task ID",
+                "limit": "Max events to return in this page (default 100, hard cap 300)",
+                "cursor": "Opaque cursor from a previous call's nextCursor. Omit to start from the first page.",
+                "order": "Reading direction: \"asc\" (default) pages from the earliest event forward; \"desc\" pages from the latest event backward."
+            }
+        },
+        "descriptions": {
+            "list_candidate_tasks": "List the cleanup candidates the server already qualified for this scan (hidden, active, and recently touched tasks are excluded before you see them). Each entry carries visibleTitle, status, lastEventAt, hasEvents, activeChildCount and the server-detected candidateReasons. Call this first, and page with cursor until truncated is false if you want the whole batch. Only task ids returned here may be proposed. moreCandidatesOutsideBatch=true means the server itself capped this batch; the leftover tasks are outside your reach and a future scan will pick them up.",
+            "get_task_events": "Get a page of a task's chronological event sequence (user messages, assistant messages, tool runs), up to 300 events per page. You choose how much to read: pick limit, pass the response's nextCursor back as cursor to keep paging, and set order=\"desc\" to start from the latest events (e.g. to see how a long task ended). truncated/total tell you whether more events exist. Call this whenever you need to see what actually happened in a task before judging it."
+        }
+    },
+    "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "task.cleanup.suggestion.list",
+        "type": "object",
+        "required": [
+            "suggestions"
+        ],
+        "properties": {
+            "suggestions": {
+                "type": "array",
+                "maxItems": 50,
+                "items": {
+                    "type": "object",
+                    "required": [
+                        "kind",
+                        "taskId",
+                        "rationale",
+                        "evidenceEventIds"
+                    ],
+                    "properties": {
+                        "kind": {
+                            "type": "string",
+                            "const": "archive"
+                        },
+                        "taskId": {
+                            "type": "string",
+                            "trim": true,
+                            "minLength": 1
+                        },
+                        "rationale": {
+                            "type": "string",
+                            "trim": true,
+                            "minLength": 1,
+                            "maxLength": 500
+                        },
+                        "evidenceEventIds": {
+                            "type": "array",
+                            "maxItems": 100,
+                            "items": {
+                                "type": "string",
+                                "trim": true,
+                                "minLength": 1
+                            },
+                            "description": "이벤트가 있는 태스크를 실제로 열어봤음을 증명하는 근거이며 빈 껍데기 후보는 빈 배열이 옳다"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "cases": {
+        "maxSuggestions": 2,
+        "candidates": [
+            {
+                "id": "task-1",
+                "visibleTitle": "제목 1",
+                "status": "waiting",
+                "lastEventAt": "2026-07-14T00:00:00Z",
+                "hasEvents": true,
+                "activeChildCount": 0,
+                "candidateReasons": [
+                    "stale"
+                ]
+            },
+            {
+                "id": "task-2",
+                "visibleTitle": "",
+                "status": "running",
+                "lastEventAt": null,
+                "hasEvents": false,
+                "activeChildCount": 0,
+                "candidateReasons": [
+                    "no-events"
+                ]
+            },
+            {
+                "id": "task-3",
+                "visibleTitle": "제목 3",
+                "status": "waiting",
+                "lastEventAt": "2026-07-14T00:00:00Z",
+                "hasEvents": true,
+                "activeChildCount": 0,
+                "candidateReasons": [
+                    "stale"
+                ]
+            }
+        ],
+        "suggestionDefaults": {
+            "kind": "archive",
+            "rationale": "의미 있는 활동이 없다",
+            "evidenceEventIds": []
+        },
+        "cases": [
+            {
+                "name": "정리할 것이 없어 아무것도 제안하지 않은 빈 출력은 옳은 답이다",
+                "inspected": {},
+                "suggestions": [],
+                "expect": {
+                    "valid": true,
+                    "validTaskIds": [],
+                    "errors": []
+                }
+            },
+            {
+                "name": "열어보고 그 이벤트를 인용한 후보는 통과한다",
+                "inspected": {
+                    "task-1": [
+                        "event-1",
+                        "event-2"
+                    ]
+                },
+                "suggestions": [
+                    {
+                        "taskId": "task-1",
+                        "evidenceEventIds": [
+                            "event-1"
+                        ]
+                    }
+                ],
+                "expect": {
+                    "valid": true,
+                    "validTaskIds": [
+                        "task-1"
+                    ],
+                    "errors": []
+                }
+            },
+            {
+                "name": "이벤트가 없다고 배치가 알려준 후보는 열어보지 않아도 통과한다",
+                "inspected": {},
+                "suggestions": [
+                    {
+                        "taskId": "task-2"
+                    }
+                ],
+                "expect": {
+                    "valid": true,
+                    "validTaskIds": [
+                        "task-2"
+                    ],
+                    "errors": []
+                }
+            },
+            {
+                "name": "열어봤더니 이벤트가 하나도 없으면 인용 없이도 통과한다",
+                "inspected": {
+                    "task-1": []
+                },
+                "suggestions": [
+                    {
+                        "taskId": "task-1"
+                    }
+                ],
+                "expect": {
+                    "valid": true,
+                    "validTaskIds": [
+                        "task-1"
+                    ],
+                    "errors": []
+                }
+            },
+            {
+                "name": "이벤트를 가진 후보를 열어보지 않고 제안하면 거부한다",
+                "inspected": {},
+                "suggestions": [
+                    {
+                        "taskId": "task-1"
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "validTaskIds": [],
+                    "errors": [
+                        "eventful task task-1 was never inspected"
+                    ]
+                }
+            },
+            {
+                "name": "열어봤지만 근거를 하나도 인용하지 않으면 거부한다",
+                "inspected": {
+                    "task-1": [
+                        "event-1"
+                    ]
+                },
+                "suggestions": [
+                    {
+                        "taskId": "task-1"
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "validTaskIds": [],
+                    "errors": [
+                        "eventful task task-1 has no inspected event evidence"
+                    ]
+                }
+            },
+            {
+                "name": "도구가 노출한 적 없는 후보를 제안하면 거부한다",
+                "inspected": {},
+                "suggestions": [
+                    {
+                        "taskId": "ghost"
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "validTaskIds": [],
+                    "errors": [
+                        "unsupported candidate task ID ghost"
+                    ]
+                }
+            },
+            {
+                "name": "열어본 적 없는 이벤트를 인용하면 정렬된 목록으로 거부한다",
+                "inspected": {
+                    "task-1": [
+                        "event-1"
+                    ]
+                },
+                "suggestions": [
+                    {
+                        "taskId": "task-1",
+                        "evidenceEventIds": [
+                            "event-9",
+                            "event-8"
+                        ]
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "validTaskIds": [],
+                    "errors": [
+                        "unsupported event IDs for task task-1: event-8, event-9"
+                    ]
+                }
+            },
+            {
+                "name": "같은 미관측 이벤트를 두 번 인용해도 한 번만 센다",
+                "inspected": {
+                    "task-1": [
+                        "event-1"
+                    ]
+                },
+                "suggestions": [
+                    {
+                        "taskId": "task-1",
+                        "evidenceEventIds": [
+                            "event-9",
+                            "event-9"
+                        ]
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "validTaskIds": [],
+                    "errors": [
+                        "unsupported event IDs for task task-1: event-9"
+                    ]
+                }
+            },
+            {
+                "name": "같은 태스크를 두 번 제안하면 앞엣것만 남긴다",
+                "inspected": {
+                    "task-1": [
+                        "event-1"
+                    ]
+                },
+                "suggestions": [
+                    {
+                        "taskId": "task-1",
+                        "evidenceEventIds": [
+                            "event-1"
+                        ]
+                    },
+                    {
+                        "taskId": "task-1",
+                        "evidenceEventIds": [
+                            "event-1"
+                        ]
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "validTaskIds": [
+                        "task-1"
+                    ],
+                    "errors": [
+                        "duplicate suggestion for task task-1"
+                    ]
+                }
+            },
+            {
+                "name": "상한을 채운 뒤의 제안을 거부한다",
+                "inspected": {
+                    "task-1": [
+                        "event-1"
+                    ],
+                    "task-3": [
+                        "event-3"
+                    ]
+                },
+                "suggestions": [
+                    {
+                        "taskId": "task-1",
+                        "evidenceEventIds": [
+                            "event-1"
+                        ]
+                    },
+                    {
+                        "taskId": "task-2"
+                    },
+                    {
+                        "taskId": "task-3",
+                        "evidenceEventIds": [
+                            "event-3"
+                        ]
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "validTaskIds": [
+                        "task-1",
+                        "task-2"
+                    ],
+                    "errors": [
+                        "suggestion limit 2 exceeded"
+                    ]
+                }
+            },
+            {
+                "name": "걸린 제안만 걷어내고 나머지는 남긴다",
+                "inspected": {
+                    "task-1": [
+                        "event-1"
+                    ]
+                },
+                "suggestions": [
+                    {
+                        "taskId": "ghost"
+                    },
+                    {
+                        "taskId": "task-1",
+                        "evidenceEventIds": [
+                            "event-1"
+                        ]
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "validTaskIds": [
+                        "task-1"
+                    ],
+                    "errors": [
+                        "unsupported candidate task ID ghost"
+                    ]
+                }
+            }
+        ]
+    },
+    "candidateCases": {
+        "now": "2026-07-28T00:00:00.000Z",
+        "cases": [
+            {
+                "name": "recently active task is excluded",
+                "tasks": [
+                    {
+                        "id": "t-recent",
+                        "title": "unique title",
+                        "status": "completed",
+                        "lastEventAt": "2026-07-27T23:59:00.000Z",
+                        "updatedAt": "2026-07-27T23:59:00.000Z"
+                    }
+                ],
+                "activeChildParentIds": [],
+                "expectedIds": []
+            },
+            {
+                "name": "task with an active child is excluded even with reasons",
+                "tasks": [
+                    {
+                        "id": "t-parent",
+                        "title": "test",
+                        "status": "completed",
+                        "lastEventAt": null,
+                        "updatedAt": "2026-06-01T00:00:00.000Z"
+                    }
+                ],
+                "activeChildParentIds": [
+                    "t-parent"
+                ],
+                "expectedIds": []
+            },
+            {
+                "name": "no-events reason",
+                "tasks": [
+                    {
+                        "id": "t-no-events",
+                        "title": "unique title",
+                        "status": "completed",
+                        "lastEventAt": null,
+                        "updatedAt": "2026-06-01T00:00:00.000Z"
+                    }
+                ],
+                "activeChildParentIds": [],
+                "expectedIds": [
+                    "t-no-events"
+                ],
+                "expectedReasons": {
+                    "t-no-events": [
+                        "no-events"
+                    ]
+                }
+            },
+            {
+                "name": "duplicate-title reason",
+                "tasks": [
+                    {
+                        "id": "t-dup-1",
+                        "title": "same title",
+                        "status": "completed",
+                        "lastEventAt": "2026-06-01T00:00:00.000Z",
+                        "updatedAt": "2026-06-01T00:00:00.000Z"
+                    },
+                    {
+                        "id": "t-dup-2",
+                        "title": "same title",
+                        "status": "completed",
+                        "lastEventAt": "2026-06-01T00:00:00.000Z",
+                        "updatedAt": "2026-06-01T00:00:00.000Z"
+                    }
+                ],
+                "activeChildParentIds": [],
+                "expectedIds": [
+                    "t-dup-1",
+                    "t-dup-2"
+                ],
+                "expectedReasons": {
+                    "t-dup-1": [
+                        "duplicate-title"
+                    ],
+                    "t-dup-2": [
+                        "duplicate-title"
+                    ]
+                }
+            },
+            {
+                "name": "placeholder-title reason including Korean placeholders",
+                "tasks": [
+                    {
+                        "id": "t-placeholder",
+                        "title": "  TODO  ",
+                        "status": "completed",
+                        "lastEventAt": "2026-06-01T00:00:00.000Z",
+                        "updatedAt": "2026-06-01T00:00:00.000Z"
+                    },
+                    {
+                        "id": "t-placeholder-ko",
+                        "title": "임시",
+                        "status": "completed",
+                        "lastEventAt": "2026-06-01T00:00:00.000Z",
+                        "updatedAt": "2026-06-01T00:00:00.000Z"
+                    }
+                ],
+                "activeChildParentIds": [],
+                "expectedIds": [
+                    "t-placeholder",
+                    "t-placeholder-ko"
+                ],
+                "expectedReasons": {
+                    "t-placeholder": [
+                        "placeholder-title"
+                    ],
+                    "t-placeholder-ko": [
+                        "placeholder-title"
+                    ]
+                }
+            },
+            {
+                "name": "stale reason only for running or waiting tasks idle past the threshold",
+                "tasks": [
+                    {
+                        "id": "t-stale-running",
+                        "title": "unique running title",
+                        "status": "running",
+                        "lastEventAt": "2026-07-01T00:00:00.000Z",
+                        "updatedAt": "2026-07-01T00:00:00.000Z"
+                    },
+                    {
+                        "id": "t-stale-completed",
+                        "title": "unique completed title",
+                        "status": "completed",
+                        "lastEventAt": "2026-07-01T00:00:00.000Z",
+                        "updatedAt": "2026-07-01T00:00:00.000Z"
+                    }
+                ],
+                "activeChildParentIds": [],
+                "expectedIds": [
+                    "t-stale-running"
+                ],
+                "expectedReasons": {
+                    "t-stale-running": [
+                        "stale"
+                    ]
+                }
+            },
+            {
+                "name": "no reason at all drops the task from candidates",
+                "tasks": [
+                    {
+                        "id": "t-fine",
+                        "title": "a perfectly fine unique title",
+                        "status": "completed",
+                        "lastEventAt": "2026-06-01T00:00:00.000Z",
+                        "updatedAt": "2026-06-01T00:00:00.000Z"
+                    }
+                ],
+                "activeChildParentIds": [],
+                "expectedIds": []
+            }
+        ]
+    }
+}
