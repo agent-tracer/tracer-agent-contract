@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS "prompt_versions" (
     "content_hash" text NOT NULL,
     "tool_contract_version" text NOT NULL,
     "output_schema_version" text NOT NULL,
+    "content_origin" text NOT NULL,
     "created_by" text NOT NULL,
     "created_at" TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT "prompt_versions_pkey" PRIMARY KEY ("id")
