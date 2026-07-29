@@ -43,3 +43,21 @@ export function readAgentSpec(agentId) {
 export function readShared(fileName) {
     return readJson(join("agent", "shared", fileName));
 }
+
+/** 계약의 어느 자리가 강제이고 어느 자리가 기록인지를 읽는다. */
+export function readEnforcement() {
+    return readJson(join("conformance", "enforcement.json"));
+}
+
+/**
+ * 계약의 자리 하나가 강제인지 기록인지를 낸다.
+ * 자리는 "wire/envelope.json"이나 "agent/chat/spec.json#tools"처럼 적으며
+ * 어느 목록에도 닿지 않으면 "unclassified"를 낸다.
+ */
+export function enforcementLevel(path) {
+    const { levels } = readEnforcement();
+    for (const level of ["enforced", "recorded"]) {
+        if (levels[level].paths.some((prefix) => path === prefix || path.startsWith(prefix))) return level;
+    }
+    return "unclassified";
+}

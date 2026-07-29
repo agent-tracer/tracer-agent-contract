@@ -44,3 +44,17 @@ def read_agent_spec(agent_id: str) -> Any:
 def read_shared(file_name: str) -> Any:
     """네 에이전트가 함께 쓰는 계약 파일 하나를 읽는다."""
     return read_json(f"agent/shared/{file_name}")
+
+
+def read_enforcement() -> Any:
+    """계약의 어느 자리가 강제이고 어느 자리가 기록인지를 읽는다."""
+    return read_json("conformance/enforcement.json")
+
+
+def enforcement_level(path: str) -> str:
+    """계약의 자리 하나가 강제인지 기록인지를 내며 어느 목록에도 닿지 않으면 unclassified를 낸다."""
+    levels = read_enforcement()["levels"]
+    for level in ("enforced", "recorded"):
+        if any(path == prefix or path.startswith(prefix) for prefix in levels[level]["paths"]):
+            return level
+    return "unclassified"

@@ -1,0 +1,44 @@
+{
+    "meaning": "계약의 파일은 강제하는 것과 기록하는 것으로 나뉜다. 강제는 어긋나면 실패이고 기록은 어긋나면 차이다. TypeScript 구현이 정본이므로 기록은 정본이 무엇을 하는지 적어 둔 것이지 Python이 글자 그대로 따라야 하는 것이 아니다.",
+    "levels": {
+        "enforced": {
+            "meaning": "두 구현체가 같은 일을 할 수 있다는 말의 실질이며 어긋나면 적합성 검사가 실패한다",
+            "paths": [
+                "agent/chat/spec.json#tools",
+                "agent/chat/spec.json#bindings",
+                "agent/chat/spec.json#output",
+                "agent/recipe-scan/spec.json#tools",
+                "agent/recipe-scan/spec.json#output",
+                "agent/title-suggestion/spec.json#tools",
+                "agent/title-suggestion/spec.json#output",
+                "agent/task-cleanup/spec.json#tools",
+                "agent/task-cleanup/spec.json#output",
+                "agent/rule-generation/spec.json#tools",
+                "wire/envelope.json",
+                "wire/headers.json",
+                "wire/topics.json",
+                "wire/job.kinds.json",
+                "workflow/",
+                "http/agent-api.openapi.yaml",
+                "db/"
+            ]
+        },
+        "recorded": {
+            "meaning": "정본이 지금 무엇을 하는지 적어 둔 것이며 어긋나면 차이로 보고하고 실패시키지 않는다",
+            "paths": [
+                "agent/chat/spec.json#prompt",
+                "agent/recipe-scan/spec.json#prompt",
+                "agent/title-suggestion/spec.json#prompt",
+                "agent/task-cleanup/spec.json#prompt",
+                "agent/shared/",
+                "http/tracer-dependency.openapi.yaml",
+                "tracer/",
+                "wire/credential.requirement.json"
+            ]
+        }
+    },
+    "notes": {
+        "tools": "도구 목록이 가장 중요하다. 같은 도구를 갖는다는 것이 두 구현체가 같은 일을 할 수 있다는 말의 실질이다.",
+        "promptFragmentIntegrity": "agent/shared/prompt.fragment.integrity.json의 해시는 정본의 자기 검사다. 조각 텍스트가 의도치 않게 바뀌는 것을 막는 장치이지 두 구현체를 대조하는 것이 아니다."
+    }
+}
