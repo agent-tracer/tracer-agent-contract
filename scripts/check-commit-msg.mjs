@@ -6,7 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const TYPES = ["feat", "fix", "refactor", "test", "docs", "chore", "ci"];
-const SCOPES = ["http", "db", "workflow", "agent", "conformance", "ci", "docs", "repo", "scripts"];
+const SCOPES = ["http", "wire", "db", "workflow", "agent", "conformance", "ci", "docs", "repo", "scripts"];
 const HEADER_PATTERN = /^(\w+)(?:\(([\w-]+)\))?: (.+)$/;
 const KOREAN_PATTERN = /[가-힣]/;
 // 명사구 제목을 막고 행위 문장을 강제한다.
@@ -33,8 +33,7 @@ const TRACE_WORDS = Object.freeze({
   "FIXME": "남길 것은 커밋에 적지 않는다",
 });
 
-// 은유와 의인화와 구어를 막고 기술 동사를 쓰게 한다.
-// 한국어는 어간에 어미가 붙어 형태가 바뀌므로 실제로 나타나는 표면형을 적는다.
+// 한국어는 어간에 어미가 붙어 형태가 바뀌므로 은유와 구어를 실제로 나타나는 표면형으로 적는다.
 const REGISTER_WORDS = Object.freeze({
   "걷어": "제거한다",
   "가른다": "분리한다",
