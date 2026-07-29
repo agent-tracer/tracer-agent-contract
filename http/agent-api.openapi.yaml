@@ -273,8 +273,6 @@ components:
           type: string
           minLength: 1
           description: 이번 턴에 쓸 모델을 지정한다
-        agentBackend:
-          $ref: "#/components/schemas/AgentBackend"
         language:
           $ref: "#/components/schemas/ChatLanguage"
 
@@ -292,10 +290,6 @@ components:
           type: string
           minLength: 1
           maxLength: 200
-
-    AgentBackend:
-      type: string
-      enum: [python, claude-sdk]
 
     ChatLanguage:
       type: string
@@ -349,9 +343,8 @@ components:
           type: string
           enum: [pending, running, completed, failed, canceled]
         requestedBackend:
-          oneOf:
-            - $ref: "#/components/schemas/AgentBackend"
-            - type: "null"
+          type: [string, "null"]
+          description: 이 실행을 맡을 구현체로 게이트웨이가 고른 값이며 상류가 고르지 않았으면 비어 있다
         draftText:
           type: [string, "null"]
           description: 아직 종결되지 않은 턴이 지금까지 만든 누적 답변이다

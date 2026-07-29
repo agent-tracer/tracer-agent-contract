@@ -18,19 +18,23 @@
         }
     },
     "statuses": {
-        "values": ["pending", "running", "completed", "failed", "canceled"],
-        "terminal": ["completed", "failed", "canceled"],
-        "cancelable": ["pending", "running"],
+        "values": [
+            "pending",
+            "running",
+            "completed",
+            "failed",
+            "canceled"
+        ],
+        "terminal": [
+            "completed",
+            "failed",
+            "canceled"
+        ],
+        "cancelable": [
+            "pending",
+            "running"
+        ],
         "meaning": "canceled를 종료 상태에 두어야 종결 가드가 취소된 잡을 덮어쓰지 않는다"
-    },
-    "backends": {
-        "values": ["python", "claude-sdk"],
-        "default": "python",
-        "queryParam": "backend",
-        "aliases": {
-            "ts": "claude-sdk"
-        },
-        "normalization": "앞뒤 공백을 지우고 소문자로 내린 뒤 대조하며, 문자열이 아니거나 어느 값에도 닿지 않으면 기본값으로 읽는다"
     },
     "lease": {
         "ttlMs": 90000,
@@ -38,7 +42,13 @@
         "meaning": "로컬 실행기가 잡을 쥐고 있음을 알리는 리스의 수명이며 하트비트가 이보다 잦아야 한다"
     },
     "steps": {
-        "roles": ["system", "user", "assistant", "tool", "graph"],
+        "roles": [
+            "system",
+            "user",
+            "assistant",
+            "tool",
+            "graph"
+        ],
         "graphEventKinds": [
             "node.started",
             "node.completed",
@@ -47,43 +57,105 @@
             "validation.failed"
         ],
         "fields": {
-            "seq": { "type": "integer", "minimum": 0 },
-            "role": { "type": "enum", "source": "steps.roles" },
-            "content": { "type": "string" },
-            "truncated": { "type": "boolean" },
+            "seq": {
+                "type": "integer",
+                "minimum": 0
+            },
+            "role": {
+                "type": "enum",
+                "source": "steps.roles"
+            },
+            "content": {
+                "type": "string"
+            },
+            "truncated": {
+                "type": "boolean"
+            },
             "toolCalls": {
                 "type": "array",
                 "item": {
-                    "id": { "type": "string" },
-                    "name": { "type": "string" },
-                    "args": { "type": "object" }
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "args": {
+                        "type": "object"
+                    }
                 }
             },
-            "toolName": { "type": "string", "optional": true },
-            "toolCallId": { "type": "string", "optional": true },
-            "inputTokens": { "type": "integer", "minimum": 0, "optional": true },
-            "outputTokens": { "type": "integer", "minimum": 0, "optional": true },
-            "cacheReadTokens": { "type": "integer", "minimum": 0, "optional": true },
-            "cacheCreationTokens": { "type": "integer", "minimum": 0, "optional": true },
-            "stopReason": { "type": "string", "optional": true },
-            "nodeName": { "type": "string", "optional": true },
-            "eventKind": { "type": "enum", "source": "steps.graphEventKinds", "optional": true },
-            "durationMs": { "type": "number", "optional": true }
+            "toolName": {
+                "type": "string",
+                "optional": true
+            },
+            "toolCallId": {
+                "type": "string",
+                "optional": true
+            },
+            "inputTokens": {
+                "type": "integer",
+                "minimum": 0,
+                "optional": true
+            },
+            "outputTokens": {
+                "type": "integer",
+                "minimum": 0,
+                "optional": true
+            },
+            "cacheReadTokens": {
+                "type": "integer",
+                "minimum": 0,
+                "optional": true
+            },
+            "cacheCreationTokens": {
+                "type": "integer",
+                "minimum": 0,
+                "optional": true
+            },
+            "stopReason": {
+                "type": "string",
+                "optional": true
+            },
+            "nodeName": {
+                "type": "string",
+                "optional": true
+            },
+            "eventKind": {
+                "type": "enum",
+                "source": "steps.graphEventKinds",
+                "optional": true
+            },
+            "durationMs": {
+                "type": "number",
+                "optional": true
+            }
         },
         "emptyStep": "content이 공백뿐이고 toolCalls도 비면 궤적에 아무 의미도 싣지 못하므로 적지 않는다"
     },
     "ruleGeneration": {
-        "focus": ["recent"],
+        "focus": [
+            "recent"
+        ],
         "intentMaxLength": 500,
         "intentNormalization": "앞뒤 공백을 지우고 빈 문자열이면 의도가 없는 것으로 보며 상한을 넘으면 자른다"
     },
     "recipeScan": {
-        "triggers": ["dashboard", "session"],
+        "triggers": [
+            "dashboard",
+            "session"
+        ],
         "meaning": "레시피 스캔을 요청한 표면이며 앵커 자격 판정이 여기서 갈린다"
     },
     "taskCleanup": {
-        "suggestionKinds": ["archive"],
-        "suggestionStatuses": ["pending", "accepted", "dismissed"],
+        "suggestionKinds": [
+            "archive"
+        ],
+        "suggestionStatuses": [
+            "pending",
+            "accepted",
+            "dismissed"
+        ],
         "maxSuggestions": 50,
         "maxEvidenceEventIds": 100
     }
