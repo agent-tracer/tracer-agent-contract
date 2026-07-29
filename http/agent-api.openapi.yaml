@@ -1,0 +1,405 @@
+openapi: 3.1.0
+info:
+  title: agent-api
+  version: 0.1.0
+  description: >-
+    에이전트 서비스가 브라우저에 여는 표면이다. 구현이 둘이므로 두 구현이 모두 만족하는
+    부분만 여기 적고, 한쪽에만 있거나 모양이 갈리는 것은 conformance/cases/divergence.json이 적는다.
+
+servers:
+  - url: /
+
+tags:
+  - name: chat
+    description: 연결보다 오래 사는 대화 턴의 접수와 취소
+  - name: job
+    description: 잡 에이전트 실행의 접수와 취소
+  - name: health
+    description: 신원 없이 열리는 프로브
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      tags: [health]
+      summary: 프로세스가 요청을 받을 수 있는지 알린다
+      responses:
+        "200":
+          description: 살아 있다
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    const: ok
+              example: { status: ok }
+
+  /api/v1/chat/threads/{threadId}/messages:
+    post:
+      operationId: enqueueChatTurn
+      tags: [chat]
+      summary: 대화 턴 하나를 접수한다
+      description: 실행은 접수와 분리되어 워크플로가 소유하므로 이 창구는 실행 결과를 기다리지 않는다.
+      parameters:
+        - $ref: "#/components/parameters/ThreadId"
+        - $ref: "#/components/parameters/UserHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostMessageBody"
+      responses:
+        "202":
+          description: 접수했다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        required: [message, execution]
+                        properties:
+                          message:
+                            $ref: "#/components/schemas/ChatMessage"
+                          execution:
+                            $ref: "#/components/schemas/ChatExecution"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "404":
+          $ref: "#/components/responses/ThreadNotFound"
+        "409":
+          $ref: "#/components/responses/IdempotencyConflict"
+
+  /api/v1/chat/threads/{threadId}/executions/{executionId}/cancel:
+    post:
+      operationId: cancelChatTurn
+      tags: [chat]
+      summary: 실행 중인 대화 턴 하나를 중단한다
+      parameters:
+        - $ref: "#/components/parameters/ThreadId"
+        - $ref: "#/components/parameters/ExecutionId"
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 중단을 원장에 적었다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        required: [execution]
+                        properties:
+                          execution:
+                            $ref: "#/components/schemas/ChatExecution"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/jobs:
+    post:
+      operationId: enqueueJob
+      tags: [job]
+      summary: 잡 에이전트 실행 하나를 접수한다
+      parameters:
+        - $ref: "#/components/parameters/UserHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnqueueJobBody"
+      responses:
+        "202":
+          description: 접수했다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        description: 접수된 실행을 가리키는 식별자를 싣는다
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "502":
+          $ref: "#/components/responses/EnvelopeUnavailable"
+
+  /api/v1/jobs/{id}/cancel:
+    post:
+      operationId: cancelJob
+      tags: [job]
+      summary: 실행 중인 잡 하나를 중단한다
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 중단 요청이 닿았다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        description: 중단된 잡의 상태를 싣는다
+        "404":
+          $ref: "#/components/responses/JobNotFound"
+
+components:
+  parameters:
+    ThreadId:
+      name: threadId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    ExecutionId:
+      name: executionId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    JobId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    UserHeader:
+      name: x-monitor-user
+      in: header
+      required: false
+      description: 자기신고 사용자 식별자이며 비었거나 공백뿐이면 local로 읽는다
+      schema: { type: string }
+
+  responses:
+    InvalidRequest:
+      description: 본문이 스키마를 만족하지 않는다
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            ok: false
+            error:
+              code: validation_error
+              message: Invalid request
+    NotFound:
+      description: 가리킨 것이 없다
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    ThreadNotFound:
+      description: 스레드가 없다
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            ok: false
+            error:
+              code: not_found
+              message: Thread not found
+    JobNotFound:
+      description: 잡 실행이 없다
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    IdempotencyConflict:
+      description: 같은 요청 식별자가 다른 입력으로 이미 쓰였다
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            ok: false
+            error:
+              code: chat.execution-idempotency-conflict
+              message: Client request id was already used with different chat input
+    EnvelopeUnavailable:
+      description: 이번 시도가 쓸 모델과 자격과 한도를 받지 못했다
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            ok: false
+            error:
+              code: job.envelope-unavailable
+              message: Could not obtain model and credential envelope
+
+  schemas:
+    SuccessEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          const: true
+        data:
+          description: 창구가 낸 payload이며 실을 것이 없으면 null이다
+
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          const: false
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details:
+              description: 구조화된 거절 근거이며 주어졌을 때만 실린다
+
+    PostMessageBody:
+      type: object
+      required: [clientRequestId, content]
+      properties:
+        clientRequestId:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: 같은 턴의 재접수를 하나로 접는 클라이언트 요청 식별자이며 앞뒤 공백을 지운 값으로 본다
+        content:
+          type: string
+          minLength: 1
+          maxLength: 10000
+          description: 이번 턴의 사용자 발화이며 앞뒤 공백을 지운 값으로 본다
+        model:
+          type: string
+          minLength: 1
+          description: 이번 턴에 쓸 모델을 지정한다
+        agentBackend:
+          $ref: "#/components/schemas/AgentBackend"
+        language:
+          $ref: "#/components/schemas/ChatLanguage"
+
+    EnqueueJobBody:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          $ref: "#/components/schemas/JobKind"
+        input:
+          type: object
+          description: 잡 종류마다 다른 도메인 입력이며 실행 문맥은 워커가 직접 조립한다
+          default: {}
+        idempotencyKey:
+          type: string
+          minLength: 1
+          maxLength: 200
+
+    AgentBackend:
+      type: string
+      enum: [python, claude-sdk]
+
+    ChatLanguage:
+      type: string
+      enum: [auto, ko, en, ja, zh]
+
+    JobKind:
+      type: string
+      enum: [title.suggestion, recipe.scan, task.cleanup]
+
+    ChatMessage:
+      type: object
+      required: [id, threadId, role, content, toolCalls, toolCallId, createdAt]
+      properties:
+        id: { type: string }
+        threadId: { type: string }
+        role: { type: string }
+        content: { type: string }
+        toolCalls:
+          type: [array, "null"]
+          items: { type: object }
+        toolCallId:
+          type: [string, "null"]
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+
+    ChatExecution:
+      type: object
+      required:
+        - id
+        - threadId
+        - userMessageId
+        - status
+        - requestedBackend
+        - draftText
+        - draftSeq
+        - assistantMessageId
+        - modelUsed
+        - costUsd
+        - numTurns
+        - stopReason
+        - error
+        - createdAt
+        - updatedAt
+        - startedAt
+        - completedAt
+      properties:
+        id: { type: string }
+        threadId: { type: string }
+        userMessageId: { type: string }
+        status:
+          type: string
+          enum: [pending, running, completed, failed, canceled]
+        requestedBackend:
+          oneOf:
+            - $ref: "#/components/schemas/AgentBackend"
+            - type: "null"
+        draftText:
+          type: [string, "null"]
+          description: 아직 종결되지 않은 턴이 지금까지 만든 누적 답변이다
+        draftSeq:
+          type: integer
+          minimum: 0
+          description: 누적 답변의 판 번호이며 뒤로 가지 않는다
+        assistantMessageId:
+          type: [string, "null"]
+        modelUsed:
+          type: [string, "null"]
+        costUsd:
+          type: [number, "null"]
+        numTurns:
+          type: [integer, "null"]
+        stopReason:
+          type: [string, "null"]
+        error:
+          type: [string, "null"]
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        updatedAt:
+          $ref: "#/components/schemas/Timestamp"
+        startedAt:
+          oneOf:
+            - $ref: "#/components/schemas/Timestamp"
+            - type: "null"
+        completedAt:
+          oneOf:
+            - $ref: "#/components/schemas/Timestamp"
+            - type: "null"
+
+    Timestamp:
+      type: string
+      description: 밀리초 세 자리를 갖는 UTC 시각이다
+      pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+      examples: ["2026-01-01T00:00:00.000Z"]
