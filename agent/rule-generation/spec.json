@@ -1,0 +1,99 @@
+{
+    "id": "rule-generation",
+    "jobKind": "rule.generation",
+    "tools": {
+        "maxTurns": 15,
+        "limits": {
+            "maxBudgetUsd": 2,
+            "maxOutputTokens": 8000,
+            "deadlineMs": 720000,
+            "effort": "medium"
+        },
+        "tools": {
+            "get_task_turns": {
+                "required": [
+                    "taskId"
+                ],
+                "optional": [],
+                "responseFields": [
+                    "turnId",
+                    "turnIndex",
+                    "askedText",
+                    "assistantSummary"
+                ]
+            },
+            "get_task_events": {
+                "required": [
+                    "taskId"
+                ],
+                "optional": [
+                    "limit"
+                ],
+                "numbers": {
+                    "limit": {
+                        "default": 50,
+                        "min": 1,
+                        "max": 100
+                    }
+                },
+                "responseFields": [
+                    "eventId",
+                    "turnId",
+                    "kind",
+                    "title",
+                    "body"
+                ]
+            },
+            "list_rules": {
+                "required": [],
+                "optional": [],
+                "responseFields": [
+                    "name",
+                    "expect"
+                ]
+            }
+        },
+        "workspaceTools": [
+            "Read",
+            "Glob",
+            "Grep"
+        ],
+        "proposal": {
+            "required": [
+                "name",
+                "expect",
+                "citedTurnIds",
+                "citedEventIds"
+            ],
+            "optional": [
+                "severity",
+                "rationale"
+            ],
+            "expectKinds": [
+                "command",
+                "pattern",
+                "action"
+            ],
+            "citations": {
+                "citedTurnIds": {
+                    "source": "get_task_turns",
+                    "min": 1,
+                    "max": 20
+                },
+                "citedEventIds": {
+                    "source": "get_task_events",
+                    "min": 0,
+                    "max": 20
+                }
+            }
+        },
+        "grounding": {
+            "ledgerSources": [
+                "get_task_turns",
+                "get_task_events"
+            ],
+            "repairAttempts": 1,
+            "onUngrounded": "drop"
+        }
+    }
+}
