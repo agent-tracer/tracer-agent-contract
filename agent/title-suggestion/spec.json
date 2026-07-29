@@ -1,0 +1,399 @@
+{
+    "id": "title-suggestion",
+    "jobKind": "title.suggestion",
+    "route": "/agents/title-suggestion",
+    "prompt": {
+        "fragments": {
+            "contextShape": [
+                "The user message carries the task's current title and an excerpt of its conversation turns (what the",
+                "user asked, what the agent reported back): the oldest user turn plus the most recent turns. Turns in",
+                "the middle are dropped when the task is long, and the excerpt says so when that happened."
+            ],
+            "titleSpec": [
+                "Each title must be concrete — naming the area or action — under 80 characters, and normally 4-9 words",
+                "in languages where words are space-delimited. Prefer an imperative or noun phrase, as in \"Fix auth",
+                "middleware token leak\" or \"Migrate billing schema to v2\". Never use a placeholder such as \"Task 123\",",
+                "\"Untitled\", or \"Test\"."
+            ],
+            "answerShape": [
+                "If the current title is already concrete, accurate, and readable, return an empty list: that is a",
+                "real answer, not a failure. Otherwise return exactly 2-3 distinct alternatives. Do not repeat the",
+                "current title or another suggestion. Each rationale is one evidence-grounded sentence under 200",
+                "characters explaining what drove the suggestion. Do not invent work the evidence does not show."
+            ],
+            "repairDirective": [
+                "Change only what is necessary to satisfy these errors. Return either an empty suggestions list or 2-3",
+                "distinct alternatives. Do not repeat the current title, use placeholder titles, or invent work the",
+                "evidence does not show. Then return the complete repaired suggestion list."
+            ]
+        }
+    },
+    "tools": {
+        "limits": {
+            "recentTurnLimit": 20,
+            "maxContextTurns": 21
+        },
+        "getTaskEvents": {
+            "required": [
+                "taskId"
+            ],
+            "optional": [
+                "limit",
+                "cursor",
+                "order"
+            ],
+            "limit": {
+                "default": 100,
+                "min": 1,
+                "max": 300
+            },
+            "order": {
+                "default": "asc",
+                "values": [
+                    "asc",
+                    "desc"
+                ]
+            }
+        },
+        "responses": {
+            "get_task_events": {
+                "page": [
+                    "events",
+                    "truncated",
+                    "nextCursor",
+                    "total"
+                ],
+                "item": [
+                    "id",
+                    "seq",
+                    "kind",
+                    "title",
+                    "body",
+                    "toolName",
+                    "filePaths",
+                    "occurredAt"
+                ]
+            }
+        },
+        "failures": {
+            "toolFailed": "Tool {tool} failed: {reason}. Do not call it again more than once. Continue with the evidence you already have, and state in your rationale which evidence you could not check."
+        },
+        "argDescriptions": {
+            "get_task_events": {
+                "taskId": "The task ID",
+                "limit": "Max events to return in this page (default 100, hard cap 300)",
+                "cursor": "Opaque cursor from a previous call's nextCursor. Omit to start from the first page.",
+                "order": "Reading direction: \"asc\" (default) pages from the earliest event forward; \"desc\" pages from the latest event backward."
+            }
+        },
+        "descriptions": {
+            "get_task_events": "Get a page of a task's chronological event sequence (user messages, assistant messages, tool runs), up to 300 events per page. You choose how much to read: pick limit, pass the response's nextCursor back as cursor to keep paging, and set order=\"desc\" to start from the latest events (e.g. to see how a long task ended). truncated/total tell you whether more events exist. Call this when the conversation excerpt in the prompt is too thin to name the work."
+        }
+    },
+    "output": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "title.suggestion.list",
+        "description": "기존 제목이 적절하면 빈 배열이고 아니면 2~3개이며, 모자란 개수는 구현체의 검증기가 잡고 여기에는 폭주를 끊는 상한만 둔다.",
+        "type": "object",
+        "required": [
+            "suggestions"
+        ],
+        "properties": {
+            "suggestions": {
+                "type": "array",
+                "maxItems": 3,
+                "items": {
+                    "type": "object",
+                    "required": [
+                        "title",
+                        "rationale"
+                    ],
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "trim": true,
+                            "minLength": 1,
+                            "maxLength": 80
+                        },
+                        "rationale": {
+                            "type": "string",
+                            "trim": true,
+                            "minLength": 1,
+                            "maxLength": 200
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "cases": {
+        "currentTitle": "Fix login redirect",
+        "cases": [
+            {
+                "name": "제목이 이미 적절해 아무것도 제안하지 않은 빈 출력은 옳은 답이다",
+                "suggestions": [],
+                "expect": {
+                    "valid": true,
+                    "errors": []
+                }
+            },
+            {
+                "name": "서로 다른 두 제안은 통과한다",
+                "suggestions": [
+                    {
+                        "title": "Fix auth middleware token leak",
+                        "rationale": "본문이 토큰 유출을 다룬다"
+                    },
+                    {
+                        "title": "Restore session after OAuth callback",
+                        "rationale": "콜백 복귀가 반복 등장한다"
+                    }
+                ],
+                "expect": {
+                    "valid": true,
+                    "errors": []
+                }
+            },
+            {
+                "name": "제안 세 개까지는 통과한다",
+                "suggestions": [
+                    {
+                        "title": "Fix auth middleware token leak",
+                        "rationale": "본문이 토큰 유출을 다룬다"
+                    },
+                    {
+                        "title": "Restore session after OAuth callback",
+                        "rationale": "콜백 복귀가 반복 등장한다"
+                    },
+                    {
+                        "title": "Harden redirect allowlist",
+                        "rationale": "허용 목록 수정이 마지막 작업이다"
+                    }
+                ],
+                "expect": {
+                    "valid": true,
+                    "errors": []
+                }
+            },
+            {
+                "name": "제안이 하나뿐이면 거부한다",
+                "suggestions": [
+                    {
+                        "title": "Fix auth middleware token leak",
+                        "rationale": "본문이 토큰 유출을 다룬다"
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "errors": [
+                        "suggestions must be empty or contain 2-3 items"
+                    ]
+                }
+            },
+            {
+                "name": "현재 제목을 그대로 되풀이하면 거부한다",
+                "suggestions": [
+                    {
+                        "title": "Fix login redirect",
+                        "rationale": "이미 맞는 제목이다"
+                    },
+                    {
+                        "title": "Restore session after OAuth callback",
+                        "rationale": "콜백 복귀가 반복 등장한다"
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "errors": [
+                        "suggestion 1 repeats the current title"
+                    ]
+                }
+            },
+            {
+                "name": "대소문자와 공백만 다른 현재 제목도 되풀이로 본다",
+                "suggestions": [
+                    {
+                        "title": "  FIX   LOGIN\tREDIRECT ",
+                        "rationale": "공백과 대소문자만 바꿨다"
+                    },
+                    {
+                        "title": "Restore session after OAuth callback",
+                        "rationale": "콜백 복귀가 반복 등장한다"
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "errors": [
+                        "suggestion 1 repeats the current title"
+                    ]
+                }
+            },
+            {
+                "name": "전각 문자로 쓴 현재 제목도 되풀이로 본다",
+                "suggestions": [
+                    {
+                        "title": "Ｆｉｘ ｌｏｇｉｎ ｒｅｄｉｒｅｃｔ",
+                        "rationale": "전각으로만 바꿨다"
+                    },
+                    {
+                        "title": "Restore session after OAuth callback",
+                        "rationale": "콜백 복귀가 반복 등장한다"
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "errors": [
+                        "suggestion 1 repeats the current title"
+                    ]
+                }
+            },
+            {
+                "name": "대소문자만 다른 두 제안은 서로 중복이다",
+                "suggestions": [
+                    {
+                        "title": "Fix auth middleware token leak",
+                        "rationale": "본문이 토큰 유출을 다룬다"
+                    },
+                    {
+                        "title": "FIX AUTH MIDDLEWARE TOKEN LEAK",
+                        "rationale": "같은 말을 대문자로 썼다"
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "errors": [
+                        "suggestion 2 duplicates another suggestion"
+                    ]
+                }
+            },
+            {
+                "name": "합자 확장이 필요한 대소문자 차이는 중복으로 보지 않는다",
+                "suggestions": [
+                    {
+                        "title": "Straße redirect audit",
+                        "rationale": "원문 표기를 남긴다"
+                    },
+                    {
+                        "title": "STRASSE REDIRECT AUDIT",
+                        "rationale": "확장 표기를 남긴다"
+                    }
+                ],
+                "expect": {
+                    "valid": true,
+                    "errors": []
+                }
+            },
+            {
+                "name": "untitled 자리표시자 제목을 거부한다",
+                "suggestions": [
+                    {
+                        "title": "Untitled",
+                        "rationale": "아직 정하지 못했다"
+                    },
+                    {
+                        "title": "Restore session after OAuth callback",
+                        "rationale": "콜백 복귀가 반복 등장한다"
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "errors": [
+                        "suggestion 1 is a placeholder title"
+                    ]
+                }
+            },
+            {
+                "name": "test 자리표시자 제목을 거부한다",
+                "suggestions": [
+                    {
+                        "title": "Fix auth middleware token leak",
+                        "rationale": "본문이 토큰 유출을 다룬다"
+                    },
+                    {
+                        "title": "Test",
+                        "rationale": "시험 삼아 적었다"
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "errors": [
+                        "suggestion 2 is a placeholder title"
+                    ]
+                }
+            },
+            {
+                "name": "번호만 붙인 task 제목을 구분자와 무관하게 거부한다",
+                "suggestions": [
+                    {
+                        "title": "Task-42",
+                        "rationale": "번호만 남겼다"
+                    },
+                    {
+                        "title": "task #7",
+                        "rationale": "번호만 남겼다"
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "errors": [
+                        "suggestion 1 is a placeholder title",
+                        "suggestion 2 is a placeholder title"
+                    ]
+                }
+            },
+            {
+                "name": "번호가 붙어도 말이 이어지면 자리표시자가 아니다",
+                "suggestions": [
+                    {
+                        "title": "Task 42 retry backoff",
+                        "rationale": "번호 뒤에 내용이 있다"
+                    },
+                    {
+                        "title": "Restore session after OAuth callback",
+                        "rationale": "콜백 복귀가 반복 등장한다"
+                    }
+                ],
+                "expect": {
+                    "valid": true,
+                    "errors": []
+                }
+            },
+            {
+                "name": "개수와 되풀이와 자리표시자가 겹치면 사유를 모두 낸다",
+                "suggestions": [
+                    {
+                        "title": "Untitled",
+                        "rationale": "아직 정하지 못했다"
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "errors": [
+                        "suggestions must be empty or contain 2-3 items",
+                        "suggestion 1 is a placeholder title"
+                    ]
+                }
+            }
+        ]
+    },
+    "contextExample": {
+        "title": "Untitled",
+        "status": "completed",
+        "workspacePath": "/repo",
+        "totalEventCount": 42,
+        "totalTurnCount": 3,
+        "truncated": true,
+        "turns": [
+            {
+                "turnIndex": 1,
+                "askedText": "인증 토큰 누수를 고쳐줘",
+                "assistantText": "누수를 수정하고 회귀 테스트를 추가했습니다."
+            },
+            {
+                "turnIndex": 3,
+                "askedText": "회귀 테스트도 추가해줘",
+                "assistantText": null
+            }
+        ]
+    }
+}
