@@ -1,0 +1,204 @@
+meaning: >-
+  두 구현체는 같은 실행을 집지 않도록 각자의 작업 큐와 워크플로 이름을 갖는다.
+  큐 이름을 통일하면 두 구현체가 같은 큐를 두고 경합한다.
+
+implementations:
+  typescript:
+    queues:
+      chat:
+        name: sdk-chat
+        meaning: 대화 실행의 워크플로와 액티비티가 실행되는 큐다
+      jobs:
+        name: sdk-jobs
+        meaning: 잡 워크플로와 짧은 액티비티가 실행되는 큐다
+      generate:
+        name: sdk-generate
+        meaning: 최대 15분인 생성 액티비티가 짧은 액티비티의 슬롯을 점유하지 않도록 분리한 큐다
+
+    workflows:
+      chatThread:
+        name: chatThreadWorkflow
+        queue: sdk-chat
+        id: "chat-thread:{threadId}"
+        input: { threadId: string }
+        signals:
+          - name: enqueueChatExecution
+            args: [executionId]
+            meaning: 접수가 새 실행 식별자를 스레드 워크플로에 밀어 넣는다
+        activities:
+          - name: getNextChatExecution
+            queue: sdk-chat
+            startToCloseSeconds: 60
+            maximumAttempts: 5
+        idleSeconds: 5
+        maxChildren: 100
+
+      chatExecution:
+        name: chatExecutionWorkflow
+        queue: sdk-chat
+        id: "chat:{executionId}"
+        input: { executionId: string }
+        activities:
+          - name: prepareChatExecution
+            queue: sdk-chat
+            startToCloseSeconds: 120
+            maximumAttempts: 5
+          - name: generateChatExecution
+            queue: sdk-chat
+            startToCloseSeconds: 900
+            heartbeatTimeoutSeconds: 30
+            maximumAttempts: 3
+            cancellation: WAIT_CANCELLATION_COMPLETED
+          - name: finalizeChatExecution
+            queue: sdk-chat
+            startToCloseSeconds: 120
+            maximumAttempts: 5
+          - name: failChatExecution
+            queue: sdk-chat
+            startToCloseSeconds: 60
+            maximumAttempts: 5
+
+      titleSuggestion:
+        name: titleSuggestionWorkflow
+        queue: sdk-jobs
+        id: "title.suggestion:{jobId}"
+        activities:
+          - name: prepareTitleSuggestion
+            queue: sdk-jobs
+            startToCloseSeconds: 60
+            maximumAttempts: 5
+          - name: generateTitleSuggestion
+            queue: sdk-generate
+            startToCloseSeconds: 300
+            scheduleToCloseSeconds: 1200
+            heartbeatTimeoutSeconds: 30
+            maximumAttempts: 3
+          - name: finalizeTitleSuggestion
+            queue: sdk-jobs
+            startToCloseSeconds: 60
+            maximumAttempts: 5
+          - name: markTitleJobFailed
+            queue: sdk-jobs
+            startToCloseSeconds: 60
+            maximumAttempts: 5
+
+      recipeScan:
+        name: recipeScanWorkflow
+        queue: sdk-jobs
+        id: "recipe.scan:{jobId}"
+        activities:
+          - name: prepareRecipeScan
+            queue: sdk-jobs
+          - name: generateRecipeCandidates
+            queue: sdk-generate
+          - name: finalizeRecipeScan
+            queue: sdk-jobs
+          - name: markRecipeJobFailed
+            queue: sdk-jobs
+
+      taskCleanup:
+        name: taskCleanupWorkflow
+        queue: sdk-jobs
+        id: "task.cleanup:{jobId}"
+        activities:
+          - name: prepareTaskCleanup
+            queue: sdk-jobs
+          - name: generateTaskCleanupSuggestions
+            queue: sdk-generate
+          - name: finalizeTaskCleanup
+            queue: sdk-jobs
+          - name: markCleanupJobFailed
+            queue: sdk-jobs
+
+      evaluationRun:
+        name: evaluationRunWorkflow
+        queue: sdk-generate
+        activities:
+          - name: runEvaluationAgent
+            queue: sdk-generate
+
+      evaluationExperiment:
+        name: evaluationExperimentWorkflow
+        queue: sdk-generate
+        activities:
+          - name: runNext
+            queue: sdk-generate
+          - name: finalize
+            queue: sdk-generate
+
+    leases:
+      chatRunningMs: 1200000
+      threadBusyRetryMs: 60000
+      threadBusyMaxRounds: 45
+      threadBusyFailure: chat.thread-busy
+
+  python:
+    queues:
+      chat:
+        name: graph-chat
+        meaning: 대화 실행의 워크플로와 액티비티가 실행되는 큐다
+      jobs:
+        name: graph-jobs
+        meaning: 잡 워크플로 하나와 액티비티 둘이 실행되는 큐다
+
+    workflows:
+      chatThread:
+        name: graphChatThreadWorkflow
+        queue: graph-chat
+        id: "graph-chat-thread:{threadId}"
+        input: { thread_id: string, pending: [execution] }
+        signals:
+          - name: enqueueChatExecution
+            args: [executionId]
+            meaning: 접수가 새 실행 식별자를 스레드 워크플로에 밀어 넣는다
+        idleSeconds: 5
+        maxChildren: 100
+
+      chatExecution:
+        name: graphChatExecutionWorkflow
+        queue: graph-chat
+        id: "graph-chat:{executionId}"
+        input: { execution_id: string, thread_id: string }
+        activities:
+          - name: prepareGraphChatExecution
+            queue: graph-chat
+            startToCloseSeconds: 120
+            maximumAttempts: 5
+          - name: generateGraphChatExecution
+            queue: graph-chat
+            startToCloseSeconds: 900
+            heartbeatTimeoutSeconds: 30
+            heartbeatIntervalSeconds: 10
+            maximumAttempts: 3
+          - name: finalizeGraphChatExecution
+            queue: graph-chat
+            startToCloseSeconds: 120
+            maximumAttempts: 5
+          - name: failGraphChatExecution
+            queue: graph-chat
+            startToCloseSeconds: 60
+            maximumAttempts: 5
+
+      agentJob:
+        name: graphAgentJobWorkflow
+        queue: graph-jobs
+        id: "graph-job:{kind}:{key}"
+        kinds: [title-suggestion, recipe-scan, task-cleanup]
+        idReusePolicy: REJECT_DUPLICATE
+        activities:
+          - name: runGraphAgentJob
+            queue: graph-jobs
+            startToCloseSeconds: 900
+            heartbeatTimeoutSeconds: 30
+            heartbeatIntervalSeconds: 10
+            maximumAttempts: 3
+          - name: settleCanceledGraphJob
+            queue: graph-jobs
+            startToCloseSeconds: 30
+            meaning: 액티비티가 실행되기 전에 취소가 닿으면 워크플로가 원장을 직접 닫는다
+
+    leases:
+      chatRunningMs: 1200000
+      threadBusyRetryMs: 60000
+      threadBusyMaxRounds: 45
+      threadBusyFailure: chat.thread-busy
