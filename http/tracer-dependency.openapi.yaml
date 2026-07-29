@@ -572,20 +572,6 @@ paths:
         "5XX":
           $ref: "#/components/responses/Failure"
 
-  /api/v1/settings:
-    get:
-      operationId: list_settings
-      tags: [tool]
-      summary: 설정을 조회한다
-      x-confirmation-gate: none
-      responses:
-        "2XX":
-          $ref: "#/components/responses/Success"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-
   /api/v1/tasks/{taskId}/archive:
     post:
       operationId: archive_task
@@ -904,50 +890,6 @@ paths:
       x-confirmation-gate: confirm
       parameters:
         - name: suggestionId
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        "2XX":
-          $ref: "#/components/responses/Success"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-
-  /api/v1/settings/{key}:
-    put:
-      operationId: upsert_setting
-      tags: [tool]
-      summary: 설정 하나를 쓴다
-      x-confirmation-gate: confirm
-      parameters:
-        - name: key
-          in: path
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                value: {}
-      responses:
-        "2XX":
-          $ref: "#/components/responses/Success"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-    delete:
-      operationId: delete_setting
-      tags: [tool]
-      summary: 설정 하나를 지운다
-      x-confirmation-gate: confirm
-      parameters:
-        - name: key
           in: path
           required: true
           schema: { type: string }

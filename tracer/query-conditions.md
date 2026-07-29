@@ -106,13 +106,7 @@
 - `ai_jobs`에 행이 없을 때만 `graph_job_executions`에서 `id = :jobId`로 조회한 뒤 `user_id = :userId`를 검사한다.
 - `JOIN`, 정렬, 상한, soft-delete 조건: 지정 없음.
 
-## 12. `GET /api/v1/settings`
-
-- 조회: `app_settings`에서 `scope = :scope`.
-- `JOIN`, 정렬, 상한, soft-delete 조건: 지정 없음.
-- 민감한 key이고 저장값이 암호화 형식이면 값을 복호화한 뒤 마스킹된 응답을 만든다.
-
-## 13. `GET /api/v1/chat/memories`
+## 12. `GET /api/v1/chat/memories`
 
 - 조회: `chat_user_memories`에서 `user_id = :userId`.
 - 정렬: `updated_at DESC`.

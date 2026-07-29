@@ -23,6 +23,10 @@
 - `human_reviews`: 두 실험 실행을 사람이 비교한 선호, 보정 출력, 사유를 담는다.
 - `prompt_fragment_definitions`: backend와 agent에 속한 prompt fragment의 식별 정보와 코드 이름을 담는다.
 
+## 설정 도메인
+
+- `app_settings`: 에이전트 실행에 쓰는 설정값을 scope 와 key 한 쌍으로 담는다.
+
 ## 외부 표 참조
 
 아래 컬럼은 대상 표가 이 스키마의 범위에 없으므로 외래 키 제약을 두지 않는다.

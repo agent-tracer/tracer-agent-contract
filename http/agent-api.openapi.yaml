@@ -14,6 +14,8 @@ tags:
     description: 연결보다 오래 사는 대화 턴의 접수와 취소
   - name: job
     description: 잡 에이전트 실행의 접수와 취소
+  - name: setting
+    description: 에이전트 실행에 쓰는 설정값의 조회와 저장과 삭제
   - name: health
     description: 신원 없이 열리는 프로브
 
@@ -158,6 +160,112 @@ paths:
         "404":
           $ref: "#/components/responses/JobNotFound"
 
+  /api/agent/settings:
+    get:
+      operationId: listSettings
+      tags: [setting]
+      summary: 저장된 설정을 키마다 하나씩 알린다
+      description: 민감한 키의 값은 끝 네 자만 남기고 가린 채로 실린다.
+      parameters:
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 저장된 설정을 실었다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        required: [items]
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/Setting"
+
+  /api/agent/settings/models:
+    get:
+      operationId: listSettingModels
+      tags: [setting]
+      summary: 고를 수 있는 모델을 알린다
+      description: 서버가 단가를 아는 모델만 실리며 그 밖의 값은 저장이 거절된다.
+      responses:
+        "200":
+          description: 고를 수 있는 모델을 실었다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        required: [items]
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/ModelOption"
+
+  /api/agent/settings/{key}:
+    put:
+      operationId: putSetting
+      tags: [setting]
+      summary: 설정 하나를 쓴다
+      parameters:
+        - $ref: "#/components/parameters/SettingKey"
+        - $ref: "#/components/parameters/UserHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PutSettingBody"
+      responses:
+        "200":
+          description: 쓴 설정을 실었다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Setting"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+    delete:
+      operationId: deleteSetting
+      tags: [setting]
+      summary: 설정 하나를 지운다
+      parameters:
+        - $ref: "#/components/parameters/SettingKey"
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 지웠는지 여부를 실었다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        required: [key, deleted]
+                        properties:
+                          key: { type: string }
+                          deleted: { type: boolean }
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+
 components:
   parameters:
     ThreadId:
@@ -175,6 +283,12 @@ components:
       in: path
       required: true
       schema: { type: string, minLength: 1 }
+    SettingKey:
+      name: key
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/SettingKey"
     UserHeader:
       name: x-monitor-user
       in: header
@@ -290,6 +404,47 @@ components:
           type: string
           minLength: 1
           maxLength: 200
+
+    SettingKey:
+      type: string
+      enum:
+        - anthropic.api_key
+        - anthropic.model
+        - ruleGen.maxRulesPerTask
+        - taskCleanup.maxSuggestions
+        - claude.outputLanguage
+
+    PutSettingBody:
+      type: object
+      required: [value]
+      properties:
+        value:
+          type: string
+          minLength: 1
+          description: 저장할 값이며 수치 설정도 문자열로 싣는다
+
+    Setting:
+      type: object
+      required: [key, maskedValue, hasValue, updatedAt]
+      properties:
+        key:
+          $ref: "#/components/schemas/SettingKey"
+        maskedValue:
+          type: string
+          description: 민감한 키이면 끝 네 자만 남기고 가린 값이고 그 밖의 키이면 저장된 값 그대로다
+        hasValue:
+          type: boolean
+          const: true
+        updatedAt:
+          type: string
+          format: date-time
+
+    ModelOption:
+      type: object
+      required: [id, label]
+      properties:
+        id: { type: string }
+        label: { type: string }
 
     ChatLanguage:
       type: string

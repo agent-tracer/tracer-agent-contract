@@ -183,11 +183,6 @@
                 "optional": [],
                 "mutation": false
             },
-            "list_settings": {
-                "required": [],
-                "optional": [],
-                "mutation": false
-            },
             "recall_facts": {
                 "required": [],
                 "optional": [],
@@ -395,39 +390,6 @@
                 ],
                 "optional": [],
                 "mutation": true
-            },
-            "upsert_setting": {
-                "required": [
-                    "key",
-                    "value"
-                ],
-                "optional": [],
-                "mutation": true,
-                "key": {
-                    "values": [
-                        "anthropic.api_key",
-                        "anthropic.model",
-                        "ruleGen.maxRulesPerTask",
-                        "taskCleanup.maxSuggestions",
-                        "claude.outputLanguage"
-                    ]
-                }
-            },
-            "delete_setting": {
-                "required": [
-                    "key"
-                ],
-                "optional": [],
-                "mutation": true,
-                "key": {
-                    "values": [
-                        "anthropic.api_key",
-                        "anthropic.model",
-                        "ruleGen.maxRulesPerTask",
-                        "taskCleanup.maxSuggestions",
-                        "claude.outputLanguage"
-                    ]
-                }
             },
             "enqueue_job": {
                 "required": [
@@ -719,17 +681,6 @@
                     "completedAt"
                 ]
             },
-            "list_settings": {
-                "page": [
-                    "items"
-                ],
-                "item": [
-                    "key",
-                    "maskedValue",
-                    "hasValue",
-                    "updatedAt"
-                ]
-            },
             "recall_facts": {
                 "page": [
                     "facts"
@@ -936,24 +887,6 @@
                     "note"
                 ]
             },
-            "upsert_setting": {
-                "proposal": [
-                    "confirmationId",
-                    "toolName",
-                    "status",
-                    "summary",
-                    "note"
-                ]
-            },
-            "delete_setting": {
-                "proposal": [
-                    "confirmationId",
-                    "toolName",
-                    "status",
-                    "summary",
-                    "note"
-                ]
-            },
             "enqueue_job": {
                 "proposal": [
                     "confirmationId",
@@ -1017,7 +950,6 @@
             "get_job": {
                 "jobId": "The AI job to report on."
             },
-            "list_settings": {},
             "recall_facts": {},
             "remember_fact": {
                 "key": "Short slug naming the fact, for example \"preferred_language\". Remembering the same key again overwrites the old content.",
@@ -1106,13 +1038,6 @@
             "dismiss_cleanup": {
                 "suggestionId": "The cleanup suggestion to dismiss."
             },
-            "upsert_setting": {
-                "key": "Which setting to write: anthropic.api_key, anthropic.model, ruleGen.maxRulesPerTask, taskCleanup.maxSuggestions, or claude.outputLanguage.",
-                "value": "The new value as a string. Numeric settings still take their number as text."
-            },
-            "delete_setting": {
-                "key": "Which setting to clear: anthropic.api_key, anthropic.model, ruleGen.maxRulesPerTask, taskCleanup.maxSuggestions, or claude.outputLanguage."
-            },
             "enqueue_job": {
                 "kind": "Which job to launch: title.suggestion, recipe.scan, task.cleanup, or rule.generation.",
                 "input": "JSON object carrying what that kind needs, for example {\"taskId\":\"...\"} for title.suggestion and recipe.scan."
@@ -1130,7 +1055,6 @@
             "list_recipes": "List the user's recipes (reusable workflows distilled from past tasks), optionally filtered by status (candidate/active/dismissed/superseded/retired). Each entry carries the full recipe (intent, steps, pitfalls, touched files) plus application stats. Use this to surface or explain a saved workflow.",
             "list_cleanup_suggestions": "List task-cleanup suggestions produced for the user, optionally filtered by status (pending/accepted/dismissed). Each names the task it targets, the proposed change, and the rationale. Use this to report what cleanup the system has proposed.",
             "get_job": "Get one AI job by jobId: its kind, executor, status, attempt count, the task it ran against, and its input/result/usage. Use this to report on the outcome of an agent job the user is asking about.",
-            "list_settings": "List the user's application settings by key, with each value masked (only whether a value is set is shown). Use this to tell the user which settings are configured without revealing secret values.",
             "recall_facts": "List the durable facts you have remembered about this user, each a short key and its content. Takes no arguments and runs immediately. These same facts are already injected at the top of your context each turn; call this only to re-read them explicitly, for example before deciding whether to remember_fact a new one.",
             "remember_fact": "Remember a durable fact about this user that should persist across ALL of their chat threads — a stated preference or a stable detail about how they work, not a one-off detail of the current task. Pass a short slug key (for example \"preferred_language\") and the content; remembering the same key again overwrites it. This runs immediately and is NOT a proposal: it is saved at once and the user sees it happen, so you may say plainly that you have remembered it.",
             "update_task": "PROPOSAL (requires user confirmation, does not run immediately): change a task's title and/or status by taskId. status is one of running/waiting/completed/errored. Pass at least one of title or status. The change is queued and only applied after the user approves; tell the user you are awaiting their confirmation.",
@@ -1154,8 +1078,6 @@
             "retire_recipe": "PROPOSAL (requires user confirmation): retire an active recipe by recipeId. Queued until the user approves.",
             "accept_cleanup": "PROPOSAL (requires user confirmation): accept a task-cleanup suggestion by suggestionId, applying its proposed change. Queued until the user approves.",
             "dismiss_cleanup": "PROPOSAL (requires user confirmation): dismiss a task-cleanup suggestion by suggestionId. Queued until the user approves.",
-            "upsert_setting": "PROPOSAL (requires user confirmation): set an application setting. key is one of anthropic.api_key/anthropic.model/ruleGen.maxRulesPerTask/taskCleanup.maxSuggestions/claude.outputLanguage; value is the new string value. Queued until the user approves.",
-            "delete_setting": "PROPOSAL (requires user confirmation): clear an application setting by key (one of anthropic.api_key/anthropic.model/ruleGen.maxRulesPerTask/taskCleanup.maxSuggestions/claude.outputLanguage). Queued until the user approves.",
             "enqueue_job": "PROPOSAL (requires user confirmation, and running it starts a real, metered agent run that costs money): launch an AI job. kind is one of title.suggestion (auto-title a task), recipe.scan (distill a recipe from a task), task.cleanup (suggest cleanup across tasks), or rule.generation (draft verification rules for a task). input is a JSON object with the fields that kind needs: title.suggestion takes {\"taskId\":\"...\"}; recipe.scan takes {\"taskId\":\"...\"} plus optional userPrompt, language, and trigger (dashboard/session); task.cleanup takes {} or {\"filters\":{\"maxSuggestions\":N}}; rule.generation requires {\"taskId\":\"...\",\"anchorEventId\":\"...\"} and may also include focus (recent), maxRules, and intent describing what to verify. Queued until the user approves — never claim the job has started yet."
         }
     },
@@ -1295,15 +1217,6 @@
                 "pathArgs": [
                     "jobId"
                 ],
-                "query": {},
-                "body": {},
-                "bodyConstants": {}
-            },
-            "list_settings": {
-                "method": "GET",
-                "path": "/api/v1/settings",
-                "gate": "none",
-                "pathArgs": [],
                 "query": {},
                 "body": {},
                 "bodyConstants": {}
@@ -1560,30 +1473,6 @@
                 "gate": "confirm",
                 "pathArgs": [
                     "suggestionId"
-                ],
-                "query": {},
-                "body": {},
-                "bodyConstants": {}
-            },
-            "upsert_setting": {
-                "method": "PUT",
-                "path": "/api/v1/settings/{key}",
-                "gate": "confirm",
-                "pathArgs": [
-                    "key"
-                ],
-                "query": {},
-                "body": {
-                    "value": "value"
-                },
-                "bodyConstants": {}
-            },
-            "delete_setting": {
-                "method": "DELETE",
-                "path": "/api/v1/settings/{key}",
-                "gate": "confirm",
-                "pathArgs": [
-                    "key"
                 ],
                 "query": {},
                 "body": {},
