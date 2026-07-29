@@ -181,7 +181,9 @@ paths:
                 profile:
                   type: string
                   minLength: 1
-                  description: 이 배포가 고른 채널을 가르는 이름이다
+                  description: >-
+                    이 배포가 고른 채널을 가르는 이름이며 지금은 어느 이름이든 production으로 간다.
+                    그 채널에 판이 없으면 production을 보고, 그것도 없으면 그 조각은 응답에 실리지 않는다
                 manifest:
                   type: array
                   items:
@@ -538,16 +540,52 @@ components:
 
     ResolvedPromptFragment:
       type: object
-      required: [templateKey, fragmentSlot, definitionId, versionId, content, contentHash]
+      description: >-
+        워커가 받은 판을 자기 매니페스트와 대조해 받아들일지 정하므로 실린 값이 그 대조에 필요한
+        것을 모두 담는다. 하나라도 어긋나면 워커는 그 응답을 버리고 파일 기본값으로 돈다.
+      required:
+        - templateKey
+        - fragmentSlot
+        - definitionId
+        - definitionKey
+        - codeName
+        - backend
+        - language
+        - versionId
+        - semanticVersion
+        - content
+        - contentHash
+        - placeholders
+        - toolContractVersion
+        - outputSchemaVersion
+        - source
       properties:
         templateKey: { type: string }
         fragmentSlot: { type: string }
         definitionId: { type: string }
+        definitionKey:
+          type: string
+          description: 요청이 실은 것과 같아야 하며 다르면 워커가 다른 조각을 받은 것으로 본다
+        codeName: { type: string }
+        backend:
+          $ref: "#/components/schemas/PromptBackend"
+        language: { type: string }
         versionId: { type: string }
+        semanticVersion: { type: string }
         content: { type: string }
         contentHash:
           type: string
           description: 정규화한 내용의 sha256이며 규칙과 예시는 agent/shared/prompt.fragment.integrity.json이 갖는다
+        placeholders:
+          type: array
+          items: { type: string }
+          description: 내용에서 뽑은 자리표시자를 나온 순서대로 중복 없이 싣는다
+        toolContractVersion: { type: string }
+        outputSchemaVersion: { type: string }
+        source:
+          type: string
+          enum: [code-default, database-authored]
+          description: code-default이면 semanticVersion과 content가 요청의 defaultVersion·defaultContent와 같다
 
     PromptVersionInput:
       type: object
