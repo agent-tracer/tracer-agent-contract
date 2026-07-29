@@ -579,12 +579,12 @@ components:
         placeholders:
           type: array
           items: { type: string }
-          description: 내용에서 뽑은 자리표시자를 나온 순서대로 중복 없이 싣는다
+          description: 내용에서 뽑은 자리표시자를 중복 없이 오름차순으로 싣는다
         toolContractVersion: { type: string }
         outputSchemaVersion: { type: string }
         source:
           type: string
-          enum: [code-default, database-authored]
+          enum: [code-default, database-override]
           description: code-default이면 semanticVersion과 content가 요청의 defaultVersion·defaultContent와 같다
 
     PromptVersionInput:
@@ -596,7 +596,9 @@ components:
         contentHash:
           type: string
           minLength: 1
-          description: 주어지지 않으면 서버가 내용에서 계산한다
+          description: >-
+            agent/shared/prompt.fragment.integrity.json의 규칙으로 만든 값이며 주어지지 않으면
+            서버가 그 규칙으로 계산한다
         toolContractVersion: { type: string, minLength: 1 }
         outputSchemaVersion: { type: string, minLength: 1 }
 
