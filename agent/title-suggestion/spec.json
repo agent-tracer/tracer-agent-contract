@@ -93,7 +93,7 @@
     "output": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "title.suggestion.list",
-        "description": "기존 제목이 적절하면 빈 배열이고 아니면 2~3개이며, 모자란 개수는 구현체의 검증기가 잡고 여기에는 폭주를 끊는 상한만 둔다.",
+        "description": "지금의 제목이 적절하면 빈 배열이고 아니면 2~3개이며, 모자란 개수는 구현체의 검증기가 잡고 여기에는 폭주를 끊는 상한만 둔다.",
         "type": "object",
         "required": [
             "suggestions"
