@@ -6,7 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const TYPES = ["feat", "fix", "refactor", "test", "docs", "chore", "ci"];
-const SCOPES = ["http", "wire", "db", "workflow", "agent", "conformance", "ci", "docs", "repo", "scripts"];
+const SCOPES = ["http", "wire", "db", "workflow", "agent", "tracer", "conformance", "ci", "docs", "repo", "scripts"];
 const HEADER_PATTERN = /^(\w+)(?:\(([\w-]+)\))?: (.+)$/;
 const KOREAN_PATTERN = /[가-힣]/;
 // 명사구 제목을 막고 행위 문장을 강제한다.
