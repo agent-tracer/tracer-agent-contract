@@ -133,8 +133,6 @@ paths:
                         description: 접수된 실행을 가리키는 식별자를 싣는다
         "400":
           $ref: "#/components/responses/InvalidRequest"
-        "502":
-          $ref: "#/components/responses/EnvelopeUnavailable"
 
   /api/v1/jobs/{id}/cancel:
     post:
@@ -230,18 +228,6 @@ components:
             error:
               code: chat.execution-idempotency-conflict
               message: Client request id was already used with different chat input
-    EnvelopeUnavailable:
-      description: 이번 시도가 쓸 모델과 자격과 한도를 받지 못했다
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ErrorEnvelope"
-          example:
-            ok: false
-            error:
-              code: job.envelope-unavailable
-              message: Could not obtain model and credential envelope
-
   schemas:
     SuccessEnvelope:
       type: object
