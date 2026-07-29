@@ -39,6 +39,11 @@ Node에서는 `conformance/runner/contract.mjs`를, Python에서는 `conformance
 | 계약 파일 하나를 읽는다 | `readJson(relative)` | `read_json(relative)` |
 | 강제·기록 분류를 읽는다 | `readEnforcement()` | `read_enforcement()` |
 | 자리 하나의 분류를 낸다 | `enforcementLevel(path)` | `enforcement_level(path)` |
+| 추적 API 의존 경로를 낸다 | `readDependencyPaths()` | `read_dependency_paths()` |
+| 도구가 부르는 경로를 낸다 | `readToolBindingPaths()` | `read_tool_binding_paths()` |
+
+`verify`가 대화 도구의 `bindings`가 가리키는 경로를 `http/tracer-dependency.openapi.yaml`이
+모두 적는지 대조한다. 도구가 부르는데 의존이 적지 않은 경로가 있으면 여기서 걸린다.
 
 구현체는 자기가 고정한 판을 `readVersion()`의 값과 대조해, 계약이 앞서 나간 것을 자기 CI에서
 먼저 본다. `node conformance/runner/verify.mjs`와 `python conformance/runner/verify.py`는

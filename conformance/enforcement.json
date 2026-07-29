@@ -32,8 +32,7 @@
                 "agent/task-cleanup/spec.json#prompt",
                 "agent/shared/",
                 "http/tracer-dependency.openapi.yaml",
-                "tracer/",
-                "wire/credential.requirement.json"
+                "tracer/"
             ]
         }
     },

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -44,6 +45,21 @@ def read_agent_spec(agent_id: str) -> Any:
 def read_shared(file_name: str) -> Any:
     """네 에이전트가 함께 쓰는 계약 파일 하나를 읽는다."""
     return read_json(f"agent/shared/{file_name}")
+
+
+def read_dependency_paths() -> list[str]:
+    """에이전트가 추적 API에 요구하는 경로를 사전순으로 낸다."""
+    spec = (ROOT / "http" / "tracer-dependency.openapi.yaml").read_text(encoding="utf-8")
+    return sorted(re.findall(r"^ {2}(/\S+):$", spec, re.MULTILINE))
+
+
+def read_tool_binding_paths() -> list[dict[str, str]]:
+    """대화 도구가 어느 경로의 뷰인지를 도구 이름 순으로 낸다."""
+    bindings = read_agent_spec("chat")["bindings"]["bindings"]
+    return [
+        {"name": name, "method": binding["method"], "path": binding["path"]}
+        for name, binding in sorted(bindings.items())
+    ]
 
 
 def read_enforcement() -> Any:

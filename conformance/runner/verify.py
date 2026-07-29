@@ -2,7 +2,15 @@
 
 from __future__ import annotations
 
-from contract import enforcement_level, list_cases, read_case, read_json, read_version
+from contract import (
+    enforcement_level,
+    list_cases,
+    read_case,
+    read_dependency_paths,
+    read_json,
+    read_tool_binding_paths,
+    read_version,
+)
 
 AGENTS = ["chat", "recipe-scan", "title-suggestion", "task-cleanup", "rule-generation"]
 SECTIONS = ["tools", "output", "bindings", "prompt"]
@@ -46,13 +54,21 @@ def main() -> None:
     for surface in surfaces:
         grouped[enforcement_level(surface)].append(surface)
 
+    dependency_paths = set(read_dependency_paths())
+    bindings = read_tool_binding_paths()
+    unmet = [binding for binding in bindings if binding["path"] not in dependency_paths]
+
     if not cases:
         raise SystemExit("적합성 케이스가 하나도 없다")
     if grouped["unclassified"]:
         raise SystemExit(f"강제인지 기록인지 정해지지 않은 자리가 있다 — {', '.join(grouped['unclassified'])}")
+    if unmet:
+        detail = ", ".join(f"{binding['name']} {binding['path']}" for binding in unmet)
+        raise SystemExit(f"도구가 부르는 경로를 추적 API 의존이 적지 않는다 — {detail}")
 
     print(f"계약 {version}: 케이스 {len(cases)}개를 읽었다 — {', '.join(cases)}")
     print(f"강제 {len(grouped['enforced'])}자리, 기록 {len(grouped['recorded'])}자리")
+    print(f"도구 {len(bindings)}개가 부르는 경로를 추적 API 의존 {len(dependency_paths)}개가 덮는다")
 
 
 if __name__ == "__main__":

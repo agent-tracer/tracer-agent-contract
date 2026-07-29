@@ -44,6 +44,20 @@ export function readShared(fileName) {
     return readJson(join("agent", "shared", fileName));
 }
 
+/** 에이전트가 추적 API에 요구하는 경로를 사전순으로 낸다. */
+export function readDependencyPaths() {
+    const spec = readFileSync(join(ROOT, "http", "tracer-dependency.openapi.yaml"), "utf8");
+    return [...spec.matchAll(/^ {2}(\/\S+):$/gm)].map((match) => match[1]).sort();
+}
+
+/** 대화 도구가 어느 경로의 뷰인지를 도구 이름 순으로 낸다. */
+export function readToolBindingPaths() {
+    const { bindings } = readAgentSpec("chat").bindings;
+    return Object.entries(bindings)
+        .sort(([left], [right]) => (left < right ? -1 : 1))
+        .map(([name, binding]) => ({ name, method: binding.method, path: binding.path }));
+}
+
 /** 계약의 어느 자리가 강제이고 어느 자리가 기록인지를 읽는다. */
 export function readEnforcement() {
     return readJson(join("conformance", "enforcement.json"));
