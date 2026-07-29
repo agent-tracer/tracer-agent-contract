@@ -1,0 +1,118 @@
+{
+    "emitted": {
+        "deadline_exceeded": {
+            "retryable": false,
+            "landsEmpty": false,
+            "emittedBy": [
+                "typescript",
+                "python"
+            ]
+        },
+        "budget_exceeded": {
+            "retryable": false,
+            "landsEmpty": true,
+            "emittedBy": [
+                "typescript",
+                "python"
+            ]
+        },
+        "max_turns_exceeded": {
+            "retryable": false,
+            "landsEmpty": true,
+            "emittedBy": [
+                "typescript",
+                "python"
+            ]
+        },
+        "max_tokens": {
+            "retryable": false,
+            "landsEmpty": false,
+            "emittedBy": [
+                "python"
+            ]
+        },
+        "output_schema_invalid": {
+            "retryable": false,
+            "landsEmpty": false,
+            "emittedBy": [
+                "typescript"
+            ]
+        },
+        "invalid_request_error": {
+            "retryable": false,
+            "landsEmpty": false,
+            "emittedBy": [
+                "typescript",
+                "python"
+            ]
+        },
+        "agent_execution_error": {
+            "retryable": false,
+            "landsEmpty": false,
+            "emittedBy": [
+                "typescript",
+                "python"
+            ]
+        },
+        "cancelled": {
+            "retryable": false,
+            "landsEmpty": false,
+            "emittedBy": [
+                "typescript"
+            ]
+        },
+        "process_error": {
+            "retryable": true,
+            "landsEmpty": false,
+            "emittedBy": [
+                "typescript"
+            ]
+        },
+        "connection_error": {
+            "retryable": true,
+            "landsEmpty": false,
+            "emittedBy": [
+                "python"
+            ]
+        },
+        "api_error": {
+            "retryable": true,
+            "landsEmpty": false,
+            "emittedBy": [
+                "python"
+            ]
+        }
+    },
+    "provider": {
+        "authentication_error": {
+            "retryable": false
+        },
+        "permission_error": {
+            "retryable": false
+        },
+        "billing_error": {
+            "retryable": false
+        },
+        "not_found_error": {
+            "retryable": false
+        },
+        "unprocessable_entity_error": {
+            "retryable": false
+        },
+        "request_too_large": {
+            "retryable": false
+        },
+        "content_filter": {
+            "retryable": false
+        },
+        "refusal": {
+            "retryable": false
+        },
+        "rate_limit_error": {
+            "retryable": true
+        },
+        "overloaded_error": {
+            "retryable": true
+        }
+    }
+}

@@ -1,0 +1,28 @@
+{
+    "cases": [
+        {
+            "name": "plain",
+            "content": "plain",
+            "canonical": "plain",
+            "hash": "a116c9ed46d6207734a43317d30fd88f52ac8634c37d904bbf4e41d865f90475",
+            "placeholders": []
+        },
+        {
+            "name": "line endings",
+            "content": "line one\r\nline two",
+            "canonical": "line one\nline two",
+            "hash": "b6858b03a6cae635deeaeab09a74e598979b72c917cbfff0bb3fe2cd05111dbc",
+            "placeholders": []
+        },
+        {
+            "name": "unicode and placeholders",
+            "content": "café ${_id} ${name} ${_id}",
+            "canonical": "café ${_id} ${name} ${_id}",
+            "hash": "461ed8c0c5da034855a409fb08b6293ee3200dabbfe6b9fb28deb5fbed5d7e24",
+            "placeholders": [
+                "_id",
+                "name"
+            ]
+        }
+    ]
+}

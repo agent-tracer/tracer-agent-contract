@@ -1,0 +1,32 @@
+{
+    "stepRoles": [
+        "system",
+        "user",
+        "assistant",
+        "tool",
+        "graph"
+    ],
+    "graphEventKinds": [
+        "node.started",
+        "node.completed",
+        "node.failed",
+        "route.selected",
+        "validation.failed"
+    ],
+    "observationEventKinds": [
+        "run.completed",
+        "model_call.completed",
+        "tool_call.completed",
+        "validation.completed"
+    ],
+    "identifiers": [
+        "experimentId",
+        "exampleId",
+        "variantId",
+        "executionId",
+        "attemptId",
+        "modelCallId",
+        "providerRequestId",
+        "traceId"
+    ]
+}

@@ -1,0 +1,100 @@
+{
+    "agents": {
+        "title-suggestion": {
+            "input": {
+                "required": [
+                    "taskId"
+                ],
+                "optional": []
+            },
+            "evidenceTools": [
+                "get_task_events"
+            ]
+        },
+        "recipe-scan": {
+            "input": {
+                "required": [
+                    "taskId"
+                ],
+                "optional": [
+                    "userPrompt",
+                    "language",
+                    "trigger"
+                ]
+            },
+            "evidenceTools": [
+                "get_task_summary",
+                "get_task_events",
+                "list_rules",
+                "search_events",
+                "find_similar_tasks",
+                "search_recipes",
+                "check_citations"
+            ]
+        },
+        "task-cleanup": {
+            "input": {
+                "required": [],
+                "optional": [
+                    "maxSuggestions"
+                ]
+            },
+            "evidenceTools": [
+                "list_candidate_tasks",
+                "get_task_events"
+            ]
+        },
+        "chat": {
+            "input": {
+                "required": [
+                    "threadId",
+                    "messages"
+                ],
+                "optional": [
+                    "facts",
+                    "summary"
+                ]
+            },
+            "evidenceTools": [
+                "search_tasks",
+                "get_task",
+                "get_timeline",
+                "search_events",
+                "list_memos",
+                "list_rules",
+                "get_rule_evidence",
+                "list_tags",
+                "list_recipes",
+                "list_cleanup_suggestions",
+                "get_job",
+                "list_settings",
+                "recall_facts",
+                "remember_fact",
+                "update_task",
+                "archive_task",
+                "unarchive_task",
+                "delete_task",
+                "create_memo",
+                "update_memo",
+                "delete_memo",
+                "create_rule",
+                "update_rule",
+                "delete_rule",
+                "approve_rule",
+                "reevaluate_rule",
+                "create_tag",
+                "update_tag",
+                "delete_tag",
+                "set_task_tags",
+                "accept_recipe",
+                "dismiss_recipe",
+                "retire_recipe",
+                "accept_cleanup",
+                "dismiss_cleanup",
+                "upsert_setting",
+                "delete_setting",
+                "enqueue_job"
+            ]
+        }
+    }
+}

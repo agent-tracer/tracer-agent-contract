@@ -1,0 +1,23 @@
+{
+    "profile": "local",
+    "manifest": [
+        {
+            "backend": "python",
+            "agentName": "task-cleanup",
+            "language": "en",
+            "codeName": "LAN_REPAIR_DIRECTIVE",
+            "definitionKey": "lan.task-cleanup.repair-directive.en",
+            "fragmentName": "repairDirective",
+            "defaultVersion": "v1",
+            "defaultContent": "Preserve the task and event IDs the reviewers cited. Remove any suggestion that cannot be grounded in\na reviewer report. Then return the complete repaired suggestion list.",
+            "toolContractVersion": "1",
+            "outputSchemaVersion": "1",
+            "bindings": [
+                {
+                    "templateKey": "lan.task-cleanup.investigator.repair",
+                    "fragmentSlot": "repairDirective"
+                }
+            ]
+        }
+    ]
+}
