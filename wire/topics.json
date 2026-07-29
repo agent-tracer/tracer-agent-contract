@@ -1,0 +1,14 @@
+{
+    "chatExecutionUpdates": {
+        "name": "chat.execution.updates",
+        "meaning": "대화 실행 하나가 갱신되었음을 다른 replica의 스트리밍 연결에 알린다",
+        "key": "executionId",
+        "payload": {
+            "executionId": {
+                "type": "string",
+                "meaning": "갱신된 실행의 식별자이며 받은 쪽은 이것으로 정본을 다시 조회한다"
+            }
+        },
+        "delivery": "유실되어도 구독자가 주기 조회로 따라잡으므로 발행 실패가 실행을 끊지 않는다"
+    }
+}
