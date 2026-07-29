@@ -1,0 +1,102 @@
+{
+    "name": "chat.intake",
+    "meaning": "브라우저가 구현체마다 분기하지 않도록 대화 턴 접수 표면을 대조한다.",
+    "path": "/api/v1/chat/threads/{threadId}/messages",
+    "cancelPath": "/api/v1/chat/threads/{threadId}/executions/{executionId}/cancel",
+    "acceptedStatus": 202,
+    "userHeader": { "name": "x-monitor-user", "defaultValue": "local" },
+    "body": {
+        "fields": ["clientRequestId", "content", "model", "agentBackend", "language"],
+        "constraints": {
+            "clientRequestId": { "required": true, "trim": true, "minLength": 1, "maxLength": 200 },
+            "content": { "required": true, "trim": true, "minLength": 1, "maxLength": 10000 },
+            "model": { "required": false, "trim": true, "minLength": 1 },
+            "agentBackend": { "required": false, "enum": ["python", "claude-sdk"] },
+            "language": { "required": false, "enum": ["auto", "ko", "en", "ja", "zh"] }
+        },
+        "cases": [
+            {
+                "name": "필수 두 필드만으로 접수한다",
+                "body": { "clientRequestId": "r1", "content": "안녕" },
+                "accepted": true
+            },
+            {
+                "name": "실행 백엔드와 언어를 골라 접수한다",
+                "body": {
+                    "clientRequestId": "r2",
+                    "content": "fix the leak",
+                    "model": "claude-opus-5",
+                    "agentBackend": "claude-sdk",
+                    "language": "ko"
+                },
+                "accepted": true
+            },
+            {
+                "name": "빈 발화를 거절한다",
+                "body": { "clientRequestId": "r3", "content": "   " },
+                "accepted": false
+            },
+            {
+                "name": "알지 못하는 실행 백엔드를 거절한다",
+                "body": { "clientRequestId": "r4", "content": "안녕", "agentBackend": "graph" },
+                "accepted": false
+            },
+            {
+                "name": "요청 식별자가 없으면 거절한다",
+                "body": { "content": "안녕" },
+                "accepted": false
+            }
+        ]
+    },
+    "idempotency": {
+        "meaning": "같은 요청 식별자가 같은 입력인지 가르는 해시이며 두 구현체가 같은 바이트를 먹는다.",
+        "keys": ["content", "agentBackend", "model", "language"],
+        "encoding": "키 순서를 이대로 두고 구분자 사이 공백 없이 JSON으로 적으며, 비ASCII를 이스케이프하지 않고 주어지지 않은 값은 null로 적는다",
+        "digest": "sha256",
+        "cases": [
+            {
+                "name": "고르지 않은 값을 null로 채운다",
+                "body": { "clientRequestId": "r1", "content": "안녕" },
+                "canonical": "{\"content\":\"안녕\",\"agentBackend\":null,\"model\":null,\"language\":null}",
+                "hash": "3ffc84e823380425f5596079640fdc7ab83705f1e9228fd53b9bad32b5369629"
+            },
+            {
+                "name": "고른 값을 그대로 싣는다",
+                "body": {
+                    "clientRequestId": "r2",
+                    "content": "fix the leak",
+                    "model": "claude-opus-5",
+                    "agentBackend": "claude-sdk",
+                    "language": "ko"
+                },
+                "canonical": "{\"content\":\"fix the leak\",\"agentBackend\":\"claude-sdk\",\"model\":\"claude-opus-5\",\"language\":\"ko\"}",
+                "hash": "b4df66d54d08e7bb871c2eb1d541d525ccbefabc2ab0b41942168d2fca0e125b"
+            }
+        ]
+    },
+    "rejections": [
+        {
+            "name": "본문이 스키마를 만족하지 않는다",
+            "status": 400,
+            "code": "validation_error",
+            "message": "Invalid request"
+        },
+        {
+            "name": "스레드가 없다",
+            "status": 404,
+            "code": "not_found",
+            "message": "Thread not found"
+        },
+        {
+            "name": "같은 요청 식별자가 다른 입력으로 이미 쓰였다",
+            "status": 409,
+            "code": "chat.execution-idempotency-conflict",
+            "message": "Client request id was already used with different chat input"
+        }
+    ],
+    "timestamps": {
+        "meaning": "실행과 메시지의 시각은 밀리초 세 자리를 갖는 UTC 문자열이다",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+        "example": "2026-01-01T00:00:00.000Z"
+    }
+}

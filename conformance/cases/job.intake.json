@@ -1,0 +1,78 @@
+{
+    "name": "job.intake",
+    "meaning": "브라우저가 구현체마다 본문을 가르지 않도록 잡 접수 표면을 대조한다.",
+    "path": "/api/v1/jobs",
+    "cancelPath": "/api/v1/jobs/{id}/cancel",
+    "acceptedStatus": 202,
+    "userHeader": { "name": "x-monitor-user", "defaultValue": "local" },
+    "kinds": ["title.suggestion", "recipe.scan", "task.cleanup"],
+    "body": {
+        "fields": ["kind", "input", "idempotencyKey"],
+        "constraints": {
+            "kind": { "required": true, "enum": ["title.suggestion", "recipe.scan", "task.cleanup"] },
+            "input": { "required": false, "type": "object", "default": {} },
+            "idempotencyKey": { "required": false, "minLength": 1, "maxLength": 200 }
+        }
+    },
+    "inputs": {
+        "title.suggestion": {
+            "required": ["taskId"],
+            "optional": [],
+            "constraints": { "taskId": { "minLength": 1, "maxLength": 64 } }
+        },
+        "recipe.scan": {
+            "required": ["taskId"],
+            "optional": ["userPrompt", "language", "trigger"],
+            "constraints": {
+                "taskId": { "minLength": 1, "maxLength": 64 },
+                "userPrompt": { "minLength": 1, "maxLength": 4000 },
+                "language": { "minLength": 1, "maxLength": 16 },
+                "trigger": { "enum": ["dashboard", "session"] }
+            }
+        },
+        "task.cleanup": {
+            "required": [],
+            "optional": ["filters.maxSuggestions"],
+            "constraints": { "filters.maxSuggestions": { "minimum": 1, "maximum": 50 } }
+        }
+    },
+    "cases": [
+        {
+            "name": "태스크에 매인 잡을 접수한다",
+            "body": { "kind": "title.suggestion", "input": { "taskId": "t1" } },
+            "accepted": true
+        },
+        {
+            "name": "레시피 스캔의 선택 입력을 함께 접수한다",
+            "body": {
+                "kind": "recipe.scan",
+                "input": { "taskId": "t1", "language": "ko", "trigger": "dashboard" },
+                "idempotencyKey": "k1"
+            },
+            "accepted": true
+        },
+        {
+            "name": "정리 제안은 도메인 입력 없이 접수한다",
+            "body": { "kind": "task.cleanup", "input": {} },
+            "accepted": true
+        },
+        {
+            "name": "필수 입력이 빠지면 거절한다",
+            "body": { "kind": "title.suggestion", "input": {} },
+            "accepted": false
+        },
+        {
+            "name": "상한을 넘는 제안 수를 거절한다",
+            "body": { "kind": "task.cleanup", "input": { "filters": { "maxSuggestions": 51 } } },
+            "accepted": false
+        }
+    ],
+    "rejections": [
+        {
+            "name": "본문이 스키마를 만족하지 않는다",
+            "status": 400,
+            "code": "validation_error",
+            "message": "Invalid request"
+        }
+    ]
+}
