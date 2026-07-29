@@ -1,0 +1,1067 @@
+openapi: 3.1.0
+info:
+  title: tracer-dependency
+  version: 0.1.0
+  description: >-
+    에이전트 서비스가 추적 API에 요구하는 부분집합이다. 추적 API의 전체 표면이 아니라
+    에이전트가 없으면 실행할 수 없는 창구만 적는다. 응답은 모두 성공 봉투나 오류 봉투로 오며
+    에이전트는 400 미만을 성공으로 보고 봉투를 벗겨 읽는다.
+
+servers:
+  - url: /
+
+tags:
+  - name: envelope
+    description: 실행 시도 하나가 쓸 모델과 자격과 단가와 한도
+  - name: prompt
+    description: 파일이 정본인 프롬프트 조각의 등록과 해소
+  - name: execution
+    description: 대화 실행의 문맥 되읽기와 누적 답변 통지와 확인 대기 행
+  - name: tool
+    description: 대화 에이전트의 도구가 읽거나 부르는 표면
+
+paths:
+  /internal/chat/executions/{executionId}/envelope:
+    post:
+      operationId: issueChatExecutionEnvelope
+      tags: [envelope]
+      summary: 이번 대화 실행 시도가 쓸 모델과 자격과 단가와 한도를 낸다
+      parameters:
+        - name: executionId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /internal/jobs/{kind}/envelope:
+    post:
+      operationId: issueJobExecutionEnvelope
+      tags: [envelope]
+      summary: 이 잡 종류와 사용자가 쓸 모델과 자격과 단가와 한도를 낸다
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId]
+              properties:
+                userId: { type: string, minLength: 1 }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /internal/prompts/fragments/register-and-resolve:
+    post:
+      operationId: registerAndResolvePromptFragments
+      tags: [prompt]
+      summary: 부팅 시 자기 파일 프롬프트 조각을 등록하고 이번 실행이 쓸 판을 받는다
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 조각의 정의 키와 기본 내용과 해시를 싣는다
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /internal/prompts/python/register:
+    post:
+      operationId: registerPrompt
+      tags: [prompt]
+      summary: 부팅 시 자기 파일 프롬프트의 해시를 등록한다
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 프롬프트의 식별자와 내용 해시를 싣는다
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/chat/threads/{threadId}/executions/{executionId}/replay:
+    get:
+      operationId: getChatReplay
+      tags: [execution]
+      summary: 이번 턴에 모델에게 되돌려 줄 대화 이력을 되읽는다
+      parameters:
+        - name: threadId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: executionId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/chat/threads/{threadId}/confirmations:
+    post:
+      operationId: proposeTool
+      tags: [execution]
+      summary: 확인이 필요한 도구 호출 하나를 대기 행에 세운다
+      parameters:
+        - name: threadId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [toolName]
+              properties:
+                toolName: { type: string, minLength: 1, maxLength: 100 }
+                args: { type: object, default: {} }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/chat/executions/{executionId}/drafts:
+    post:
+      operationId: checkpointChatDraft
+      tags: [execution]
+      summary: 지금까지 만든 누적 답변을 원장에 통지한다
+      description: 이 창구의 주소와 자격 토큰은 실행 봉투가 싣는다
+      parameters:
+        - name: executionId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, attempt, draftSeq, text]
+              properties:
+                token: { type: string, minLength: 1, maxLength: 200 }
+                attempt: { type: integer, minimum: 1 }
+                draftSeq: { type: integer, minimum: 1 }
+                text: { type: string, maxLength: 200000 }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/tasks:
+    get:
+      operationId: search_tasks
+      tags: [tool]
+      summary: 태스크를 조건으로 조회한다
+      x-confirmation-gate: none
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { type: string }
+        - name: origin
+          in: query
+          required: false
+          schema: { type: string }
+        - name: archived
+          in: query
+          required: false
+          schema: { type: string }
+        - name: root
+          in: query
+          required: false
+          schema: { type: string }
+        - name: parentTaskId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/tasks/{taskId}:
+    get:
+      operationId: get_task
+      tags: [tool]
+      summary: 태스크 하나를 조회한다
+      x-confirmation-gate: none
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+    patch:
+      operationId: update_task
+      tags: [tool]
+      summary: 태스크의 제목과 상태를 고친다
+      x-confirmation-gate: confirm
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: {}
+                status: {}
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+    delete:
+      operationId: delete_task
+      tags: [tool]
+      summary: 태스크를 삭제한다
+      x-confirmation-gate: confirm
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/tasks/{taskId}/timeline:
+    get:
+      operationId: get_timeline
+      tags: [tool]
+      summary: 태스크의 타임라인을 조회한다
+      x-confirmation-gate: none
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: cursor
+          in: query
+          required: false
+          schema: { type: string }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/events/search:
+    get:
+      operationId: search_events
+      tags: [tool]
+      summary: 이벤트를 검색한다
+      x-confirmation-gate: none
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema: { type: string }
+        - name: taskId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: kind
+          in: query
+          required: false
+          schema: { type: string }
+        - name: lane
+          in: query
+          required: false
+          schema: { type: string }
+        - name: from
+          in: query
+          required: false
+          schema: { type: string }
+        - name: to
+          in: query
+          required: false
+          schema: { type: string }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/memos:
+    get:
+      operationId: list_memos
+      tags: [tool]
+      summary: 메모를 조회한다
+      x-confirmation-gate: none
+      parameters:
+        - name: taskId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: eventId
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+    post:
+      operationId: create_memo
+      tags: [tool]
+      summary: 메모를 만든다
+      x-confirmation-gate: confirm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                taskId: {}
+                body: {}
+                eventId: {}
+                author: { const: agent }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/rules:
+    get:
+      operationId: list_rules
+      tags: [tool]
+      summary: 검증 규칙을 조회한다
+      x-confirmation-gate: none
+      parameters:
+        - name: taskId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: all
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+    post:
+      operationId: create_rule
+      tags: [tool]
+      summary: 검증 규칙을 만든다
+      x-confirmation-gate: confirm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                taskId: {}
+                anchorEventId: {}
+                name: {}
+                expect: {}
+                severity: {}
+                rationale: {}
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/rules/{ruleId}/evidence:
+    get:
+      operationId: get_rule_evidence
+      tags: [tool]
+      summary: 규칙의 근거를 조회한다
+      x-confirmation-gate: none
+      parameters:
+        - name: ruleId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: taskId
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/tags:
+    get:
+      operationId: list_tags
+      tags: [tool]
+      summary: 태그를 조회한다
+      x-confirmation-gate: none
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+    post:
+      operationId: create_tag
+      tags: [tool]
+      summary: 태그를 만든다
+      x-confirmation-gate: confirm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: {}
+                color: {}
+                description: {}
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/recipes:
+    get:
+      operationId: list_recipes
+      tags: [tool]
+      summary: 레시피를 조회한다
+      x-confirmation-gate: none
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/task-cleanup/suggestions:
+    get:
+      operationId: list_cleanup_suggestions
+      tags: [tool]
+      summary: 정리 제안을 조회한다
+      x-confirmation-gate: none
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/jobs/{jobId}:
+    get:
+      operationId: get_job
+      tags: [tool]
+      summary: 잡 하나를 조회한다
+      x-confirmation-gate: none
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/settings:
+    get:
+      operationId: list_settings
+      tags: [tool]
+      summary: 설정을 조회한다
+      x-confirmation-gate: none
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/tasks/{taskId}/archive:
+    post:
+      operationId: archive_task
+      tags: [tool]
+      summary: 태스크를 보관한다
+      x-confirmation-gate: confirm
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+    delete:
+      operationId: unarchive_task
+      tags: [tool]
+      summary: 태스크의 보관을 푼다
+      x-confirmation-gate: confirm
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/memos/{memoId}:
+    patch:
+      operationId: update_memo
+      tags: [tool]
+      summary: 메모를 고친다
+      x-confirmation-gate: confirm
+      parameters:
+        - name: memoId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body: {}
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+    delete:
+      operationId: delete_memo
+      tags: [tool]
+      summary: 메모를 삭제한다
+      x-confirmation-gate: confirm
+      parameters:
+        - name: memoId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/rules/{ruleId}:
+    patch:
+      operationId: update_rule
+      tags: [tool]
+      summary: 검증 규칙을 고친다
+      x-confirmation-gate: confirm
+      parameters:
+        - name: ruleId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: {}
+                expect: {}
+                severity: {}
+                rationale: {}
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+    delete:
+      operationId: delete_rule
+      tags: [tool]
+      summary: 검증 규칙을 삭제한다
+      x-confirmation-gate: confirm
+      parameters:
+        - name: ruleId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/rules/{ruleId}/approve:
+    post:
+      operationId: approve_rule
+      tags: [tool]
+      summary: 검증 규칙을 승인한다
+      x-confirmation-gate: confirm
+      parameters:
+        - name: ruleId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/rules/{ruleId}/reevaluate:
+    post:
+      operationId: reevaluate_rule
+      tags: [tool]
+      summary: 검증 규칙을 다시 평가한다
+      x-confirmation-gate: confirm
+      parameters:
+        - name: ruleId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/tags/{tagId}:
+    patch:
+      operationId: update_tag
+      tags: [tool]
+      summary: 태그를 고친다
+      x-confirmation-gate: confirm
+      parameters:
+        - name: tagId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: {}
+                color: {}
+                description: {}
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+    delete:
+      operationId: delete_tag
+      tags: [tool]
+      summary: 태그를 삭제한다
+      x-confirmation-gate: confirm
+      parameters:
+        - name: tagId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/task-tags:
+    put:
+      operationId: set_task_tags
+      tags: [tool]
+      summary: 태스크의 태그를 통째로 지정한다
+      x-confirmation-gate: confirm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                taskId: {}
+                tagIds: {}
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/recipes/{recipeId}/accept:
+    post:
+      operationId: accept_recipe
+      tags: [tool]
+      summary: 레시피를 채택한다
+      x-confirmation-gate: confirm
+      parameters:
+        - name: recipeId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/recipes/{recipeId}/dismiss:
+    post:
+      operationId: dismiss_recipe
+      tags: [tool]
+      summary: 레시피를 보류한다
+      x-confirmation-gate: confirm
+      parameters:
+        - name: recipeId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/recipes/{recipeId}/retire:
+    post:
+      operationId: retire_recipe
+      tags: [tool]
+      summary: 레시피를 폐기한다
+      x-confirmation-gate: confirm
+      parameters:
+        - name: recipeId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/task-cleanup/suggestions/{suggestionId}/accept:
+    post:
+      operationId: accept_cleanup
+      tags: [tool]
+      summary: 정리 제안을 수용한다
+      x-confirmation-gate: confirm
+      parameters:
+        - name: suggestionId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/task-cleanup/suggestions/{suggestionId}/dismiss:
+    post:
+      operationId: dismiss_cleanup
+      tags: [tool]
+      summary: 정리 제안을 기각한다
+      x-confirmation-gate: confirm
+      parameters:
+        - name: suggestionId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/settings/{key}:
+    put:
+      operationId: upsert_setting
+      tags: [tool]
+      summary: 설정 하나를 쓴다
+      x-confirmation-gate: confirm
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                value: {}
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+    delete:
+      operationId: delete_setting
+      tags: [tool]
+      summary: 설정 하나를 지운다
+      x-confirmation-gate: confirm
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/jobs:
+    post:
+      operationId: enqueue_job
+      tags: [tool]
+      summary: 잡 하나를 접수한다
+      x-confirmation-gate: confirm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                kind: {}
+                input: {}
+                agentBackend: {}
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/chat/memories:
+    get:
+      operationId: recall_facts
+      tags: [tool]
+      summary: 사용자 장기기억을 되읽는다
+      x-confirmation-gate: none
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+  /api/v1/chat/memories/{key}:
+    put:
+      operationId: remember_fact
+      tags: [tool]
+      summary: 사용자 장기기억 하나를 쓴다
+      x-confirmation-gate: none
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content: {}
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
+components:
+  responses:
+    Success:
+      description: 성공 봉투를 낸다
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SuccessEnvelope"
+    Failure:
+      description: 오류 봉투를 낸다
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+
+  schemas:
+    SuccessEnvelope:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          const: true
+        data:
+          description: 창구가 낸 payload이며 실을 것이 없으면 null이다
+
+    ErrorEnvelope:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          const: false
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            details:
+              description: 구조화된 거절 근거이며 주어졌을 때만 실린다
