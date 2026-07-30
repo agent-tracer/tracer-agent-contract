@@ -73,15 +73,3 @@ CREATE TABLE IF NOT EXISTS "experiment_variants" (
     "baseline" boolean NOT NULL DEFAULT false,
     CONSTRAINT "experiment_variants_pkey" PRIMARY KEY ("id")
 );
-
--- 워커가 자기 프롬프트 판을 대조하는 창구이며 production 채널의 시스템 기본 판만 비춘다.
-CREATE OR REPLACE VIEW "agent_prompt_registry_view" AS
-SELECT
-    d.agent_name AS agent_name,
-    d.backend AS backend,
-    v.semantic_version AS semantic_version,
-    v.content_hash AS content_hash
-FROM prompt_channels c
-JOIN prompt_definitions d ON d.id = c.definition_id
-JOIN prompt_versions v ON v.id = c.version_id AND v.definition_id = c.definition_id
-WHERE c.channel = 'production' AND d.user_id = 'system' AND d.name = 'default';
