@@ -34,6 +34,11 @@
         "rule": "부팅 등록은 그 배포가 보는 채널에 행이 없을 때만 코드 기본값 판을 심는다",
         "origin": "code-default"
     },
+    "versionOrigins": {
+        "meaning": "prompt_fragment_versions.origin 은 그 판의 본문이 어디서 왔는지를 가르며 값은 이 둘뿐이다",
+        "code-default": "구현체가 코드로 선언한 본문을 부팅 등록이 심었다",
+        "database-authored": "후보 등록 창구로 사람이 작성한 본문이다"
+    },
     "drift": {
         "policy": "boot-fail",
         "meaning": "등록 창구에 닿지 못하거나 받은 판이 코드가 선언한 것과 어긋나면 워커 부팅이 실패하며 파일 기본값으로 물러서지 않는다",
