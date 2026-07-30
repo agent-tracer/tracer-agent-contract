@@ -111,6 +111,28 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /api/v1/chat/threads/{threadId}/executions/{executionId}/replay:
+    get:
+      operationId: getChatReplay
+      tags: [chat]
+      summary: 이번 턴에 모델에게 되돌려 줄 대화 이력을 되읽는다
+      description: >-
+        실행기가 자기 원장으로 이력을 다시 구하지 않고 접수를 되읽어, 어느 구현체가 태우든 같은
+        재생 계산을 받는다. 실행기가 자기 배포 단위의 창구를 부르므로 에이전트가 이것을 소유한다.
+      parameters:
+        - $ref: "#/components/parameters/ThreadId"
+        - $ref: "#/components/parameters/ExecutionId"
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 되돌려 줄 이력을 낸다
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessEnvelope"
+        "404":
+          $ref: "#/components/responses/ThreadNotFound"
+
   /api/v1/jobs:
     post:
       operationId: enqueueJob

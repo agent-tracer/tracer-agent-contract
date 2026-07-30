@@ -3,33 +3,6 @@
     "meaning": "Python 구현이 아직 정본을 따라가지 못한 자리의 목록이다. 양쪽 다 옳을 수 있는 차이가 아니라 좁혀야 할 대상이며, 계약이 목표 상태를 적으면 두 구현체가 동시에 실패해 무엇이 문제인지 보이지 않으므로 갈라진 곳은 갈라진 대로 여기 적는다. 이 목록이 다음 단계의 백로그다.",
     "items": [
         {
-            "id": "job.ledger",
-            "area": "job",
-            "summary": "잡 실행을 적는 원장이 다르다",
-            "canonical": "typescript",
-            "typescript": "잡 행 하나와 그에 매달린 궤적 단계를 적고 /api/v1/jobs/{id}로 조회한다",
-            "python": "자기 접수구가 쓴 실행 행 하나만 적고 /api/v1/jobs/graph/{id}로 조회한다",
-            "resolution": "두 원장이 수렴한 뒤 db/에 실행 원장 스키마를 세운다"
-        },
-        {
-            "id": "job.enqueue.response",
-            "area": "job",
-            "summary": "잡 접수 응답의 data가 다르다",
-            "canonical": "typescript",
-            "typescript": "job 하나를 통째로 싣는다",
-            "python": "runId와 executionId만 싣는다",
-            "resolution": "실행 원장이 수렴하면 접수 응답도 한 모양으로 모은다"
-        },
-        {
-            "id": "job.cancel.response",
-            "area": "job",
-            "summary": "잡 취소 응답의 data가 다르다",
-            "canonical": "typescript",
-            "typescript": "중단된 job 하나를 싣는다",
-            "python": "취소 요청이 워크플로에 닿았는지를 참거짓으로 싣는다",
-            "resolution": "실행 원장이 수렴하면 취소 응답도 한 모양으로 모은다"
-        },
-        {
             "id": "job.enqueue.credential",
             "area": "job",
             "summary": "접수 시점의 자격 검사가 다르다",
@@ -48,22 +21,13 @@
             "resolution": "rule.generation을 어느 구현체가 소유할지 정한다"
         },
         {
-            "id": "job.queues",
-            "area": "workflow",
-            "summary": "잡 큐의 수가 다르다",
-            "canonical": "typescript",
-            "typescript": "sdk-jobs와 sdk-generate로 나누어 긴 생성 액티비티가 짧은 액티비티의 슬롯을 점유하지 않게 한다",
-            "python": "graph-jobs 하나로 받으며 생성 큐를 분리하지 않는다",
-            "resolution": "생성 큐 분리를 두 구현체 모두에 세운다"
-        },
-        {
             "id": "job.workflow.shape",
             "area": "workflow",
-            "summary": "잡 워크플로의 수가 다르다",
+            "summary": "잡 워크플로와 액티비티의 수가 다르다",
             "canonical": "typescript",
-            "typescript": "잡 종류마다 워크플로 하나를 두고 준비·생성·종결 액티비티로 나눈다",
-            "python": "셋을 graphAgentJobWorkflow 하나가 받고 실행 액티비티 하나로 처리한다",
-            "resolution": "궤적을 원장에 적는 단계 경계를 한 모양으로 정한다"
+            "typescript": "잡 종류마다 워크플로 하나를 두고 준비·생성·종결 액티비티로 나누며 생성만 generate 큐로 보낸다",
+            "python": "셋을 agentJobWorkflow 하나가 받고 준비와 종결을 실행 액티비티 안에서 처리하며 그 하나를 generate 큐로 보낸다",
+            "resolution": "궤적 단계 경계는 이미 같다. 남은 것은 워크플로와 액티비티의 수이며 재시도 경계가 그것에 매여 있다"
         },
         {
             "id": "job.deadline.source",
@@ -73,15 +37,6 @@
             "typescript": "추적 API의 기능 한도에서 받는다",
             "python": "접수가 잡 종류마다 고정값을 싣는다. recipe.scan 720000, title.suggestion 180000, task.cleanup 300000",
             "resolution": "데드라인을 실행 봉투 하나가 소유하게 한다"
-        },
-        {
-            "id": "chat.queue",
-            "area": "workflow",
-            "summary": "대화 큐와 워크플로 이름이 갈라져 있다",
-            "canonical": "typescript",
-            "typescript": "sdk-chat에서 chatThreadWorkflow와 chatExecutionWorkflow가 실행된다",
-            "python": "graph-chat에서 graphChatThreadWorkflow와 graphChatExecutionWorkflow가 실행된다",
-            "resolution": "지금 이름을 통일하면 두 구현체가 같은 큐를 두고 경합하므로, 한 구현체가 대화 실행을 단독으로 소유한 뒤에 모은다"
         },
         {
             "id": "evaluation.run",
@@ -100,6 +55,33 @@
             "typescript": "output_schema_invalid·cancelled·process_error를 낸다",
             "python": "max_tokens·connection_error·api_error를 낸다",
             "resolution": "agent/shared/error.subtypes.json의 emittedBy가 모두 두 구현체를 담을 때까지 좁힌다"
+        },
+        {
+            "id": "chat.replay",
+            "area": "http",
+            "summary": "실행기가 되읽는 대화 이력 창구를 한쪽만 섬긴다",
+            "canonical": "typescript",
+            "typescript": "agent-api가 /api/v1/chat/threads/{threadId}/executions/{executionId}/replay를 열고 워커가 자기 배포 단위의 그 경로를 부른다",
+            "python": "그 경로를 열지 않고 워커가 추적 API 주소로 부르므로 404가 오고 턴이 종결하지 못한다",
+            "resolution": "python의 agent-api가 그 창구를 열고 워커가 자기 배포 단위를 부르게 한다"
+        },
+        {
+            "id": "chat.draft",
+            "area": "http",
+            "summary": "누적 답변을 받는 창구를 한쪽만 섬긴다",
+            "canonical": "typescript",
+            "typescript": "agent-api가 /api/v1/chat/executions/{id}/drafts를 열어 실행기가 만드는 중인 답변을 받는다",
+            "python": "봉투가 그 주소를 실어 보내지만 그 경로를 열지 않아 타이핑되는 답변이 화면에 닿지 않는다",
+            "resolution": "python의 agent-api가 그 창구를 연다. 원장의 checkpoint_running은 이미 있다"
+        },
+        {
+            "id": "job.usage.shape",
+            "area": "job",
+            "summary": "실패한 잡의 usage 모양이 다르다",
+            "canonical": "typescript",
+            "typescript": "실패하면 시도마다의 기록을 attempts 배열 하나로 싣는다",
+            "python": "실패해도 model·costUsd·numTurns·durationMs와 토큰 넷을 평평하게 싣는다",
+            "resolution": "성공 경로는 이미 같다. 실패 경로의 usage를 한 모양으로 정한다"
         }
     ],
     "canonical": "typescript가 정본이다. 항목의 canonical이 python이면 SDK나 LangGraph가 강제해 정본이 따라가야 하는 자리다."

@@ -17,28 +17,6 @@ tags:
     description: 대화 에이전트의 도구가 읽거나 부르는 표면
 
 paths:
-  /api/v1/chat/threads/{threadId}/executions/{executionId}/replay:
-    get:
-      operationId: getChatReplay
-      tags: [execution]
-      summary: 이번 턴에 모델에게 되돌려 줄 대화 이력을 되읽는다
-      parameters:
-        - name: threadId
-          in: path
-          required: true
-          schema: { type: string }
-        - name: executionId
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        "2XX":
-          $ref: "#/components/responses/Success"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-
   /api/v1/chat/threads/{threadId}/confirmations:
     post:
       operationId: proposeTool
