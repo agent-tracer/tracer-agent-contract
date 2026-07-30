@@ -73,6 +73,16 @@ def _read_surface_paths(file_name: str) -> list[str]:
     return re.findall(r"^ {2}(/\S+):$", spec, re.MULTILINE)
 
 
+def read_openapi_enum(schema_name: str) -> list[str]:
+    """OpenAPI 가 선언한 이름 붙은 enum 하나의 값을 낸다."""
+    spec = (ROOT / "http" / "agent-api.openapi.yaml").read_text(encoding="utf-8")
+    pattern = rf"^ {{4}}{schema_name}:\n(?: {{6}}.*\n)*? {{6}}enum: \[([^\]]*)\]"
+    declared = re.search(pattern, spec, re.MULTILINE)
+    if declared is None:
+        raise SystemExit(f"{schema_name} 이 enum 을 선언하지 않는다")
+    return [value.strip() for value in declared.group(1).split(",")]
+
+
 def route_key(route: dict[str, str]) -> str:
     """메서드와 경로를 한 문자열로 모아 대조와 정렬의 키로 쓴다."""
     return f"{route['method']} {normalize_path_template(route['path'])}"

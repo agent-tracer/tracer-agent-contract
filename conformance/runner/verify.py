@@ -14,6 +14,7 @@ from contract import (
     read_case,
     read_declared_http_paths,
     read_json,
+    read_openapi_enum,
     read_tool_binding_paths,
     read_version,
     route_key,
@@ -120,6 +121,17 @@ def main() -> None:
         channel not in ungated_channels for channel in registry["promotionPath"][:-1]
     )
 
+    intake_kinds = read_case("job.intake")["kinds"]
+    ledger_kinds = list(read_json("wire/job.kinds.json")["kinds"].keys())
+    kind_mismatch = [
+        (where, values)
+        for where, values in (
+            ("OpenAPI 의 JobKind", read_openapi_enum("JobKind")),
+            ("wire/job.kinds.json", ledger_kinds),
+        )
+        if sorted(values) != sorted(intake_kinds)
+    ]
+
     if not cases:
         raise SystemExit("적합성 케이스가 하나도 없다")
     if grouped["unclassified"]:
@@ -143,6 +155,11 @@ def main() -> None:
         )
     if prefixed_keys:
         raise SystemExit(f"조각의 이름이 구현체를 말하는 접두사를 달고 있다 — {', '.join(prefixed_keys)}")
+    if kind_mismatch:
+        detail = " · ".join(f"{where} 는 {', '.join(values)}" for where, values in kind_mismatch)
+        raise SystemExit(
+            f"접수가 받는 잡 종류가 자리마다 다르다 — job.intake 는 {', '.join(intake_kinds)} 인데 {detail}"
+        )
     if incomplete_topics:
         fields = " · ".join(TOPIC_FIELDS)
         raise SystemExit(f"토픽 선언에 {fields} 가 다 있어야 한다 — {', '.join(incomplete_topics)}")
@@ -175,6 +192,9 @@ def main() -> None:
     print(f"계약 {version}: 케이스 {len(cases)}개를 읽었다 — {', '.join(cases)}")
     print(f"강제 {len(grouped['enforced'])}자리, 기록 {len(grouped['recorded'])}자리")
     print(f"도구 {len(bindings)}개가 부르는 경로를 HTTP 표면 {len(declared_paths)}자리가 덮는다")
+    print(
+        f"접수가 받는 잡 종류 {len(intake_kinds)}개를 세 자리가 같게 적는다 — {', '.join(intake_kinds)}"
+    )
     print(
         f"조각 채널 {len(declared_channels)}개를 profile {len(registry['profileChannels'])}개가 나눠 보고 "
         f"판이 어긋나면 {registry['drift']['policy']} 하며 "

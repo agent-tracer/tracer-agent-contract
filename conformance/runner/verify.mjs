@@ -7,6 +7,7 @@ import {
     readDeclaredHttpPaths,
     readJson,
     readToolBindingPaths,
+    readOpenApiEnum,
     readVersion,
     routeKey,
 } from "./contract.mjs";
@@ -83,6 +84,13 @@ const prefixedKeys = [registry.identity.definitionKey.example, registry.identity
     .concat(registry.identity.codeName.example)
     .filter((value) => registry.identity.rejectedPrefixes.some((prefix) => value.startsWith(prefix)));
 
+const intakeKinds = readCase("job.intake").kinds;
+const ledgerKinds = Object.keys(readJson("wire/job.kinds.json").kinds);
+const kindMismatch = [
+    ["OpenAPI 의 JobKind", readOpenApiEnum("JobKind")],
+    ["wire/job.kinds.json", ledgerKinds],
+].filter(([, values]) => [...values].sort().join() !== [...intakeKinds].sort().join());
+
 const topics = readJson("wire/topics.json");
 const incompleteTopics = Object.entries(topics)
     .filter(([, topic]) => TOPIC_FIELDS.some((field) => topic[field] === undefined))
@@ -114,6 +122,12 @@ if (gateMismatch) {
 if (prefixedKeys.length > 0) {
     throw new Error(`조각의 이름이 구현체를 말하는 접두사를 달고 있다 — ${prefixedKeys.join(", ")}`);
 }
+if (kindMismatch.length > 0) {
+    throw new Error(
+        `접수가 받는 잡 종류가 자리마다 다르다 — job.intake 는 ${intakeKinds.join(", ")} 인데 ` +
+            kindMismatch.map(([where, values]) => `${where} 는 ${values.join(", ")}`).join(" · "),
+    );
+}
 if (incompleteTopics.length > 0) {
     throw new Error(
         `토픽 선언에 ${TOPIC_FIELDS.join(" · ")} 가 다 있어야 한다 — ${incompleteTopics.join(", ")}`,
@@ -143,6 +157,7 @@ if (baseUrl !== undefined) {
 console.log(`계약 ${version}: 케이스 ${cases.length}개를 읽었다 — ${cases.join(", ")}`);
 console.log(`강제 ${grouped.enforced.length}자리, 기록 ${grouped.recorded.length}자리`);
 console.log(`도구 ${bindings.length}개가 부르는 경로를 HTTP 표면 ${declaredPaths.size}자리가 덮는다`);
+console.log(`접수가 받는 잡 종류 ${intakeKinds.length}개를 세 자리가 같게 적는다 — ${intakeKinds.join(", ")}`);
 console.log(
     `조각 채널 ${declaredChannels.length}개를 profile ${Object.keys(registry.profileChannels).length}개가 나눠 보고 ` +
         `판이 어긋나면 ${registry.drift.policy} 하며 ${gatedChannel} 승격이 ${registry.promotionGate.policy} 를 지난다`,

@@ -85,6 +85,14 @@ export function readAgentApiRoutes() {
     return routes.sort((left, right) => (routeKey(left) < routeKey(right) ? -1 : 1));
 }
 
+/** OpenAPI 가 선언한 이름 붙은 enum 하나의 값을 낸다. */
+export function readOpenApiEnum(schemaName) {
+    const spec = readFileSync(join(ROOT, "http", "agent-api.openapi.yaml"), "utf8");
+    const declared = new RegExp(`^ {4}${schemaName}:\\n(?: {6}.*\\n)*? {6}enum: \\[([^\\]]*)\\]`, "m").exec(spec);
+    if (declared === null) throw new Error(`${schemaName} 이 enum 을 선언하지 않는다`);
+    return declared[1].split(",").map((value) => value.trim());
+}
+
 /** 메서드와 경로를 한 문자열로 모아 대조와 정렬의 키로 쓴다. */
 export function routeKey(route) {
     return `${route.method} ${normalizePathTemplate(route.path)}`;
