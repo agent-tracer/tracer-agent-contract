@@ -142,20 +142,13 @@ jobWorkflows:
       kinds: [title-suggestion, recipe-scan, task-cleanup]
       idReusePolicy: REJECT_DUPLICATE
       activities:
-        - name: prepareAgentJob
-          queue: jobs
-          startToCloseSeconds: 60
-          maximumAttempts: 5
         - name: runAgentJob
           queue: generate
           startToCloseSeconds: 900
           heartbeatTimeoutSeconds: 30
           heartbeatIntervalSeconds: 10
           maximumAttempts: 3
-        - name: finalizeAgentJob
-          queue: jobs
-          startToCloseSeconds: 60
-          maximumAttempts: 5
+          meaning: 준비와 종결이 이 액티비티 안에서 함께 일어나므로 잡 하나가 액티비티 하나로 끝난다
         - name: settleCanceledAgentJob
           queue: jobs
           startToCloseSeconds: 30
