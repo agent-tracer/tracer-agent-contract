@@ -55,3 +55,37 @@ CREATE TABLE IF NOT EXISTS "evaluation_scores" (
 
 CREATE UNIQUE INDEX IF NOT EXISTS "evaluation_scores_execution_evaluator"
     ON "evaluation_scores" ("execution_id", "evaluator_id", "evaluator_version");
+
+CREATE TABLE IF NOT EXISTS "evaluator_sets" (
+    "id" text NOT NULL,
+    "version" text NOT NULL,
+    "created_at" TIMESTAMP WITH TIME ZONE NOT NULL,
+    CONSTRAINT "evaluator_sets_pkey" PRIMARY KEY ("id")
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS "evaluator_sets_version"
+    ON "evaluator_sets" ("version");
+
+CREATE TABLE IF NOT EXISTS "evaluator_set_members" (
+    "id" text NOT NULL,
+    "set_id" text NOT NULL,
+    "evaluator_definition_id" text NOT NULL,
+    "ordinal" integer NOT NULL,
+    CONSTRAINT "evaluator_set_members_pkey" PRIMARY KEY ("id")
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS "evaluator_set_members_set_ordinal"
+    ON "evaluator_set_members" ("set_id", "ordinal");
+
+CREATE TABLE IF NOT EXISTS "human_review_revisions" (
+    "id" text NOT NULL,
+    "review_id" text NOT NULL,
+    "preference" text NOT NULL,
+    "reason" text,
+    "corrected_output" jsonb,
+    "created_at" TIMESTAMP WITH TIME ZONE NOT NULL,
+    CONSTRAINT "human_review_revisions_pkey" PRIMARY KEY ("id")
+);
+
+CREATE INDEX IF NOT EXISTS "human_review_revisions_review"
+    ON "human_review_revisions" ("review_id", "created_at");
