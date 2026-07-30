@@ -25,7 +25,8 @@
                 "conformance/cases/envelope.json",
                 "conformance/cases/chat.intake.json",
                 "conformance/cases/chat.query.json",
-                "conformance/cases/job.intake.json"
+                "conformance/cases/job.intake.json",
+                "conformance/cases/tracer.outputs.json"
             ]
         },
         "recorded": {
@@ -45,6 +46,7 @@
     "notes": {
         "tools": "도구 목록이 가장 중요하다. 같은 도구를 갖는다는 것이 두 구현체가 같은 일을 할 수 있다는 말의 실질이다.",
         "promptFragmentIntegrity": "agent/shared/prompt.fragment.integrity.json의 세 케이스는 두 구현체가 자기 해시 함수로 대조한다. 같은 본문이 같은 정규화와 같은 다이제스트를 거쳐야 한쪽에 등록한 조각을 다른 쪽이 무결성 검사에서 거절하지 않는다.",
-        "queryShapes": "조회 응답의 칸은 열거하며 object라 적지 않는다. chat.query.json이 대화 조회의 칸을, job.intake.json의 response 절이 잡 접수와 조회의 칸을 소유하고 두 구현체가 그 목록을 읽어 자기 응답과 대조한다."
+        "queryShapes": "조회 응답의 칸은 열거하며 object라 적지 않는다. chat.query.json이 대화 조회의 칸을, job.intake.json의 response 절이 잡 접수와 조회의 칸을 소유하고 두 구현체가 그 목록을 읽어 자기 응답과 대조한다.",
+        "tracerOutputs": "tracer.outputs.json은 추적 API의 산출물 생성 창구를 대조한다. 그 창구는 에이전트를 위한 것이 아니므로 요청의 칸과 창구가 정하는 값을 함께 적어 대시보드가 같은 본문으로 부를 수 있게 한다."
     }
 }
