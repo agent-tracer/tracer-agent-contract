@@ -12,15 +12,6 @@
             "resolution": "봉투 발급 시점을 한쪽으로 모은 뒤 거절 코드를 하나로 정한다"
         },
         {
-            "id": "job.kinds",
-            "area": "job",
-            "summary": "접수가 받는 잡 종류의 수가 다르다",
-            "canonical": "typescript",
-            "typescript": "title.suggestion·recipe.scan·task.cleanup·rule.generation 넷을 받으며 rule.generation은 로컬 실행기가 집는다",
-            "python": "앞의 셋만 받는다",
-            "resolution": "rule.generation을 어느 구현체가 소유할지 정한다"
-        },
-        {
             "id": "job.workflow.shape",
             "area": "workflow",
             "summary": "잡 워크플로와 액티비티의 수가 다르다",
@@ -28,15 +19,6 @@
             "typescript": "잡 종류마다 워크플로 하나를 두고 준비·생성·종결 액티비티로 나누며 생성만 generate 큐로 보낸다",
             "python": "셋을 agentJobWorkflow 하나가 받고 준비와 종결을 실행 액티비티 안에서 처리하며 그 하나를 generate 큐로 보낸다",
             "resolution": "궤적 단계 경계는 이미 같다. 남은 것은 워크플로와 액티비티의 수이며 재시도 경계가 그것에 매여 있다"
-        },
-        {
-            "id": "job.deadline.source",
-            "area": "job",
-            "summary": "잡 실행 데드라인의 출처가 다르다",
-            "canonical": "typescript",
-            "typescript": "추적 API의 기능 한도에서 받는다",
-            "python": "접수가 잡 종류마다 고정값을 싣는다. recipe.scan 720000, title.suggestion 180000, task.cleanup 300000",
-            "resolution": "데드라인을 실행 봉투 하나가 소유하게 한다"
         },
         {
             "id": "evaluation.surface",
@@ -67,24 +49,6 @@
             "typescript": "output_schema_invalid·cancelled·process_error를 낸다",
             "python": "max_tokens·connection_error·api_error를 낸다",
             "resolution": "agent/shared/error.subtypes.json의 emittedBy가 모두 두 구현체를 담을 때까지 좁힌다"
-        },
-        {
-            "id": "job.usage.shape",
-            "area": "job",
-            "summary": "실패한 잡의 usage 모양이 다르다",
-            "canonical": "typescript",
-            "typescript": "실패하면 시도마다의 기록을 attempts 배열 하나로 싣는다",
-            "python": "실패해도 model·costUsd·numTurns·durationMs와 토큰 넷을 평평하게 싣는다",
-            "resolution": "성공 경로는 이미 같다. 실패 경로의 usage를 한 모양으로 정한다"
-        },
-        {
-            "id": "job.id.source",
-            "area": "job",
-            "summary": "원장에 적는 잡 식별자의 출처가 다르다",
-            "canonical": "typescript",
-            "typescript": "접수가 식별자를 새로 만들고 idempotencyKey는 중복 접수 판정에만 쓴다",
-            "python": "idempotencyKey를 그대로 잡 식별자로 쓴다",
-            "resolution": "접수가 식별자를 만들고 멱등키는 판정에만 쓰게 한다"
         }
     ],
     "canonical": "typescript가 정본이다. 항목의 canonical이 python이면 SDK나 LangGraph가 강제해 정본이 따라가야 하는 자리다.",
