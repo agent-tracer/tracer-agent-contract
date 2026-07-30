@@ -148,14 +148,28 @@ def main() -> None:
         raise SystemExit(f"토픽 선언에 {fields} 가 다 있어야 한다 — {', '.join(incomplete_topics)}")
 
     declared_routes = read_agent_api_routes()
+    recorded_unserved = [
+        prefix
+        for item in read_case("divergence")["items"]
+        for prefix in item.get("unservedPaths", [])
+    ]
     base_url = sys.argv[1] if len(sys.argv) > 1 else None
     if base_url is not None:
         served = read_served_routes(base_url)
-        unserved = [route for route in declared_routes if route_key(route) not in served]
+        unserved = [
+            route
+            for route in declared_routes
+            if route_key(route) not in served
+            and not any(route["path"].startswith(prefix) for prefix in recorded_unserved)
+        ]
         if unserved:
             detail = ", ".join(route_key(route) for route in unserved)
             raise SystemExit(f"계약이 선언한 창구에 서버가 없다 — {detail}")
-        print(f"{base_url} 가 계약의 창구 {len(declared_routes)}자리를 모두 연다")
+        skipped = ", ".join(recorded_unserved) or "없음"
+        print(
+            f"{base_url} 가 계약의 창구 {len(declared_routes)}자리를 연다 — "
+            f"갈라짐으로 적힌 {skipped} 은 묻지 않는다"
+        )
 
     names = ", ".join(topic["name"] for topic in topics.values())
     print(f"계약 {version}: 케이스 {len(cases)}개를 읽었다 — {', '.join(cases)}")

@@ -121,16 +121,23 @@ if (incompleteTopics.length > 0) {
 }
 
 const declaredRoutes = readAgentApiRoutes();
+const recordedUnserved = readCase("divergence").items.flatMap((item) => item.unservedPaths ?? []);
 const baseUrl = process.argv[2];
 if (baseUrl !== undefined) {
     const served = await readServedRoutes(baseUrl);
-    const unserved = declaredRoutes.filter((route) => !served.has(routeKey(route)));
+    const unserved = declaredRoutes.filter(
+        (route) => !served.has(routeKey(route))
+            && !recordedUnserved.some((prefix) => route.path.startsWith(prefix)),
+    );
     if (unserved.length > 0) {
         throw new Error(
             `계약이 선언한 창구에 서버가 없다 — ${unserved.map(routeKey).join(", ")}`,
         );
     }
-    console.log(`${baseUrl} 가 계약의 창구 ${declaredRoutes.length}자리를 모두 연다`);
+    console.log(
+        `${baseUrl} 가 계약의 창구 ${declaredRoutes.length}자리를 연다 — ` +
+            `갈라짐으로 적힌 ${recordedUnserved.join(", ") || "없음"} 은 묻지 않는다`,
+    );
 }
 
 console.log(`계약 ${version}: 케이스 ${cases.length}개를 읽었다 — ${cases.join(", ")}`);
