@@ -15,12 +15,14 @@ const SHARED = [
     "error.subtypes.json",
     "execution.vocabulary.json",
     "prompt.fragment.integrity.json",
+    "prompt.fragment.registry.json",
     "prompt.placeholders.json",
     "prompt.fragment.manifest.json",
     "evaluation.example.contract.json",
 ];
 const WIRE = ["envelope.json", "headers.json", "topics.json", "job.kinds.json"];
 const TOPIC_FIELDS = ["name", "key", "payload", "delivery"];
+const FRAGMENT_SURFACES = ["registerAndResolve", "registerCandidate", "promote"];
 
 const version = readVersion();
 const cases = listCases();
@@ -49,6 +51,20 @@ const declaredPaths = new Set(readDeclaredHttpPaths());
 const bindings = readToolBindingPaths();
 const unmet = bindings.filter((binding) => !declaredPaths.has(normalizePathTemplate(binding.path)));
 
+const registry = readJson("agent/shared/prompt.fragment.registry.json");
+const declaredChannels = Object.keys(registry.channels);
+const unseenChannels = declaredChannels.filter(
+    (channel) => !Object.values(registry.profileChannels).includes(channel)
+        && !registry.promotionPath.includes(channel),
+);
+const unmappedProfiles = Object.entries(registry.profileChannels)
+    .filter(([, channel]) => !declaredChannels.includes(channel))
+    .map(([profile]) => profile);
+const missingFragmentSurfaces = FRAGMENT_SURFACES.filter((name) => registry.surfaces[name] === undefined);
+const prefixedKeys = [registry.identity.definitionKey.example, registry.identity.templateKey.example]
+    .concat(registry.identity.codeName.example)
+    .filter((value) => registry.identity.rejectedPrefixes.some((prefix) => value.startsWith(prefix)));
+
 const topics = readJson("wire/topics.json");
 const incompleteTopics = Object.entries(topics)
     .filter(([, topic]) => TOPIC_FIELDS.some((field) => topic[field] === undefined))
@@ -62,6 +78,18 @@ if (unmet.length > 0) {
     const detail = unmet.map((binding) => `${binding.name} ${binding.path}`).join(", ");
     throw new Error(`도구가 부르는 경로를 어느 HTTP 표면도 선언하지 않는다 — ${detail}`);
 }
+if (unmappedProfiles.length > 0) {
+    throw new Error(`profile 이 선언되지 않은 조각 채널을 본다 — ${unmappedProfiles.join(", ")}`);
+}
+if (unseenChannels.length > 0) {
+    throw new Error(`어느 profile 도 승격 경로도 닿지 않는 조각 채널이 있다 — ${unseenChannels.join(", ")}`);
+}
+if (missingFragmentSurfaces.length > 0) {
+    throw new Error(`조각 쓰기 경로의 창구가 선언되지 않았다 — ${missingFragmentSurfaces.join(", ")}`);
+}
+if (prefixedKeys.length > 0) {
+    throw new Error(`조각의 이름이 구현체를 말하는 접두사를 달고 있다 — ${prefixedKeys.join(", ")}`);
+}
 if (incompleteTopics.length > 0) {
     throw new Error(
         `토픽 선언에 ${TOPIC_FIELDS.join(" · ")} 가 다 있어야 한다 — ${incompleteTopics.join(", ")}`,
@@ -71,6 +99,10 @@ if (incompleteTopics.length > 0) {
 console.log(`계약 ${version}: 케이스 ${cases.length}개를 읽었다 — ${cases.join(", ")}`);
 console.log(`강제 ${grouped.enforced.length}자리, 기록 ${grouped.recorded.length}자리`);
 console.log(`도구 ${bindings.length}개가 부르는 경로를 HTTP 표면 ${declaredPaths.size}자리가 덮는다`);
+console.log(
+    `조각 채널 ${declaredChannels.length}개를 profile ${Object.keys(registry.profileChannels).length}개가 나눠 보고 ` +
+        `판이 어긋나면 ${registry.drift.policy} 한다`,
+);
 console.log(
     `서비스를 넘는 토픽 ${Object.keys(topics).length}개를 선언한다 — ` +
         `${Object.values(topics).map((topic) => topic.name).join(", ")}`,

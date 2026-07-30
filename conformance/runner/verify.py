@@ -20,12 +20,14 @@ SHARED = [
     "error.subtypes.json",
     "execution.vocabulary.json",
     "prompt.fragment.integrity.json",
+    "prompt.fragment.registry.json",
     "prompt.placeholders.json",
     "prompt.fragment.manifest.json",
     "evaluation.example.contract.json",
 ]
 WIRE = ["envelope.json", "headers.json", "topics.json", "job.kinds.json"]
 TOPIC_FIELDS = ["name", "key", "payload", "delivery"]
+FRAGMENT_SURFACES = ["registerAndResolve", "registerCandidate", "promote"]
 STANDALONE = [
     "workflow/queues.yaml",
     "http/agent-api.openapi.yaml",
@@ -57,6 +59,31 @@ def main() -> None:
     for surface in surfaces:
         grouped[enforcement_level(surface)].append(surface)
 
+    registry = read_json("agent/shared/prompt.fragment.registry.json")
+    identity = registry["identity"]
+    declared_channels = list(registry["channels"])
+    unseen_channels = [
+        channel
+        for channel in declared_channels
+        if channel not in registry["profileChannels"].values()
+        and channel not in registry["promotionPath"]
+    ]
+    unmapped_profiles = [
+        profile
+        for profile, channel in registry["profileChannels"].items()
+        if channel not in declared_channels
+    ]
+    missing_surfaces = [name for name in FRAGMENT_SURFACES if name not in registry["surfaces"]]
+    prefixed_keys = [
+        value
+        for value in (
+            identity["definitionKey"]["example"],
+            identity["codeName"]["example"],
+            identity["templateKey"]["example"],
+        )
+        if any(value.startswith(prefix) for prefix in identity["rejectedPrefixes"])
+    ]
+
     topics = read_json("wire/topics.json")
     incomplete_topics = [
         topic_id
@@ -80,6 +107,14 @@ def main() -> None:
     if unmet:
         detail = ", ".join(f"{binding['name']} {binding['path']}" for binding in unmet)
         raise SystemExit(f"도구가 부르는 경로를 어느 HTTP 표면도 선언하지 않는다 — {detail}")
+    if unmapped_profiles:
+        raise SystemExit(f"profile 이 선언되지 않은 조각 채널을 본다 — {', '.join(unmapped_profiles)}")
+    if unseen_channels:
+        raise SystemExit(f"어느 profile 도 승격 경로도 닿지 않는 조각 채널이 있다 — {', '.join(unseen_channels)}")
+    if missing_surfaces:
+        raise SystemExit(f"조각 쓰기 경로의 창구가 선언되지 않았다 — {', '.join(missing_surfaces)}")
+    if prefixed_keys:
+        raise SystemExit(f"조각의 이름이 구현체를 말하는 접두사를 달고 있다 — {', '.join(prefixed_keys)}")
     if incomplete_topics:
         fields = " · ".join(TOPIC_FIELDS)
         raise SystemExit(f"토픽 선언에 {fields} 가 다 있어야 한다 — {', '.join(incomplete_topics)}")
@@ -88,6 +123,10 @@ def main() -> None:
     print(f"계약 {version}: 케이스 {len(cases)}개를 읽었다 — {', '.join(cases)}")
     print(f"강제 {len(grouped['enforced'])}자리, 기록 {len(grouped['recorded'])}자리")
     print(f"도구 {len(bindings)}개가 부르는 경로를 HTTP 표면 {len(declared_paths)}자리가 덮는다")
+    print(
+        f"조각 채널 {len(declared_channels)}개를 profile {len(registry['profileChannels'])}개가 나눠 보고 "
+        f"판이 어긋나면 {registry['drift']['policy']} 한다"
+    )
     print(f"서비스를 넘는 토픽 {len(topics)}개를 선언한다 — {names}")
 
 

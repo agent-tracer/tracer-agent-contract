@@ -1,0 +1,83 @@
+{
+    "identity": {
+        "backend": "백엔드를 나르는 것은 prompt_fragment_definitions.backend 칸 하나이며 키의 어느 자리도 그것을 다시 말하지 않는다",
+        "definitionKey": {
+            "grammar": "<agentName>.<fragmentSlot-kebab>.<language>",
+            "example": "chat.grounding-rules.en"
+        },
+        "codeName": {
+            "grammar": "<AGENT_NAME_UPPER_SNAKE>_<FRAGMENT_SLOT_UPPER_SNAKE>",
+            "example": "CHAT_GROUNDING_RULES"
+        },
+        "templateKey": {
+            "grammar": "<agentName>.<template>",
+            "example": "chat.assistant.system"
+        },
+        "rejectedPrefixes": ["sdk.", "lan.", "SDK_", "LAN_"],
+        "uniqueness": {
+            "prompt_fragment_definitions": ["backend", "definition_key"],
+            "prompt_fragment_bindings": ["backend", "template_key", "fragment_slot"],
+            "meaning": "두 백엔드가 같은 에이전트의 같은 자리를 올리므로 유일성이 backend를 포함해야 한 축이 다른 축의 조각을 덮지 않는다"
+        }
+    },
+    "channels": {
+        "candidate": "작성된 판이 머무는 자리이며 어느 배포도 실행에 쓰지 않는다",
+        "staging": "local profile 의 배포가 실행에 쓰는 판이다",
+        "production": "prd profile 의 배포가 실행에 쓰는 판이다"
+    },
+    "promotionPath": ["candidate", "staging", "production"],
+    "profileChannels": {
+        "local": "staging",
+        "prd": "production"
+    },
+    "seed": {
+        "rule": "부팅 등록은 그 배포가 보는 채널에 행이 없을 때만 코드 기본값 판을 심는다",
+        "origin": "code-default"
+    },
+    "drift": {
+        "policy": "boot-fail",
+        "meaning": "등록 창구에 닿지 못하거나 받은 판이 코드가 선언한 것과 어긋나면 워커 부팅이 실패하며 파일 기본값으로 물러서지 않는다",
+        "checks": [
+            "resolution-complete",
+            "definition-key",
+            "content-hash",
+            "placeholders",
+            "tool-contract-version",
+            "output-schema-version",
+            "code-default-content"
+        ]
+    },
+    "surfaces": {
+        "registerAndResolve": {
+            "method": "POST",
+            "path": "/internal/prompts/fragments/register-and-resolve",
+            "body": ["profile", "manifest"],
+            "manifestEntry": [
+                "backend",
+                "agentName",
+                "language",
+                "codeName",
+                "definitionKey",
+                "fragmentName",
+                "defaultVersion",
+                "defaultContent",
+                "toolContractVersion",
+                "outputSchemaVersion",
+                "bindings"
+            ]
+        },
+        "registerCandidate": {
+            "method": "POST",
+            "path": "/api/agent/evaluation/prompt-fragments/candidate",
+            "body": ["backend", "agentName", "fragmentName", "language", "content", "changeSummary"],
+            "meaning": "코드가 선언한 정의 위에 판을 쌓으며 정의를 새로 만들지 않는다"
+        },
+        "promote": {
+            "method": "POST",
+            "path": "/api/agent/evaluation/prompt-fragments/{definitionId}/promotions",
+            "body": ["versionId", "channel"],
+            "table": "prompt_fragment_channels",
+            "meaning": "승격이 조각 채널을 움직이며 그 채널을 보는 profile 의 다음 부팅이 그 판으로 실행한다"
+        }
+    }
+}
