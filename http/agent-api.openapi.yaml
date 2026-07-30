@@ -1667,7 +1667,7 @@ components:
           description: 실행 재시도 회차이며 시도마다 seq가 0부터 다시 시작해도 이 값으로 분리된다
         role:
           type: string
-          enum: [system, user, assistant, tool, graph]
+          enum: [system, user, assistant, tool, orchestration]
         content: { type: string }
         truncated: { type: boolean }
         toolCalls:
@@ -1847,7 +1847,7 @@ components:
           description: 실행 재시도 회차이며 시도마다 seq가 0부터 다시 시작해도 이 값으로 분리된다
         role:
           type: string
-          enum: [system, user, assistant, tool, graph]
+          enum: [system, user, assistant, tool, orchestration]
         content: { type: string }
         truncated: { type: boolean }
         toolCalls:
