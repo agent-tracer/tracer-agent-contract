@@ -114,6 +114,12 @@ def main() -> None:
         if normalize_path_template(binding["path"]) not in declared_paths
     ]
 
+    gated_channel = registry["promotionPath"][-1]
+    ungated_channels = registry["promotionGate"]["ungatedChannels"]
+    gate_mismatch = gated_channel in ungated_channels or any(
+        channel not in ungated_channels for channel in registry["promotionPath"][:-1]
+    )
+
     if not cases:
         raise SystemExit("적합성 케이스가 하나도 없다")
     if grouped["unclassified"]:
@@ -128,6 +134,13 @@ def main() -> None:
         raise SystemExit(f"어느 profile 도 승격 경로도 닿지 않는 조각 채널이 있다 — {', '.join(unseen_channels)}")
     if missing_surfaces:
         raise SystemExit(f"조각 쓰기 경로의 창구가 선언되지 않았다 — {', '.join(missing_surfaces)}")
+    if gate_mismatch:
+        path_text = " → ".join(registry["promotionPath"])
+        ungated_text = ", ".join(ungated_channels)
+        raise SystemExit(
+            f"승격 경로의 마지막 채널만 게이트를 가져야 한다 — 경로 {path_text} · "
+            f"게이트 없는 채널 {ungated_text}"
+        )
     if prefixed_keys:
         raise SystemExit(f"조각의 이름이 구현체를 말하는 접두사를 달고 있다 — {', '.join(prefixed_keys)}")
     if incomplete_topics:
@@ -150,7 +163,8 @@ def main() -> None:
     print(f"도구 {len(bindings)}개가 부르는 경로를 HTTP 표면 {len(declared_paths)}자리가 덮는다")
     print(
         f"조각 채널 {len(declared_channels)}개를 profile {len(registry['profileChannels'])}개가 나눠 보고 "
-        f"판이 어긋나면 {registry['drift']['policy']} 한다"
+        f"판이 어긋나면 {registry['drift']['policy']} 하며 "
+        f"{gated_channel} 승격이 {registry['promotionGate']['policy']} 를 지난다"
     )
     print(f"서비스를 넘는 토픽 {len(topics)}개를 선언한다 — {names}")
 

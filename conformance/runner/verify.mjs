@@ -75,6 +75,10 @@ const unmappedProfiles = Object.entries(registry.profileChannels)
     .filter(([, channel]) => !declaredChannels.includes(channel))
     .map(([profile]) => profile);
 const missingFragmentSurfaces = FRAGMENT_SURFACES.filter((name) => registry.surfaces[name] === undefined);
+const gatedChannel = registry.promotionPath[registry.promotionPath.length - 1];
+const ungatedChannels = registry.promotionGate.ungatedChannels;
+const gateMismatch = ungatedChannels.includes(gatedChannel)
+    || registry.promotionPath.slice(0, -1).some((channel) => !ungatedChannels.includes(channel));
 const prefixedKeys = [registry.identity.definitionKey.example, registry.identity.templateKey.example]
     .concat(registry.identity.codeName.example)
     .filter((value) => registry.identity.rejectedPrefixes.some((prefix) => value.startsWith(prefix)));
@@ -100,6 +104,12 @@ if (unseenChannels.length > 0) {
 }
 if (missingFragmentSurfaces.length > 0) {
     throw new Error(`조각 쓰기 경로의 창구가 선언되지 않았다 — ${missingFragmentSurfaces.join(", ")}`);
+}
+if (gateMismatch) {
+    throw new Error(
+        `승격 경로의 마지막 채널만 게이트를 가져야 한다 — 경로 ${registry.promotionPath.join(" → ")} · ` +
+            `게이트 없는 채널 ${ungatedChannels.join(", ")}`,
+    );
 }
 if (prefixedKeys.length > 0) {
     throw new Error(`조각의 이름이 구현체를 말하는 접두사를 달고 있다 — ${prefixedKeys.join(", ")}`);
@@ -128,7 +138,7 @@ console.log(`강제 ${grouped.enforced.length}자리, 기록 ${grouped.recorded.
 console.log(`도구 ${bindings.length}개가 부르는 경로를 HTTP 표면 ${declaredPaths.size}자리가 덮는다`);
 console.log(
     `조각 채널 ${declaredChannels.length}개를 profile ${Object.keys(registry.profileChannels).length}개가 나눠 보고 ` +
-        `판이 어긋나면 ${registry.drift.policy} 한다`,
+        `판이 어긋나면 ${registry.drift.policy} 하며 ${gatedChannel} 승격이 ${registry.promotionGate.policy} 를 지난다`,
 );
 console.log(
     `서비스를 넘는 토픽 ${Object.keys(topics).length}개를 선언한다 — ` +

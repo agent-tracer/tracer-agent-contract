@@ -26,6 +26,14 @@
         "staging": "local profile 의 배포가 실행에 쓰는 판이다",
         "production": "prd profile 의 배포가 실행에 쓰는 판이다"
     },
+    "promotionGate": {
+        "policy": "staging-first",
+        "meaning": "production 으로 가는 판은 그 정의의 staging 채널에 서 있던 판이어야 하며 승격이 그것을 검사한다",
+        "ungatedChannels": [
+            "candidate",
+            "staging"
+        ]
+    },
     "promotionPath": ["candidate", "staging", "production"],
     "profileChannels": {
         "local": "staging",
