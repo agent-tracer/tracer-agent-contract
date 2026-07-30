@@ -75,5 +75,5 @@ CREATE TABLE IF NOT EXISTS "prompt_fragment_definitions" (
 
 CREATE UNIQUE INDEX IF NOT EXISTS "prompt_fragment_definitions_scope"
     ON "prompt_fragment_definitions" ("backend", "agent_name", "fragment_name", "language");
-CREATE UNIQUE INDEX IF NOT EXISTS "prompt_fragment_definitions_key"
-    ON "prompt_fragment_definitions" ("definition_key");
+CREATE UNIQUE INDEX IF NOT EXISTS "prompt_fragment_definitions_backend_key"
+    ON "prompt_fragment_definitions" ("backend", "definition_key");
