@@ -74,7 +74,7 @@ paths:
                     const: unready
               example: { status: unready }
 
-  /api/v1/chat/threads:
+  /api/agent/chat/threads:
     get:
       operationId: listChatThreads
       tags: [chat]
@@ -132,7 +132,7 @@ paths:
         "400":
           $ref: "#/components/responses/InvalidRequest"
 
-  /api/v1/chat/threads/{threadId}:
+  /api/agent/chat/threads/{threadId}:
     get:
       operationId: getChatThread
       tags: [chat]
@@ -224,7 +224,7 @@ paths:
         "404":
           $ref: "#/components/responses/ThreadNotFound"
 
-  /api/v1/chat/threads/{threadId}/messages:
+  /api/agent/chat/threads/{threadId}/messages:
     get:
       operationId: listChatMessages
       tags: [chat]
@@ -292,7 +292,7 @@ paths:
         "409":
           $ref: "#/components/responses/IdempotencyConflict"
 
-  /api/v1/chat/threads/{threadId}/confirmations:
+  /api/agent/chat/threads/{threadId}/confirmations:
     post:
       operationId: proposeChatTool
       tags: [chat]
@@ -331,7 +331,7 @@ paths:
         "404":
           $ref: "#/components/responses/ThreadNotFound"
 
-  /api/v1/chat/threads/{threadId}/confirmations/{confirmationId}:
+  /api/agent/chat/threads/{threadId}/confirmations/{confirmationId}:
     post:
       operationId: decideChatTool
       tags: [chat]
@@ -370,7 +370,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /api/v1/chat/threads/{threadId}/executions:
+  /api/agent/chat/threads/{threadId}/executions:
     get:
       operationId: listChatExecutions
       tags: [chat]
@@ -404,7 +404,7 @@ paths:
         "404":
           $ref: "#/components/responses/ThreadNotFound"
 
-  /api/v1/chat/threads/{threadId}/executions/{executionId}/events:
+  /api/agent/chat/threads/{threadId}/executions/{executionId}/events:
     get:
       operationId: watchChatExecution
       tags: [chat]
@@ -427,7 +427,7 @@ paths:
         "404":
           $ref: "#/components/responses/ChatExecutionNotFound"
 
-  /api/v1/chat/threads/{threadId}/executions/{executionId}/steps:
+  /api/agent/chat/threads/{threadId}/executions/{executionId}/steps:
     get:
       operationId: listChatExecutionSteps
       tags: [chat]
@@ -458,7 +458,7 @@ paths:
         "404":
           $ref: "#/components/responses/ChatExecutionNotFound"
 
-  /api/v1/chat/threads/{threadId}/executions/{executionId}/cancel:
+  /api/agent/chat/threads/{threadId}/executions/{executionId}/cancel:
     post:
       operationId: cancelChatTurn
       tags: [chat]
@@ -486,7 +486,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /api/v1/chat/threads/{threadId}/executions/{executionId}/replay:
+  /api/agent/chat/threads/{threadId}/executions/{executionId}/replay:
     get:
       operationId: getChatReplay
       tags: [chat]
@@ -515,7 +515,7 @@ paths:
         "404":
           $ref: "#/components/responses/ChatExecutionNotFound"
 
-  /api/v1/chat/executions/{executionId}/drafts:
+  /api/agent/chat/executions/{executionId}/drafts:
     post:
       operationId: checkpointChatDraft
       tags: [chat]
@@ -566,7 +566,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /api/v1/chat/memories:
+  /api/agent/chat/memories:
     get:
       operationId: recall_facts
       tags: [chat, tool]
@@ -594,7 +594,7 @@ paths:
                             items:
                               $ref: "#/components/schemas/ChatUserMemory"
 
-  /api/v1/chat/memories/{key}:
+  /api/agent/chat/memories/{key}:
     put:
       operationId: remember_fact
       tags: [chat, tool]
@@ -635,7 +635,7 @@ paths:
         "400":
           $ref: "#/components/responses/InvalidRequest"
 
-  /api/v1/jobs:
+  /api/agent/jobs:
     get:
       operationId: listPendingJobs
       tags: [job]
@@ -703,7 +703,7 @@ paths:
         "400":
           $ref: "#/components/responses/InvalidRequest"
 
-  /api/v1/jobs/history:
+  /api/agent/jobs/history:
     get:
       operationId: listJobHistory
       tags: [job]
@@ -762,7 +762,7 @@ paths:
         "400":
           $ref: "#/components/responses/InvalidRequest"
 
-  /api/v1/jobs/latest:
+  /api/agent/jobs/latest:
     get:
       operationId: getLatestJob
       tags: [job]
@@ -797,7 +797,7 @@ paths:
         "400":
           $ref: "#/components/responses/InvalidRequest"
 
-  /api/v1/jobs/{id}:
+  /api/agent/jobs/{id}:
     get:
       operationId: getJob
       tags: [job]
@@ -825,7 +825,7 @@ paths:
         "404":
           $ref: "#/components/responses/JobNotFound"
 
-  /api/v1/jobs/{id}/steps:
+  /api/agent/jobs/{id}/steps:
     get:
       operationId: getJobSteps
       tags: [job]
@@ -851,7 +851,7 @@ paths:
         "404":
           $ref: "#/components/responses/JobNotFound"
 
-  /api/v1/jobs/{id}/cancel:
+  /api/agent/jobs/{id}/cancel:
     post:
       operationId: cancelJob
       tags: [job]

@@ -1212,7 +1212,7 @@
             },
             "get_job": {
                 "method": "GET",
-                "path": "/api/v1/jobs/{jobId}",
+                "path": "/api/agent/jobs/{jobId}",
                 "gate": "none",
                 "pathArgs": [
                     "jobId"
@@ -1480,7 +1480,7 @@
             },
             "enqueue_job": {
                 "method": "POST",
-                "path": "/api/v1/jobs",
+                "path": "/api/agent/jobs",
                 "gate": "confirm",
                 "pathArgs": [],
                 "query": {},
@@ -1492,7 +1492,7 @@
             },
             "recall_facts": {
                 "method": "GET",
-                "path": "/api/v1/chat/memories",
+                "path": "/api/agent/chat/memories",
                 "gate": "none",
                 "pathArgs": [],
                 "query": {},
@@ -1501,7 +1501,7 @@
             },
             "remember_fact": {
                 "method": "PUT",
-                "path": "/api/v1/chat/memories/{key}",
+                "path": "/api/agent/chat/memories/{key}",
                 "gate": "none",
                 "pathArgs": [
                     "key"

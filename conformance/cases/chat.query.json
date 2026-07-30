@@ -208,91 +208,91 @@
         {
             "name": "스레드를 최근 갱신순으로 조회한다",
             "method": "GET",
-            "path": "/api/v1/chat/threads",
+            "path": "/api/agent/chat/threads",
             "status": 200,
             "data": { "items": "thread[]" }
         },
         {
             "name": "새 스레드를 연다",
             "method": "POST",
-            "path": "/api/v1/chat/threads",
+            "path": "/api/agent/chat/threads",
             "status": 201,
             "data": { "thread": "thread" }
         },
         {
             "name": "스레드 하나를 조회한다",
             "method": "GET",
-            "path": "/api/v1/chat/threads/{threadId}",
+            "path": "/api/agent/chat/threads/{threadId}",
             "status": 200,
             "data": { "thread": "thread" }
         },
         {
             "name": "스레드의 제목을 고친다",
             "method": "PATCH",
-            "path": "/api/v1/chat/threads/{threadId}",
+            "path": "/api/agent/chat/threads/{threadId}",
             "status": 200,
             "data": { "thread": "thread" }
         },
         {
             "name": "스레드를 지운다",
             "method": "DELETE",
-            "path": "/api/v1/chat/threads/{threadId}",
+            "path": "/api/agent/chat/threads/{threadId}",
             "status": 200,
             "data": { "deleted": "true" }
         },
         {
             "name": "스레드의 메시지를 쌓인 순서대로 조회한다",
             "method": "GET",
-            "path": "/api/v1/chat/threads/{threadId}/messages",
+            "path": "/api/agent/chat/threads/{threadId}/messages",
             "status": 200,
             "data": { "items": "message[]" }
         },
         {
             "name": "실행 이력과 대기 도구를 함께 조회한다",
             "method": "GET",
-            "path": "/api/v1/chat/threads/{threadId}/executions",
+            "path": "/api/agent/chat/threads/{threadId}/executions",
             "status": 200,
             "data": { "items": "execution[]", "confirmations": "confirmation[]" }
         },
         {
             "name": "턴 하나의 궤적을 순서대로 조회한다",
             "method": "GET",
-            "path": "/api/v1/chat/threads/{threadId}/executions/{executionId}/steps",
+            "path": "/api/agent/chat/threads/{threadId}/executions/{executionId}/steps",
             "status": 200,
             "data": { "items": "step[]" }
         },
         {
             "name": "턴 하나를 중단한다",
             "method": "POST",
-            "path": "/api/v1/chat/threads/{threadId}/executions/{executionId}/cancel",
+            "path": "/api/agent/chat/threads/{threadId}/executions/{executionId}/cancel",
             "status": 200,
             "data": { "execution": "execution" }
         },
         {
             "name": "되돌려 줄 이력과 요약과 기억을 되읽는다",
             "method": "GET",
-            "path": "/api/v1/chat/threads/{threadId}/executions/{executionId}/replay",
+            "path": "/api/agent/chat/threads/{threadId}/executions/{executionId}/replay",
             "status": 200,
             "data": "replay"
         },
         {
             "name": "확인이 필요한 도구 호출을 대기 행에 세운다",
             "method": "POST",
-            "path": "/api/v1/chat/threads/{threadId}/confirmations",
+            "path": "/api/agent/chat/threads/{threadId}/confirmations",
             "status": 201,
             "data": "proposal"
         },
         {
             "name": "대기 중인 도구 호출을 승인이나 거절로 해소한다",
             "method": "POST",
-            "path": "/api/v1/chat/threads/{threadId}/confirmations/{confirmationId}",
+            "path": "/api/agent/chat/threads/{threadId}/confirmations/{confirmationId}",
             "status": 200,
             "data": "decision"
         },
         {
             "name": "누적 답변을 원장에 통지한다",
             "method": "POST",
-            "path": "/api/v1/chat/executions/{executionId}/drafts",
+            "path": "/api/agent/chat/executions/{executionId}/drafts",
             "status": 200,
             "data": { "stored": "boolean", "terminal": "boolean" }
         }
@@ -300,7 +300,7 @@
     "stream": {
         "meaning": "실행 하나의 스냅샷을 연결이 살아 있는 동안 이어서 내며 종결 상태를 보낸 뒤 닫는다",
         "method": "GET",
-        "path": "/api/v1/chat/threads/{threadId}/executions/{executionId}/events",
+        "path": "/api/agent/chat/threads/{threadId}/executions/{executionId}/events",
         "contentType": "text/event-stream",
         "event": "snapshot",
         "frameId": "draftSeq와 updatedAt을 콜론으로 이은 값이다",

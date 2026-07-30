@@ -1,8 +1,8 @@
 {
     "name": "job.intake",
     "meaning": "브라우저가 구현체마다 본문을 가르지 않도록 잡 접수와 조회와 취소 표면을 대조한다.",
-    "path": "/api/v1/jobs",
-    "cancelPath": "/api/v1/jobs/{id}/cancel",
+    "path": "/api/agent/jobs",
+    "cancelPath": "/api/agent/jobs/{id}/cancel",
     "acceptedStatus": 202,
     "userHeader": {
         "name": "x-monitor-user",
@@ -195,7 +195,7 @@
             }
         },
         "get": {
-            "path": "/api/v1/jobs/{id}",
+            "path": "/api/agent/jobs/{id}",
             "status": 200,
             "data": {
                 "job": "jobFields"
@@ -203,7 +203,7 @@
         },
         "pending": {
             "meaning": "종류를 골라 대기 잡만 내며 status를 실으려면 pending이어야 한다",
-            "path": "/api/v1/jobs",
+            "path": "/api/agent/jobs",
             "status": 200,
             "query": {
                 "kind": {
@@ -224,7 +224,7 @@
         },
         "history": {
             "meaning": "이력을 한 페이지씩 내고 상한과 건너뛰기를 뺀 전체 개수를 함께 싣는다",
-            "path": "/api/v1/jobs/history",
+            "path": "/api/agent/jobs/history",
             "status": 200,
             "query": {
                 "kind": {
@@ -261,7 +261,7 @@
         },
         "latest": {
             "meaning": "사용자와 종류와 태스크 조합의 가장 최근 잡이며 없으면 job이 비어 있다",
-            "path": "/api/v1/jobs/latest",
+            "path": "/api/agent/jobs/latest",
             "status": 200,
             "query": {
                 "kind": {
@@ -284,7 +284,7 @@
             }
         },
         "steps": {
-            "path": "/api/v1/jobs/{id}/steps",
+            "path": "/api/agent/jobs/{id}/steps",
             "status": 200,
             "order": [
                 "attempt",

@@ -1,8 +1,8 @@
 {
     "name": "chat.intake",
     "meaning": "브라우저가 구현체마다 분기하지 않도록 대화 턴 접수 표면을 대조한다.",
-    "path": "/api/v1/chat/threads/{threadId}/messages",
-    "cancelPath": "/api/v1/chat/threads/{threadId}/executions/{executionId}/cancel",
+    "path": "/api/agent/chat/threads/{threadId}/messages",
+    "cancelPath": "/api/agent/chat/threads/{threadId}/executions/{executionId}/cancel",
     "acceptedStatus": 202,
     "userHeader": { "name": "x-monitor-user", "defaultValue": "local" },
     "body": {
