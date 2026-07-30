@@ -11,9 +11,9 @@ servers:
 
 tags:
   - name: chat
-    description: 연결보다 오래 사는 대화 턴의 접수와 취소
+    description: 연결보다 오래 사는 대화 턴의 접수와 취소와 조회, 그리고 스레드와 도구 확인
   - name: job
-    description: 잡 에이전트 실행의 접수와 취소
+    description: 잡 에이전트 실행의 접수와 취소와 조회
   - name: setting
     description: 에이전트 실행에 쓰는 설정값의 조회와 저장과 삭제
   - name: prompt
@@ -43,7 +43,185 @@ paths:
                     const: ok
               example: { status: ok }
 
+  /api/v1/chat/threads:
+    get:
+      operationId: listChatThreads
+      tags: [chat]
+      summary: 이 사용자의 대화 스레드를 최근 갱신순으로 조회한다
+      parameters:
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 스레드를 낸다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [items]
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/ChatThread"
+    post:
+      operationId: createChatThread
+      tags: [chat]
+      summary: 새 대화 스레드를 연다
+      parameters:
+        - $ref: "#/components/parameters/UserHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatThreadTitleBody"
+      responses:
+        "201":
+          description: 열었다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [thread]
+                        properties:
+                          thread:
+                            $ref: "#/components/schemas/ChatThread"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+
+  /api/v1/chat/threads/{threadId}:
+    get:
+      operationId: getChatThread
+      tags: [chat]
+      summary: 대화 스레드 하나를 조회한다
+      parameters:
+        - $ref: "#/components/parameters/ThreadId"
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 스레드 하나를 낸다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [thread]
+                        properties:
+                          thread:
+                            $ref: "#/components/schemas/ChatThread"
+        "404":
+          $ref: "#/components/responses/ThreadNotFound"
+    patch:
+      operationId: renameChatThread
+      tags: [chat]
+      summary: 대화 스레드의 제목을 고친다
+      parameters:
+        - $ref: "#/components/parameters/ThreadId"
+        - $ref: "#/components/parameters/UserHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatThreadTitleBody"
+      responses:
+        "200":
+          description: 고친 스레드를 낸다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [thread]
+                        properties:
+                          thread:
+                            $ref: "#/components/schemas/ChatThread"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "404":
+          $ref: "#/components/responses/ThreadNotFound"
+    delete:
+      operationId: deleteChatThread
+      tags: [chat]
+      summary: 대화 스레드를 그 메시지와 실행과 대기 도구까지 지운다
+      description: >-
+        아직 끝나지 않은 실행에는 먼저 중단을 보낸다. 사용자 장기기억은 스레드가 아니라 사용자에
+        매인 것이라 함께 지우지 않는다.
+      parameters:
+        - $ref: "#/components/parameters/ThreadId"
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 지웠다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [deleted]
+                        properties:
+                          deleted:
+                            type: boolean
+                            const: true
+        "404":
+          $ref: "#/components/responses/ThreadNotFound"
+
   /api/v1/chat/threads/{threadId}/messages:
+    get:
+      operationId: listChatMessages
+      tags: [chat]
+      summary: 스레드에 쌓인 메시지를 쌓인 순서대로 조회한다
+      parameters:
+        - $ref: "#/components/parameters/ThreadId"
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 메시지를 낸다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [items]
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/ChatMessage"
+        "404":
+          $ref: "#/components/responses/ThreadNotFound"
     post:
       operationId: enqueueChatTurn
       tags: [chat]
@@ -161,6 +339,94 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /api/v1/chat/threads/{threadId}/executions:
+    get:
+      operationId: listChatExecutions
+      tags: [chat]
+      summary: 스레드의 실행 이력과 지금 승인을 기다리는 도구를 함께 조회한다
+      parameters:
+        - $ref: "#/components/parameters/ThreadId"
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 실행을 최근순으로 내고 대기 도구를 함께 싣는다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [items, confirmations]
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/ChatExecution"
+                          confirmations:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/ChatConfirmation"
+        "404":
+          $ref: "#/components/responses/ThreadNotFound"
+
+  /api/v1/chat/threads/{threadId}/executions/{executionId}/events:
+    get:
+      operationId: watchChatExecution
+      tags: [chat]
+      summary: 실행 하나의 스냅샷을 연결이 살아 있는 동안 이어서 낸다
+      description: >-
+        프레임은 event가 snapshot이고 id가 draftSeq와 updatedAt을 콜론으로 이은 값이다.
+        깨우기 신호가 유실되어도 이십 초 주기의 다시 읽기가 정본을 실어 보내며, 실행이 종결 상태에
+        닿은 스냅샷을 보낸 뒤 연결을 닫는다.
+      parameters:
+        - $ref: "#/components/parameters/ThreadId"
+        - $ref: "#/components/parameters/ExecutionId"
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 스냅샷 프레임을 흘려보낸다
+          content:
+            text/event-stream:
+              schema:
+                $ref: "#/components/schemas/ChatExecutionSnapshot"
+        "404":
+          $ref: "#/components/responses/ChatExecutionNotFound"
+
+  /api/v1/chat/threads/{threadId}/executions/{executionId}/steps:
+    get:
+      operationId: listChatExecutionSteps
+      tags: [chat]
+      summary: 대화 턴 하나가 남긴 실행 궤적을 순서대로 조회한다
+      parameters:
+        - $ref: "#/components/parameters/ThreadId"
+        - $ref: "#/components/parameters/ExecutionId"
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 궤적을 attempt와 seq의 오름차순으로 낸다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [items]
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/ChatExecutionStep"
+        "404":
+          $ref: "#/components/responses/ChatExecutionNotFound"
+
   /api/v1/chat/threads/{threadId}/executions/{executionId}/cancel:
     post:
       operationId: cancelChatTurn
@@ -197,19 +463,26 @@ paths:
       description: >-
         실행기가 자기 원장으로 이력을 다시 구하지 않고 접수를 되읽어, 어느 구현체가 태우든 같은
         재생 계산을 받는다. 실행기가 자기 배포 단위의 창구를 부르므로 에이전트가 이것을 소유한다.
+        창 자르기와 도구 호출 짝 맞추기의 규칙은 tracer/query-conditions.md가 갖는다.
       parameters:
         - $ref: "#/components/parameters/ThreadId"
         - $ref: "#/components/parameters/ExecutionId"
         - $ref: "#/components/parameters/UserHeader"
       responses:
         "200":
-          description: 되돌려 줄 이력을 낸다
+          description: 되돌려 줄 이력과 요약과 기억을 낸다
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SuccessEnvelope"
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ChatReplay"
         "404":
-          $ref: "#/components/responses/ThreadNotFound"
+          $ref: "#/components/responses/ChatExecutionNotFound"
 
   /api/v1/chat/executions/{executionId}/drafts:
     post:
@@ -263,6 +536,41 @@ paths:
           $ref: "#/components/responses/NotFound"
 
   /api/v1/jobs:
+    get:
+      operationId: listPendingJobs
+      tags: [job]
+      summary: 종류별 대기 잡 중 이 사용자의 것을 조회한다
+      parameters:
+        - $ref: "#/components/parameters/JobKindQuery"
+        - name: status
+          in: query
+          required: false
+          description: 이 창구는 대기 잡만 내므로 실으려면 pending이어야 한다
+          schema:
+            type: string
+            const: pending
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 대기 잡을 접수 시각의 오름차순으로 낸다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [items]
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/Job"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
     post:
       operationId: enqueueJob
       tags: [job]
@@ -292,6 +600,100 @@ paths:
                         properties:
                           job:
                             $ref: "#/components/schemas/Job"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+
+  /api/v1/jobs/history:
+    get:
+      operationId: listJobHistory
+      tags: [job]
+      summary: 이 사용자의 잡 이력을 한 페이지씩 조회한다
+      description: 고정 경로가 잡 식별자 경로보다 앞서 잡히므로 history라는 식별자는 이 창구에 닿는다.
+      parameters:
+        - name: kind
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/JobLedgerKind"
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/JobStatus"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 이력을 접수 시각의 내림차순으로 내고 조건에 맞는 전체 개수를 함께 싣는다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [items, total]
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/Job"
+                          total:
+                            type: integer
+                            minimum: 0
+                            description: 상한과 건너뛰기를 빼고 같은 조건으로 센 전체 개수다
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+
+  /api/v1/jobs/latest:
+    get:
+      operationId: getLatestJob
+      tags: [job]
+      summary: 사용자와 종류와 태스크 조합의 가장 최근 잡을 조회한다
+      description: 고정 경로가 잡 식별자 경로보다 앞서 잡히므로 latest라는 식별자는 이 창구에 닿는다.
+      parameters:
+        - $ref: "#/components/parameters/JobKindQuery"
+        - name: taskId
+          in: query
+          required: false
+          schema: { type: string, minLength: 1 }
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 가장 최근 잡을 내며 조건에 맞는 것이 없으면 job이 비어 있다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [job]
+                        properties:
+                          job:
+                            oneOf:
+                              - $ref: "#/components/schemas/Job"
+                              - type: "null"
         "400":
           $ref: "#/components/responses/InvalidRequest"
 
@@ -652,6 +1054,12 @@ components:
       in: path
       required: true
       schema: { type: string, minLength: 1 }
+    JobKindQuery:
+      name: kind
+      in: query
+      required: true
+      schema:
+        $ref: "#/components/schemas/JobLedgerKind"
     SettingKey:
       name: key
       in: path
@@ -694,6 +1102,17 @@ components:
             error:
               code: not_found
               message: Thread not found
+    ChatExecutionNotFound:
+      description: 그 스레드에 걸린 대화 실행이 없다
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            ok: false
+            error:
+              code: not_found
+              message: Chat execution not found
     JobNotFound:
       description: 잡 실행이 없다
       content:
@@ -1158,6 +1577,153 @@ components:
           type: integer
           exclusiveMinimum: 0
 
+    ChatThreadTitleBody:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: 앞뒤 공백을 지운 값으로 본다
+
+    ChatThread:
+      type: object
+      description: 대화 스레드 하나이며 목록과 상세와 생성과 개명이 모두 이 모양을 낸다
+      required: [id, userId, title, summary, backend, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        title: { type: string }
+        summary:
+          type: [string, "null"]
+          description: 창을 넘긴 이력을 접어 둔 요약이며 접을 것이 없으면 비어 있다
+        backend:
+          type: [string, "null"]
+          description: 이 스레드의 턴을 맡은 구현체로 상류가 고른 값이며 고르지 않았으면 비어 있다
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        updatedAt:
+          $ref: "#/components/schemas/Timestamp"
+
+    ChatToolCall:
+      type: object
+      description: 어시스턴트가 제안한 도구 호출 한 건이며 args는 모델이 낸 원본 인자다
+      required: [id, name, args]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        args: { type: object }
+
+    ChatConfirmation:
+      type: object
+      description: 지금 승인을 기다리는 도구 호출 하나다
+      required: [id, toolName, args]
+      properties:
+        id: { type: string }
+        toolName: { type: string }
+        args: { type: object }
+
+    ChatExecutionSnapshot:
+      type: object
+      description: 열린 연결이 한 프레임에 싣는 실행 상태와 대기 도구다
+      required: [execution, confirmations]
+      properties:
+        execution:
+          $ref: "#/components/schemas/ChatExecution"
+        confirmations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatConfirmation"
+
+    ChatExecutionStep:
+      type: object
+      description: >-
+        대화 턴 하나가 부른 모델과 도구의 궤적 한 줄이다. 값이 없는 자리는 싣지 않으며,
+        한 단계로 세는 경계는 agent/shared/execution.vocabulary.json이 갖는다.
+      required: [seq, attempt, role, content, truncated, toolCalls]
+      properties:
+        seq:
+          type: integer
+          minimum: 0
+        attempt:
+          type: integer
+          minimum: 1
+          description: 실행 재시도 회차이며 시도마다 seq가 0부터 다시 시작해도 이 값으로 분리된다
+        role:
+          type: string
+          enum: [system, user, assistant, tool, graph]
+        content: { type: string }
+        truncated: { type: boolean }
+        toolCalls:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatToolCall"
+        toolName: { type: string }
+        toolCallId: { type: string }
+        inputTokens: { type: integer }
+        outputTokens: { type: integer }
+        cacheReadTokens: { type: integer }
+        cacheCreationTokens: { type: integer }
+        stopReason: { type: string }
+        nodeName: { type: string }
+        eventKind:
+          type: string
+          enum: [node.started, node.completed, node.failed, route.selected, validation.failed]
+        durationMs: { type: integer }
+
+    ChatReplay:
+      type: object
+      description: 한 대화 턴이 모델에게 되돌려 줄 이력과 요약과 기억이며 어느 구현체가 태우든 같은 값이다
+      required: [messages, summary, facts]
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatReplayMessage"
+        summary:
+          type: [string, "null"]
+        facts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatUserFact"
+
+    ChatReplayMessage:
+      type: object
+      description: 재생에 실리는 이전 메시지 한 건이며 짝을 잃은 도구 인용은 벗겨진 채로 온다
+      required: [role, content]
+      properties:
+        role:
+          $ref: "#/components/schemas/ChatMessageRole"
+        content: { type: string }
+        toolCalls:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatToolCall"
+        toolCallId: { type: string }
+
+    ChatUserFact:
+      type: object
+      description: 모델이 이 사용자에 대해 오래 기억하는 사실 한 건이며 key가 재작성 대상을 찾는 슬러그다
+      required: [key, content]
+      properties:
+        key: { type: string }
+        content: { type: string }
+
+    ChatMessageRole:
+      type: string
+      enum: [user, assistant, tool]
+
+    ChatExecutionStatus:
+      type: string
+      enum: [queued, running, completed, failed, canceled]
+      description: 실행의 수명이며 completed와 failed와 canceled가 종결 상태다
+
+    ChatStopReason:
+      type: string
+      enum: [completed, deadline, stalled, budget_landed, turn_limit, canceled, failed]
+      description: 모델이 왜 말을 멈췄는지이며 실행 수명을 나타내는 status와 다른 축이다
+
     ChatToolProposal:
       type: object
       description: 승인을 기다리는 도구 호출 하나이며 summary와 note는 대화에 그대로 보인다
@@ -1197,13 +1763,17 @@ components:
       properties:
         id: { type: string }
         threadId: { type: string }
-        role: { type: string }
+        role:
+          $ref: "#/components/schemas/ChatMessageRole"
         content: { type: string }
         toolCalls:
           type: [array, "null"]
-          items: { type: object }
+          items:
+            $ref: "#/components/schemas/ChatToolCall"
+          description: 어시스턴트가 도구 호출을 제안한 줄에만 값이 있고 그 밖의 역할에는 비어 있다
         toolCallId:
           type: [string, "null"]
+          description: role이 tool일 때 어느 호출의 결과인지를 잇는 식별자다
         createdAt:
           $ref: "#/components/schemas/Timestamp"
 
@@ -1232,14 +1802,13 @@ components:
         threadId: { type: string }
         userMessageId: { type: string }
         status:
-          type: string
-          enum: [pending, running, completed, failed, canceled]
+          $ref: "#/components/schemas/ChatExecutionStatus"
         requestedBackend:
           type: [string, "null"]
           description: 이 실행을 맡을 구현체로 게이트웨이가 고른 값이며 상류가 고르지 않았으면 비어 있다
         draftText:
-          type: [string, "null"]
-          description: 아직 종결되지 않은 턴이 지금까지 만든 누적 답변이다
+          type: string
+          description: 지금까지 만든 누적 답변이며 아직 한 조각도 없으면 빈 문자열이다
         draftSeq:
           type: integer
           minimum: 0
@@ -1253,7 +1822,9 @@ components:
         numTurns:
           type: [integer, "null"]
         stopReason:
-          type: [string, "null"]
+          oneOf:
+            - $ref: "#/components/schemas/ChatStopReason"
+            - type: "null"
         error:
           type: [string, "null"]
         createdAt:

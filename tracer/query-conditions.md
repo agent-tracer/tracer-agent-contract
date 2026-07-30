@@ -1,6 +1,8 @@
-# tracer-api 조회 조건 기록
+# 조회 조건 기록
 
 이 문서는 강제되는 제약이 아니라 조회 동작을 설명하는 기록이다. TypeScript 구현이 정본이며 정본의 조회 조건이 바뀌면 이 문서가 따라 바뀐다. Python 구현은 자기 질의를 적을 때 이것을 본다.
+
+1장부터 10장까지는 에이전트의 도구가 추적 API에 요구하는 조회이고, 11장부터는 에이전트가 자기 원장에 여는 조회다. 두 표면의 소유는 `http/tracer-dependency.openapi.yaml`과 `http/agent-api.openapi.yaml`이 가른다.
 
 ## 공통 표기
 
@@ -110,3 +112,98 @@
 - 조회: `chat_user_memories`에서 `user_id = :userId`.
 - 정렬: `updated_at DESC`.
 - `JOIN`, 상한, soft-delete 조건: 지정 없음.
+
+## 13. `GET /api/v1/jobs`
+
+- 조회: `ai_jobs`에서 `kind = :kind AND status = 'pending'`, `created_at ASC`. 상한 지정 없음.
+- 소유자 검사는 질의에 없고 읽은 행 중 `user_id = :userId`인 것만 application 계층에서 남긴다.
+- `kind`는 필수이며 원장의 잡 종류 넷 중 하나여야 한다. `status`를 실으면 `pending`이어야 한다.
+- `JOIN`, soft-delete 조건: 없음.
+
+## 14. `GET /api/v1/jobs/history`
+
+- 조회: `ai_jobs`에서 `user_id = :userId`. `kind`가 있으면 `kind = :kind`, `status`가 있으면 `status = :status`를 추가한다.
+- 정렬: `created_at DESC`.
+- 상한: 기본 50, 최소 1, 최대 100. 건너뛰기는 기본 0이고 음수를 받지 않는다. 두 값이 범위를 벗어나면 조회하지 않고 거절한다.
+- 전체 개수는 같은 조건에서 상한과 건너뛰기만 뺀 `COUNT`이며 같은 질의 한 번으로 함께 센다.
+- `JOIN`, soft-delete 조건: 없음.
+
+## 15. `GET /api/v1/jobs/latest`
+
+- 조회: `ai_jobs`에서 `user_id = :userId AND kind = :kind`. `taskId`가 있으면 `task_id = :taskId`를 추가한다.
+- 정렬: `created_at DESC`. 상한은 한 행이다.
+- 조건에 맞는 행이 없으면 `job`이 비어 있는 성공 응답이며 404가 아니다.
+- `kind`는 필수이며 원장의 잡 종류 넷 중 하나여야 한다.
+- `JOIN`, soft-delete 조건: 없음.
+
+## 16. `GET /api/v1/jobs/{id}/steps`
+
+- 소유권 확인: `ai_jobs`에서 `id = :id`를 읽고 `user_id = :userId`를 application 계층에서 검사한다. 어긋나면 궤적을 조회하지 않고 404다.
+- 궤적 조회: `ai_job_steps`에서 `job_id = :id AND user_id = :userId`, `attempt ASC, seq ASC`. 상한 지정 없음.
+- `JOIN`, soft-delete 조건: 없음.
+
+## 17. `GET /api/v1/chat/threads`
+
+- 조회: `chat_threads`에서 `user_id = :userId`, `updated_at DESC`. 상한 지정 없음.
+- `JOIN`, soft-delete 조건: 없음.
+
+## 18. `GET /api/v1/chat/threads/{threadId}`
+
+- 조회: `chat_threads`에서 `id = :threadId`를 읽고 `user_id = :userId`를 application 계층에서 검사한다. 어긋나면 404다.
+- `JOIN`, 정렬, 상한: 지정 없음.
+
+## 19. `GET /api/v1/chat/threads/{threadId}/messages`
+
+- 소유권 확인: 18장과 같다. 어긋나면 메시지를 조회하지 않는다.
+- 메시지 조회: `chat_messages`에서 `thread_id = :threadId`, `created_at ASC, id ASC`. 상한 지정 없음.
+- 같은 시각에 여러 줄이 쌓이므로 `id`가 둘째 정렬 키로 순서를 고정한다.
+- `JOIN`, soft-delete 조건: 없음.
+
+## 20. `GET /api/v1/chat/threads/{threadId}/executions`
+
+- 소유권 확인: 18장과 같다.
+- 실행 조회: `chat_executions`에서 `thread_id = :threadId`, `created_at DESC`. 상한 지정 없음.
+- 대기 도구 조회: `chat_pending_tools`에서 `thread_id = :threadId`, `created_at ASC`. 상한 지정 없음. 읽은 행 중 `status = 'pending'`인 것만 application 계층에서 남긴다.
+- 두 조회는 병렬 실행하며 `JOIN`은 사용하지 않는다.
+
+## 21. `GET /api/v1/chat/threads/{threadId}/executions/{executionId}/steps`
+
+- 소유권 확인: `chat_executions`에서 `id = :executionId`를 읽고 `user_id = :userId`와 `thread_id = :threadId`를 application 계층에서 검사한다. 어긋나면 궤적을 조회하지 않고 404다.
+- 궤적 조회: `chat_execution_steps`에서 `execution_id = :executionId AND user_id = :userId`, `attempt ASC, seq ASC`. 상한 지정 없음.
+- `JOIN`, soft-delete 조건: 없음.
+
+## 22. `GET /api/v1/chat/threads/{threadId}/executions/{executionId}/events`
+
+- 스냅샷 하나는 세 조회를 병렬 실행해 만든다. `chat_threads`에서 `id = :threadId`, `chat_executions`에서 `id = :executionId`, `chat_pending_tools`에서 `thread_id = :threadId`를 `created_at ASC`로 읽는다.
+- 소유권 검사는 application 계층에서 하며 스레드의 `user_id`, 실행의 `user_id`, 실행의 `thread_id` 셋이 모두 맞아야 한다. 하나라도 어긋나면 404이고 연결을 열지 않는다.
+- 대기 도구는 `status = 'pending'`인 행만 남긴다.
+- 같은 세 조회를 깨우기 신호마다 그리고 20초마다 다시 실행한다. 프레임의 `id`는 실행의 `draft_seq`와 `updated_at`을 콜론으로 이은 값이다.
+- 실행이 `completed`이거나 `failed`이거나 `canceled`인 스냅샷을 보낸 뒤 연결을 닫는다.
+- `JOIN`, 상한, soft-delete 조건: 없음.
+
+## 23. `GET /api/v1/chat/threads/{threadId}/executions/{executionId}/replay`
+
+조회 조건과 재생 계산을 함께 적는다. **두 구현체가 같은 대화를 같은 이력으로 재생하는 것이 이 장의 목적이다.**
+
+### 조회
+
+- 소유권 확인: `chat_executions`에서 `id = :executionId`를 읽고 `user_id = :userId`와 `thread_id = :threadId`를 검사한다. 어긋나면 404다.
+- 셋을 병렬 실행한다. `chat_threads`에서 `id = :threadId`, `chat_messages`에서 `thread_id = :threadId`를 `created_at ASC, id ASC`로, `chat_user_memories`에서 `user_id = :userId`를 `updated_at DESC`로 읽는다.
+- 스레드를 읽은 뒤 `user_id = :userId`를 한 번 더 검사한다. 어긋나면 404다.
+- 메시지는 실행 식별자로 거르지 않는다. 도구 승인이 적재한 결과 줄은 어느 실행에도 매이지 않으므로 실행별로 모으면 통째로 빠진다.
+- 응답의 `summary`는 스레드의 `summary`를 그대로 싣고, `facts`는 기억 행에서 `key`와 `content`만 남긴다.
+
+### 자르기
+
+- 이번 턴의 사용자 메시지, 즉 실행 행의 `user_message_id`가 가리키는 줄까지가 이력이다. 그 뒤의 줄은 이 턴이 만들 것이라 아직 이력이 아니다.
+- 그 식별자가 읽은 메시지에 없으면 재생을 만들지 않고 실패한다.
+- 스레드의 `summary`가 비어 있거나 공백뿐이면 자른 이력을 그대로 재생한다.
+- 요약이 있으면 최근 대화 턴 여덟 개까지만 남긴다. 창의 단위는 대화 턴이며 `role = 'tool'`인 줄은 턴으로 세지 않고 자기 턴에 딸려 함께 남는다. 뒤에서부터 세어 아홉째 턴을 만나는 순간 그 줄의 다음부터를 창으로 삼는다.
+
+### 접기
+
+- 도구 호출의 짝은 창 안에서만 본다. `role = 'assistant'`인 줄이 선언한 호출 식별자 전부가 답을 받았을 때만 그 줄의 호출이 짝을 이룬 것으로 센다.
+- 답은 호출 바로 뒤에 이어져야 한다. `role = 'tool'`이 아닌 줄이 끼어드는 순간 그 뒤의 결과는 그 호출의 답이 아니다.
+- 어시스턴트 줄은 짝을 이룬 호출만 남긴다. 남은 호출이 없고 본문도 비어 있으면 그 줄을 재생하지 않는다. 남은 호출이 없고 본문이 있으면 본문만 재생한다.
+- 도구 줄은 짝을 이루었으면 `toolCallId`를 그대로 싣고, 짝을 잃었으면 그 인용만 지워 평문 문맥으로 남긴다. 버리지 않는다.
+- 확인 게이트 때문에 답이 없는 호출이 정상적으로 쌓이고 거절당한 호출은 영영 짝이 없으므로, 이 접기가 없으면 모델이 답 없는 호출을 받는다.
