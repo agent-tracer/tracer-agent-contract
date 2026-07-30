@@ -83,6 +83,84 @@ paths:
         "409":
           $ref: "#/components/responses/IdempotencyConflict"
 
+  /api/v1/chat/threads/{threadId}/confirmations:
+    post:
+      operationId: proposeChatTool
+      tags: [chat]
+      summary: 확인이 필요한 도구 호출 하나를 대기 행에 세운다
+      description: 실행기가 쓰기 도구를 직접 부르지 않고 이 자리에 세우므로 승인 없는 쓰기가 생기지 않는다.
+      parameters:
+        - $ref: "#/components/parameters/ThreadId"
+        - $ref: "#/components/parameters/UserHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [toolName]
+              properties:
+                toolName: { type: string, minLength: 1, maxLength: 100 }
+                args:
+                  type: object
+                  default: {}
+      responses:
+        "201":
+          description: 대기 행에 세웠다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ChatToolProposal"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "404":
+          $ref: "#/components/responses/ThreadNotFound"
+
+  /api/v1/chat/threads/{threadId}/confirmations/{confirmationId}:
+    post:
+      operationId: decideChatTool
+      tags: [chat]
+      summary: 대기 중인 도구 호출 하나를 승인이나 거절로 해소한다
+      description: 승인이면 창구가 그 도구를 실제로 부르고 그 결과를 대화에 한 줄로 남긴다.
+      parameters:
+        - $ref: "#/components/parameters/ThreadId"
+        - $ref: "#/components/parameters/ConfirmationId"
+        - $ref: "#/components/parameters/UserHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision:
+                  type: string
+                  enum: [approve, reject]
+      responses:
+        "200":
+          description: 결정을 원장에 적었다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ChatToolDecision"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /api/v1/chat/threads/{threadId}/executions/{executionId}/cancel:
     post:
       operationId: cancelChatTurn
@@ -132,6 +210,57 @@ paths:
                 $ref: "#/components/schemas/SuccessEnvelope"
         "404":
           $ref: "#/components/responses/ThreadNotFound"
+
+  /api/v1/chat/executions/{executionId}/drafts:
+    post:
+      operationId: checkpointChatDraft
+      tags: [chat]
+      summary: 지금까지 만든 누적 답변을 원장에 통지한다
+      description: >-
+        이 창구의 주소와 자격 토큰은 실행 봉투가 싣는다. 사용자 세션이 아니라 실행 시도 하나에 묶인
+        토큰이 자격이므로 사용자 헤더를 읽지 않는다. 재시도가 붙인 시도 번호는 원장이 정하므로
+        살아 있는 시도가 아닌 통지는 stored가 거짓으로 온다.
+      parameters:
+        - $ref: "#/components/parameters/ExecutionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, attempt, draftSeq, text]
+              properties:
+                token: { type: string, minLength: 1, maxLength: 200 }
+                attempt: { type: integer, minimum: 1 }
+                draftSeq: { type: integer, minimum: 1 }
+                text: { type: string, maxLength: 200000 }
+      responses:
+        "200":
+          description: 통지를 받았다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [stored, terminal]
+                        properties:
+                          stored:
+                            type: boolean
+                            description: 이 통지가 원장의 누적 답변을 갱신했는지이며 지난 시도의 통지는 거짓이다
+                          terminal:
+                            type: boolean
+                            description: 이 실행이 이미 종결되었는지이며 참이면 실행기가 통지를 멈춘다
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "403":
+          $ref: "#/components/responses/DraftTokenRejected"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /api/v1/jobs:
     post:
@@ -513,6 +642,11 @@ components:
       in: path
       required: true
       schema: { type: string, minLength: 1 }
+    ConfirmationId:
+      name: confirmationId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
     JobId:
       name: id
       in: path
@@ -580,6 +714,17 @@ components:
             error:
               code: job.llm-key-missing
               message: Model credential is not configured
+    DraftTokenRejected:
+      description: 실은 토큰이 이 실행 시도의 것이 아니다
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            ok: false
+            error:
+              code: forbidden
+              message: Chat draft callback is not authorized
     IdempotencyConflict:
       description: 같은 요청 식별자가 다른 입력으로 이미 쓰였다
       content:
@@ -1012,6 +1157,39 @@ components:
         deadlineMs:
           type: integer
           exclusiveMinimum: 0
+
+    ChatToolProposal:
+      type: object
+      description: 승인을 기다리는 도구 호출 하나이며 summary와 note는 대화에 그대로 보인다
+      required: [confirmationId, toolName, status, summary, note]
+      properties:
+        confirmationId: { type: string }
+        toolName: { type: string }
+        status:
+          $ref: "#/components/schemas/ChatConfirmationStatus"
+        summary:
+          type: string
+          description: 무엇을 하려는지 사용자에게 보이는 한 문장이다
+        note:
+          type: string
+          description: 승인을 요청하며 대화에 남기는 문장이다
+
+    ChatToolDecision:
+      type: object
+      description: 대기 중이던 도구 호출 하나의 해소 결과다
+      required: [confirmationId, toolName, status, result]
+      properties:
+        confirmationId: { type: string }
+        toolName: { type: string }
+        status:
+          $ref: "#/components/schemas/ChatConfirmationStatus"
+        result:
+          type: string
+          description: 승인이면 실제 호출의 결과 문장이고 거절이면 거절을 알리는 문장이다
+
+    ChatConfirmationStatus:
+      type: string
+      enum: [pending, approved, rejected]
 
     ChatMessage:
       type: object

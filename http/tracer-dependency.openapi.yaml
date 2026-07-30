@@ -11,71 +11,10 @@ servers:
   - url: /
 
 tags:
-  - name: execution
-    description: 대화 실행의 문맥 되읽기와 누적 답변 통지와 확인 대기 행
   - name: tool
     description: 대화 에이전트의 도구가 읽거나 부르는 표면
 
 paths:
-  /api/v1/chat/threads/{threadId}/confirmations:
-    post:
-      operationId: proposeTool
-      tags: [execution]
-      summary: 확인이 필요한 도구 호출 하나를 대기 행에 세운다
-      parameters:
-        - name: threadId
-          in: path
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [toolName]
-              properties:
-                toolName: { type: string, minLength: 1, maxLength: 100 }
-                args: { type: object, default: {} }
-      responses:
-        "2XX":
-          $ref: "#/components/responses/Success"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-
-  /api/v1/chat/executions/{executionId}/drafts:
-    post:
-      operationId: checkpointChatDraft
-      tags: [execution]
-      summary: 지금까지 만든 누적 답변을 원장에 통지한다
-      description: 이 창구의 주소와 자격 토큰은 실행 봉투가 싣는다
-      parameters:
-        - name: executionId
-          in: path
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [token, attempt, draftSeq, text]
-              properties:
-                token: { type: string, minLength: 1, maxLength: 200 }
-                attempt: { type: integer, minimum: 1 }
-                draftSeq: { type: integer, minimum: 1 }
-                text: { type: string, maxLength: 200000 }
-      responses:
-        "2XX":
-          $ref: "#/components/responses/Success"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-
   /api/v1/tasks:
     get:
       operationId: search_tasks
