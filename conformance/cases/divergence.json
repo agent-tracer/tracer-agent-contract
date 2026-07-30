@@ -39,6 +39,15 @@
             "resolution": "데드라인을 실행 봉투 하나가 소유하게 한다"
         },
         {
+            "id": "evaluation.surface",
+            "area": "http",
+            "summary": "평가 표면을 한쪽만 연다",
+            "canonical": "typescript",
+            "typescript": "datasets·evaluators·prompts·prompt-fragments·candidate 다섯을 api/agent/evaluation 아래 연다",
+            "python": "HTTP 평가 표면이 없다. 화면이 그 경로를 부르면 404가 오고 평가 작업창이 비어 보인다",
+            "resolution": "계약이 평가 표면을 선언하고 python이 그것을 따라간다"
+        },
+        {
             "id": "evaluation.run",
             "area": "http",
             "summary": "합성 평가 실행을 한쪽만 수행한다",
