@@ -215,6 +215,26 @@ paths:
         "5XX":
           $ref: "#/components/responses/Failure"
 
+  /api/v1/events/{eventId}:
+    get:
+      operationId: get_event
+      tags: [tool]
+      summary: 이벤트 하나를 조회한다
+      description: 근거로 지목된 이벤트가 이 사용자의 것인지와 어느 종류인지를 가리는 자리이며 남의 것은 404다
+      x-confirmation-gate: none
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "2XX":
+          $ref: "#/components/responses/Success"
+        "4XX":
+          $ref: "#/components/responses/Failure"
+        "5XX":
+          $ref: "#/components/responses/Failure"
+
   /api/v1/events/search:
     get:
       operationId: search_events
