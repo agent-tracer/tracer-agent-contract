@@ -1423,7 +1423,10 @@ components:
 
     PromptBackend:
       type: string
-      enum: [python, claude-sdk]
+      minLength: 1
+      maxLength: 64
+      pattern: "^[a-z][a-z0-9-]*$"
+      description: 조각을 올린 에이전트 서비스를 가르는 이름이며 배포의 상류 선언이 그 값을 정하므로 계약도 구현체도 후보를 열거하지 않는다
 
     PromptFragmentManifestEntry:
       type: object

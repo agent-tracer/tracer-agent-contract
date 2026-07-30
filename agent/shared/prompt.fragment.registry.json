@@ -1,6 +1,7 @@
 {
     "identity": {
         "backend": "백엔드를 나르는 것은 prompt_fragment_definitions.backend 칸 하나이며 키의 어느 자리도 그것을 다시 말하지 않는다",
+        "backendNames": "그 칸이 담는 이름은 배포의 상류 선언이 정하므로 계약도 구현체도 후보를 열거하지 않으며 등록 창구는 문법만 검사한다",
         "definitionKey": {
             "grammar": "<agentName>.<fragmentSlot-kebab>.<language>",
             "example": "chat.grounding-rules.en"
