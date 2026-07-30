@@ -1,4 +1,10 @@
 {
+    "modes": {
+        "meaning": "실행 봉투의 promptIntegrity.mode 는 그 실행이 프롬프트의 무결성을 무엇으로 증명하는지 가른다",
+        "full-prompt": "조각으로 나뉘지 않은 프롬프트 전체를 그대로 검증하며 봉투가 조각을 싣지 않는다",
+        "resolved-fragments": "해석된 조각들과 최종 prompt 해시를 함께 실어 렌더링 결과까지 검증한다",
+        "fragment-content-only": "조각 본문의 무결성만 싣고 최종 prompt 해시는 렌더링하는 쪽이 산출한다"
+    },
     "cases": [
         {
             "name": "plain",
