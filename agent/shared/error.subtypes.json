@@ -58,7 +58,8 @@
             "retryable": false,
             "landsEmpty": false,
             "emittedBy": [
-                "typescript"
+                "typescript",
+                "python"
             ]
         },
         "process_error": {
