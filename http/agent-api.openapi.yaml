@@ -989,14 +989,19 @@ paths:
         "400":
           $ref: "#/components/responses/InvalidRequest"
 
-  /internal/prompts/python/register:
+  /internal/prompts/{backend}/register:
     post:
       operationId: registerPrompt
       tags: [prompt]
       summary: 부팅 시 자기 파일 프롬프트의 판과 해시를 등록한다
-      description: 배포 단위 사이에서만 오가는 창구라 게이트웨이가 바깥에 열지 않는다.
+      description: 배포 단위 사이에서만 오가는 창구라 게이트웨이가 바깥에 열지 않는다. 경로가 정의의 backend 를 정하므로 본문이 그것을 다시 싣지 않는다.
       parameters:
         - $ref: "#/components/parameters/UserHeader"
+        - name: backend
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/PromptBackend"
       requestBody:
         required: true
         content:
