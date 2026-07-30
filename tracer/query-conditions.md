@@ -207,3 +207,47 @@
 - 어시스턴트 줄은 짝을 이룬 호출만 남긴다. 남은 호출이 없고 본문도 비어 있으면 그 줄을 재생하지 않는다. 남은 호출이 없고 본문이 있으면 본문만 재생한다.
 - 도구 줄은 짝을 이루었으면 `toolCallId`를 그대로 싣고, 짝을 잃었으면 그 인용만 지워 평문 문맥으로 남긴다. 버리지 않는다.
 - 확인 게이트 때문에 답이 없는 호출이 정상적으로 쌓이고 거절당한 호출은 영영 짝이 없으므로, 이 접기가 없으면 모델이 답 없는 호출을 받는다.
+
+---
+
+## 24. `GET /api/agent/evaluation/experiments`
+
+- 조회: `experiments`에서 `user_id = :userId`. 정렬 `created_at DESC`. 상한 지정 없음.
+- JOIN, soft-delete 조건: 없음.
+
+## 25. `GET /api/agent/evaluation/experiments/{experimentId}`
+
+- 실험 조회: `experiments`에서 `id = :experimentId AND user_id = :userId`. 없으면 실패다.
+- 변형 조회: `experiment_variants`에서 `experiment_id = :experimentId`, `id ASC`. 상한 지정 없음.
+- 소유권이 어긋나면 변형을 조회하지 않고 빈 목록을 낸다.
+- JOIN은 사용하지 않는다.
+
+## 26. `GET /api/agent/evaluation/experiments/{experimentId}/preview`
+
+- 소유권 확인: 25장과 같다. 상태가 `draft`가 아니면 예고를 만들지 않는다.
+- 예시 조회: `evaluation_examples e JOIN evaluation_datasets d ON d.id = e.dataset_id`. 조건은 `d.user_id = :userId AND e.dataset_id = :datasetId AND e.revision = :revision AND e.enabled = true`. 정렬 `e.id`. 상한 지정 없음.
+- 변형 조회: 25장과 같다.
+- `executionCount`는 예시 수 × 변형 수 × `repetitions`다.
+- `fingerprint`는 실험 식별자, `datasetRevision`, 정렬한 예시 식별자 전부, 정렬한 변형 식별자 전부를 콜론으로 이은 값이다. 시작 확인이 이 값을 그대로 대조한다.
+
+## 27. `GET /api/agent/evaluation/experiments/{experimentId}/executions`
+
+- 소유권 확인: 25장과 같다. 어긋나면 실행을 조회하지 않는다.
+- 실행 조회: `experiment_executions`에서 `experiment_id = :experimentId`, `id ASC`. 상한 지정 없음.
+- 점수 조회: `evaluation_scores s JOIN experiment_executions e ON e.id = s.execution_id`. 조건은 `e.experiment_id = :experimentId`. 정렬과 상한 지정 없음.
+- 두 조회를 순서대로 실행하고 점수는 application 계층에서 `execution_id`로 묶는다.
+- 점수가 없는 실행은 빈 목록을 달고 나온다.
+
+## 28. `GET /api/agent/evaluation/experiments/{experimentId}/comparison`
+
+- 소유권 확인: 25장과 같다.
+- 변형과 실행과 점수를 27장과 25장의 조건으로 각각 읽는다.
+- 변형마다 `status = 'succeeded'`인 실행만 세고 그 실행의 점수만 평균한다.
+- 점수가 하나도 없으면 `meanScore`는 비어 있다. `totalCostUsd`는 성공한 실행의 `cost_usd` 합이다.
+- 응답에 실험의 `id`와 `status`를 함께 싣는다.
+
+## 29. `GET /api/agent/evaluation/experiments/{experimentId}/reviews`
+
+- 소유권 확인: 25장과 같다. 어긋나면 검토를 조회하지 않는다.
+- 검토 조회: `human_reviews`에서 `user_id = :userId AND experiment_id = :experimentId`. 정렬 `created_at ASC`. 상한 지정 없음.
+- JOIN, soft-delete 조건: 없음.
