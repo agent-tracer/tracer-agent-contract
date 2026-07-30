@@ -73,6 +73,33 @@ def _read_surface_paths(file_name: str) -> list[str]:
     return re.findall(r"^ {2}(/\S+):$", spec, re.MULTILINE)
 
 
+def route_key(route: dict[str, str]) -> str:
+    """메서드와 경로를 한 문자열로 모아 대조와 정렬의 키로 쓴다."""
+    return f"{route['method']} {normalize_path_template(route['path'])}"
+
+
+def read_agent_api_routes() -> list[dict[str, str]]:
+    """에이전트 서비스가 열어야 하는 창구를 메서드와 경로의 쌍으로 사전순으로 낸다."""
+    spec = (ROOT / "http" / "agent-api.openapi.yaml").read_text(encoding="utf-8")
+    routes: list[dict[str, str]] = []
+    path: str | None = None
+    for line in spec.split("\n"):
+        declared = re.match(r"^ {2}(/\S+):$", line)
+        if declared:
+            path = declared.group(1)
+            continue
+        if path is None:
+            continue
+        method = re.match(r"^ {4}(get|post|put|patch|delete):$", line)
+        if method:
+            routes.append(
+                {"method": method.group(1).upper(), "path": normalize_path_template(path)}
+            )
+        elif re.match(r"^ {0,3}\S", line):
+            path = None
+    return sorted(routes, key=route_key)
+
+
 def read_tool_binding_paths() -> list[dict[str, str]]:
     """대화 도구가 어느 경로의 뷰인지를 도구 이름 순으로 낸다."""
     bindings = read_agent_spec("chat")["bindings"]["bindings"]

@@ -2,12 +2,26 @@ import {
     enforcementLevel,
     listCases,
     normalizePathTemplate,
+    readAgentApiRoutes,
     readCase,
     readDeclaredHttpPaths,
     readJson,
     readToolBindingPaths,
     readVersion,
+    routeKey,
 } from "./contract.mjs";
+
+const SURFACE_PATH = "/internal/surface";
+
+/** 도는 서버가 자기 라우팅 표를 그대로 내므로 그것을 계약이 선언한 창구와 대조한다. */
+async function readServedRoutes(baseUrl) {
+    const response = await fetch(new URL(SURFACE_PATH, baseUrl));
+    if (!response.ok) {
+        throw new Error(`${baseUrl} 가 자기 표면을 내지 않는다 — ${SURFACE_PATH} 가 ${response.status} 다`);
+    }
+    const body = await response.json();
+    return new Set(body.data.routes.map(routeKey));
+}
 
 const AGENTS = ["chat", "recipe-scan", "title-suggestion", "task-cleanup", "rule-generation"];
 const SHARED = [
@@ -94,6 +108,19 @@ if (incompleteTopics.length > 0) {
     throw new Error(
         `토픽 선언에 ${TOPIC_FIELDS.join(" · ")} 가 다 있어야 한다 — ${incompleteTopics.join(", ")}`,
     );
+}
+
+const declaredRoutes = readAgentApiRoutes();
+const baseUrl = process.argv[2];
+if (baseUrl !== undefined) {
+    const served = await readServedRoutes(baseUrl);
+    const unserved = declaredRoutes.filter((route) => !served.has(routeKey(route)));
+    if (unserved.length > 0) {
+        throw new Error(
+            `계약이 선언한 창구에 서버가 없다 — ${unserved.map(routeKey).join(", ")}`,
+        );
+    }
+    console.log(`${baseUrl} 가 계약의 창구 ${declaredRoutes.length}자리를 모두 연다`);
 }
 
 console.log(`계약 ${version}: 케이스 ${cases.length}개를 읽었다 — ${cases.join(", ")}`);

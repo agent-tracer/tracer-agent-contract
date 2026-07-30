@@ -66,6 +66,30 @@ function readSurfacePaths(fileName) {
     return [...spec.matchAll(/^ {2}(\/\S+):$/gm)].map((match) => match[1]);
 }
 
+/** 에이전트 서비스가 열어야 하는 창구를 메서드와 경로의 쌍으로 사전순으로 낸다. */
+export function readAgentApiRoutes() {
+    const spec = readFileSync(join(ROOT, "http", "agent-api.openapi.yaml"), "utf8");
+    const routes = [];
+    let path = null;
+    for (const line of spec.split("\n")) {
+        const declared = /^ {2}(\/\S+):$/.exec(line);
+        if (declared) {
+            path = declared[1];
+            continue;
+        }
+        if (path === null) continue;
+        const method = /^ {4}(get|post|put|patch|delete):$/.exec(line);
+        if (method) routes.push({ method: method[1].toUpperCase(), path: normalizePathTemplate(path) });
+        else if (/^ {0,3}\S/.test(line)) path = null;
+    }
+    return routes.sort((left, right) => (routeKey(left) < routeKey(right) ? -1 : 1));
+}
+
+/** 메서드와 경로를 한 문자열로 모아 대조와 정렬의 키로 쓴다. */
+export function routeKey(route) {
+    return `${route.method} ${normalizePathTemplate(route.path)}`;
+}
+
 /** 대화 도구가 어느 경로의 뷰인지를 도구 이름 순으로 낸다. */
 export function readToolBindingPaths() {
     const { bindings } = readAgentSpec("chat").bindings;
