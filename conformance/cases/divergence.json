@@ -52,7 +52,7 @@
             "area": "http",
             "summary": "합성 평가 실행을 한쪽만 수행한다",
             "canonical": "typescript",
-            "typescript": "evaluationRunWorkflow가 sdk-generate에서 실행한다",
+            "typescript": "evaluationRunWorkflow가 생성 큐에서 실행한다",
             "python": "POST /v1/evaluation-runs가 봉투를 검증한 뒤 422로 거절한다. 봉투가 본문을 싣지 않아 어느 프롬프트를 고를지 알 이름이 없다",
             "resolution": "실행 봉투에 에이전트 범위를 실어 두 구현체가 같은 창구로 평가를 실행하게 한다"
         },
