@@ -2,19 +2,23 @@
     "kinds": {
         "title.suggestion": {
             "agent": "title-suggestion",
-            "executor": "temporal"
+            "executor": "temporal",
+            "deadlineMs": 300000
         },
         "recipe.scan": {
             "agent": "recipe-scan",
-            "executor": "temporal"
+            "executor": "temporal",
+            "deadlineMs": 720000
         },
         "task.cleanup": {
             "agent": "task-cleanup",
-            "executor": "temporal"
+            "executor": "temporal",
+            "deadlineMs": 600000
         },
         "rule.generation": {
             "agent": "rule-generation",
-            "executor": "local"
+            "executor": "local",
+            "deadlineMeaning": "로컬 실행기가 가져가므로 실행 봉투를 받지 않고 데드라인도 갖지 않는다"
         }
     },
     "statuses": {
@@ -159,5 +163,6 @@
         ],
         "maxSuggestions": 50,
         "maxEvidenceEventIds": 100
-    }
+    },
+    "deadlines": "kinds 의 deadlineMs 는 그 종류의 실행 하나가 쓸 수 있는 최대 시간이며 실행 봉투가 그 값을 실어 나른다"
 }
