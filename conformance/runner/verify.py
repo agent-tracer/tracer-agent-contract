@@ -25,6 +25,7 @@ SHARED = [
     "evaluation.example.contract.json",
 ]
 WIRE = ["envelope.json", "headers.json", "topics.json", "job.kinds.json"]
+TOPIC_FIELDS = ["name", "key", "payload", "delivery"]
 STANDALONE = [
     "workflow/queues.yaml",
     "http/agent-api.openapi.yaml",
@@ -56,6 +57,13 @@ def main() -> None:
     for surface in surfaces:
         grouped[enforcement_level(surface)].append(surface)
 
+    topics = read_json("wire/topics.json")
+    incomplete_topics = [
+        topic_id
+        for topic_id, topic in topics.items()
+        if any(field not in topic for field in TOPIC_FIELDS)
+    ]
+
     declared_paths = set(read_declared_http_paths())
     bindings = read_tool_binding_paths()
     unmet = [
@@ -72,10 +80,15 @@ def main() -> None:
     if unmet:
         detail = ", ".join(f"{binding['name']} {binding['path']}" for binding in unmet)
         raise SystemExit(f"도구가 부르는 경로를 어느 HTTP 표면도 선언하지 않는다 — {detail}")
+    if incomplete_topics:
+        fields = " · ".join(TOPIC_FIELDS)
+        raise SystemExit(f"토픽 선언에 {fields} 가 다 있어야 한다 — {', '.join(incomplete_topics)}")
 
+    names = ", ".join(topic["name"] for topic in topics.values())
     print(f"계약 {version}: 케이스 {len(cases)}개를 읽었다 — {', '.join(cases)}")
     print(f"강제 {len(grouped['enforced'])}자리, 기록 {len(grouped['recorded'])}자리")
     print(f"도구 {len(bindings)}개가 부르는 경로를 HTTP 표면 {len(declared_paths)}자리가 덮는다")
+    print(f"서비스를 넘는 토픽 {len(topics)}개를 선언한다 — {names}")
 
 
 if __name__ == "__main__":

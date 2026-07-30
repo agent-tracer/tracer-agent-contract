@@ -10,5 +10,60 @@
             }
         },
         "delivery": "유실되어도 구독자가 주기 조회로 따라잡으므로 발행 실패가 실행을 끊지 않는다"
+    },
+    "notifications": {
+        "name": "notifications",
+        "meaning": "사용자의 열린 화면에 상태 전이를 알리며 소비자는 발행자를 묻지 않는다",
+        "key": "userId",
+        "payload": {
+            "userId": {
+                "type": "string",
+                "meaning": "이 알림이 향하는 사용자이며 받은 쪽은 이것으로 대상 연결을 고른다"
+            },
+            "notification": {
+                "type": "object",
+                "meaning": "종류 하나와 그 종류가 정한 칸 한 벌을 담는다",
+                "fields": {
+                    "type": {
+                        "type": "string",
+                        "meaning": "알림의 종류이며 받은 쪽은 모르는 종류를 버린다"
+                    },
+                    "payload": {
+                        "type": "object",
+                        "meaning": "그 종류가 정한 칸이며 종류마다 모양이 다르다"
+                    }
+                }
+            }
+        },
+        "types": {
+            "meaning": "에이전트 서비스가 발행하는 종류만 적는다. 같은 토픽에 추적 서비스가 자기 종류를 함께 실으며 그 목록은 추적이 소유한다",
+            "jobUpdated": {
+                "name": "job.updated",
+                "meaning": "잡 하나의 실행 상태가 바뀌었다",
+                "payload": {
+                    "jobId": {
+                        "type": "string",
+                        "meaning": "상태가 바뀐 잡 실행의 식별자다",
+                        "required": true
+                    },
+                    "kind": {
+                        "type": "string",
+                        "meaning": "wire/job.kinds.json이 선언한 잡 종류다",
+                        "required": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "meaning": "그 잡이 옮겨 간 실행 상태다",
+                        "required": true
+                    },
+                    "taskId": {
+                        "type": "string",
+                        "meaning": "잡이 매인 태스크이며 태스크에 매이지 않은 잡은 이 칸을 싣지 않는다",
+                        "required": false
+                    }
+                }
+            }
+        },
+        "delivery": "유실되어도 화면이 주기 조회로 정본을 다시 읽으므로 발행 실패가 잡을 끊지 않는다"
     }
 }
