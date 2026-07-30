@@ -4,9 +4,9 @@
         "user",
         "assistant",
         "tool",
-        "graph"
+        "orchestration"
     ],
-    "graphEventKinds": [
+    "orchestrationEventKinds": [
         "node.started",
         "node.completed",
         "node.failed",
