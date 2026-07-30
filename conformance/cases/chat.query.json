@@ -307,6 +307,22 @@
         "resendIntervalMs": 20000,
         "frame": "snapshot"
     },
+    "valueRules": {
+        "meaning": "칸의 존재만 적으면 같은 칸에 다른 뜻의 값이 담겨도 통과한다. 화면이 값을 그대로 렌더하는 자리는 값 자체를 여기에 못 박는다",
+        "stepContent": {
+            "meaning": "궤적 한 줄의 content는 사람이 읽는 평문이다",
+            "assistant": "모델이 낸 텍스트 자체다. 내용 블록 배열을 JSON으로 직렬화한 문자열이 아니다",
+            "fromBlocks": "실행기가 블록 배열을 받으면 kind가 텍스트인 블록의 텍스트만 순서대로 이어 붙인다. 도구 호출 블록은 content가 아니라 toolCalls로 간다",
+            "empty": "이을 텍스트가 없으면 빈 문자열이며, 본문도 도구 호출도 없는 줄은 seq를 쓰지 않고 버린다",
+            "tool": "도구 결과 줄의 content는 그 도구가 낸 텍스트다",
+            "truncation": "상한을 넘기면 잘린 자리에서 끊고 truncated를 참으로 적는다. 여러 바이트로 적히는 글자를 가운데서 자르지 않는다",
+            "maxBytes": 32000,
+            "example": {
+                "blocks": [{ "type": "text", "text": "4", "index": 0 }],
+                "content": "4"
+            }
+        }
+    },
     "replayRules": {
         "meaning": "재생 계산이 두 축에서 같아야 하므로 창 자르기와 짝 맞추기를 여기에 못 박는다",
         "window": "이번 턴의 사용자 메시지까지가 이력이며 그 뒤 행은 싣지 않는다",

@@ -176,6 +176,18 @@
             "startedAt",
             "completedAt"
         ],
+        "usage": {
+            "meaning": "usage 전체의 모양은 job.usage.shape가 갖는다. 여기는 화면이 그대로 보여주는 model 칸 하나의 값을 못 박는다",
+            "model": {
+                "value": "이 시도를 태운 모델의 별칭이며 실행 봉투가 건넨 식별자를 그대로 적는다",
+                "example": "claude-haiku-4-5",
+                "forbidden": "판까지 붙은 식별자 — claude-haiku-4-5-20251001",
+                "fallback": "물러선 모델이 태웠으면 그 모델의 별칭을 적는다",
+                "rateKey": "modelRates의 키와 같은 값이므로 한 기록 안에서 model과 costUsd가 같은 모델을 가리킨다",
+                "onFailure": "공급자가 답하기 전에 실패해도 봉투가 건넨 값을 알기 때문에 이 칸은 비지 않는다",
+                "actualModel": "공급자가 실제로 답한 판까지 붙은 식별자는 실행 관측 기록의 자기 칸이 갖는다. usage는 그것을 싣지 않는다"
+            }
+        },
         "enqueue": {
             "status": 202,
             "data": {
