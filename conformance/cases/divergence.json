@@ -57,24 +57,6 @@
             "resolution": "agent/shared/error.subtypes.json의 emittedBy가 모두 두 구현체를 담을 때까지 좁힌다"
         },
         {
-            "id": "chat.replay",
-            "area": "http",
-            "summary": "실행기가 되읽는 대화 이력 창구를 한쪽만 섬긴다",
-            "canonical": "typescript",
-            "typescript": "agent-api가 /api/v1/chat/threads/{threadId}/executions/{executionId}/replay를 열고 워커가 자기 배포 단위의 그 경로를 부른다",
-            "python": "그 경로를 열지 않고 워커가 추적 API 주소로 부르므로 404가 오고 턴이 종결하지 못한다",
-            "resolution": "python의 agent-api가 그 창구를 열고 워커가 자기 배포 단위를 부르게 한다"
-        },
-        {
-            "id": "chat.draft",
-            "area": "http",
-            "summary": "누적 답변을 받는 창구를 한쪽만 섬긴다",
-            "canonical": "typescript",
-            "typescript": "agent-api가 /api/v1/chat/executions/{id}/drafts를 열어 실행기가 만드는 중인 답변을 받는다",
-            "python": "봉투가 그 주소를 실어 보내지만 그 경로를 열지 않아 타이핑되는 답변이 화면에 닿지 않는다",
-            "resolution": "python의 agent-api가 그 창구를 연다. 원장의 checkpoint_running은 이미 있다"
-        },
-        {
             "id": "job.usage.shape",
             "area": "job",
             "summary": "실패한 잡의 usage 모양이 다르다",
@@ -82,6 +64,33 @@
             "typescript": "실패하면 시도마다의 기록을 attempts 배열 하나로 싣는다",
             "python": "실패해도 model·costUsd·numTurns·durationMs와 토큰 넷을 평평하게 싣는다",
             "resolution": "성공 경로는 이미 같다. 실패 경로의 usage를 한 모양으로 정한다"
+        },
+        {
+            "id": "chat.step.content",
+            "area": "chat",
+            "summary": "궤적에 적는 모델 응답 본문의 표현이 다르다",
+            "canonical": "typescript",
+            "typescript": "assistant 한 줄의 content가 모델이 낸 텍스트 자체다",
+            "python": "assistant 한 줄의 content가 내용 블록 배열을 JSON으로 직렬화한 문자열이다",
+            "resolution": "블록 배열에서 텍스트를 뽑아 적는다. 계약이 content를 string으로만 적어 두 축의 화면이 다르게 보인다"
+        },
+        {
+            "id": "job.id.source",
+            "area": "job",
+            "summary": "원장에 적는 잡 식별자의 출처가 다르다",
+            "canonical": "typescript",
+            "typescript": "접수가 식별자를 새로 만들고 idempotencyKey는 중복 접수 판정에만 쓴다",
+            "python": "idempotencyKey를 그대로 잡 식별자로 쓴다",
+            "resolution": "접수가 식별자를 만들고 멱등키는 판정에만 쓰게 한다"
+        },
+        {
+            "id": "job.usage.model",
+            "area": "job",
+            "summary": "usage에 적는 모델 식별자의 자세함이 다르다",
+            "canonical": "typescript",
+            "typescript": "별칭을 적는다 — claude-haiku-4-5",
+            "python": "판까지 붙은 완전한 식별자를 적는다 — claude-haiku-4-5-20251001",
+            "resolution": "무엇을 적을지 계약이 정한다. 화면이 모델명을 그대로 보여준다"
         }
     ],
     "canonical": "typescript가 정본이다. 항목의 canonical이 python이면 SDK나 LangGraph가 강제해 정본이 따라가야 하는 자리다."
