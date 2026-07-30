@@ -43,6 +43,37 @@ paths:
                     const: ok
               example: { status: ok }
 
+  /health/ready:
+    get:
+      operationId: getReadiness
+      tags: [health]
+      summary: 의존이 모두 닿아 요청을 처리할 수 있는지 알린다
+      responses:
+        "200":
+          description: 처리할 수 있다
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    const: ok
+              example: { status: ok }
+        "503":
+          description: 의존 하나 이상에 닿지 못한다
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    const: unready
+              example: { status: unready }
+
   /api/v1/chat/threads:
     get:
       operationId: listChatThreads
