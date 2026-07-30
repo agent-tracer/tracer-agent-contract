@@ -10,6 +10,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 CASES = ROOT / "conformance" / "cases"
 SUFFIX = ".json"
+HTTP_SURFACES = ["agent-api.openapi.yaml", "tracer-dependency.openapi.yaml"]
 
 
 def contract_root() -> Path:
@@ -47,10 +48,29 @@ def read_shared(file_name: str) -> Any:
     return read_json(f"agent/shared/{file_name}")
 
 
+def normalize_path_template(path: str) -> str:
+    """경로 변수의 이름은 선언하는 쪽의 사정이므로 표면을 대조할 때는 변수 자리만 남긴다."""
+    return re.sub(r"\{[^}]*\}", "{}", path)
+
+
 def read_dependency_paths() -> list[str]:
     """에이전트가 추적 API에 요구하는 경로를 사전순으로 낸다."""
-    spec = (ROOT / "http" / "tracer-dependency.openapi.yaml").read_text(encoding="utf-8")
-    return sorted(re.findall(r"^ {2}(/\S+):$", spec, re.MULTILINE))
+    return sorted(_read_surface_paths("tracer-dependency.openapi.yaml"))
+
+
+def read_declared_http_paths() -> list[str]:
+    """계약이 선언한 HTTP 경로 전부를 변수 이름을 지운 꼴로 사전순으로 낸다."""
+    declared = (
+        normalize_path_template(path)
+        for file_name in HTTP_SURFACES
+        for path in _read_surface_paths(file_name)
+    )
+    return sorted(set(declared))
+
+
+def _read_surface_paths(file_name: str) -> list[str]:
+    spec = (ROOT / "http" / file_name).read_text(encoding="utf-8")
+    return re.findall(r"^ {2}(/\S+):$", spec, re.MULTILINE)
 
 
 def read_tool_binding_paths() -> list[dict[str, str]]:
@@ -68,7 +88,7 @@ def read_enforcement() -> Any:
 
 
 def enforcement_level(path: str) -> str:
-    """계약의 자리 하나가 강제인지 기록인지를 내며 어느 목록에도 닿지 않으면 unclassified를 낸다."""
+    """자리 하나가 강제인지 기록인지를 내며 어느 목록에도 닿지 않으면 unclassified를 낸다."""
     levels = read_enforcement()["levels"]
     for level in ("enforced", "recorded"):
         if any(path == prefix or path.startswith(prefix) for prefix in levels[level]["paths"]):

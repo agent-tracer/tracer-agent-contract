@@ -381,25 +381,6 @@ paths:
         "5XX":
           $ref: "#/components/responses/Failure"
 
-  /api/v1/jobs/{jobId}:
-    get:
-      operationId: get_job
-      tags: [tool]
-      summary: 잡 하나를 조회한다
-      x-confirmation-gate: none
-      parameters:
-        - name: jobId
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        "2XX":
-          $ref: "#/components/responses/Success"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-
   /api/v1/tasks/{taskId}/archive:
     post:
       operationId: archive_task
@@ -721,29 +702,6 @@ paths:
           in: path
           required: true
           schema: { type: string }
-      responses:
-        "2XX":
-          $ref: "#/components/responses/Success"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-
-  /api/v1/jobs:
-    post:
-      operationId: enqueue_job
-      tags: [tool]
-      summary: 잡 하나를 접수한다
-      x-confirmation-gate: confirm
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                kind: {}
-                input: {}
       responses:
         "2XX":
           $ref: "#/components/responses/Success"

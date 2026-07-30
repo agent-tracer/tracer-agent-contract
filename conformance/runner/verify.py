@@ -1,12 +1,13 @@
-"""로더가 계약 파일과 케이스를 전부 읽어 낼 수 있고 자리마다 강제와 기록이 정해졌는지 확인한다."""
+"""로더가 계약 파일과 케이스를 읽어 낼 수 있고 자리마다 강제와 기록이 정해졌는지 확인한다."""
 
 from __future__ import annotations
 
 from contract import (
     enforcement_level,
     list_cases,
+    normalize_path_template,
     read_case,
-    read_dependency_paths,
+    read_declared_http_paths,
     read_json,
     read_tool_binding_paths,
     read_version,
@@ -54,21 +55,26 @@ def main() -> None:
     for surface in surfaces:
         grouped[enforcement_level(surface)].append(surface)
 
-    dependency_paths = set(read_dependency_paths())
+    declared_paths = set(read_declared_http_paths())
     bindings = read_tool_binding_paths()
-    unmet = [binding for binding in bindings if binding["path"] not in dependency_paths]
+    unmet = [
+        binding
+        for binding in bindings
+        if normalize_path_template(binding["path"]) not in declared_paths
+    ]
 
     if not cases:
         raise SystemExit("적합성 케이스가 하나도 없다")
     if grouped["unclassified"]:
-        raise SystemExit(f"강제인지 기록인지 정해지지 않은 자리가 있다 — {', '.join(grouped['unclassified'])}")
+        unclassified = ", ".join(grouped["unclassified"])
+        raise SystemExit(f"강제인지 기록인지 정해지지 않은 자리가 있다 — {unclassified}")
     if unmet:
         detail = ", ".join(f"{binding['name']} {binding['path']}" for binding in unmet)
-        raise SystemExit(f"도구가 부르는 경로를 추적 API 의존이 적지 않는다 — {detail}")
+        raise SystemExit(f"도구가 부르는 경로를 어느 HTTP 표면도 선언하지 않는다 — {detail}")
 
     print(f"계약 {version}: 케이스 {len(cases)}개를 읽었다 — {', '.join(cases)}")
     print(f"강제 {len(grouped['enforced'])}자리, 기록 {len(grouped['recorded'])}자리")
-    print(f"도구 {len(bindings)}개가 부르는 경로를 추적 API 의존 {len(dependency_paths)}개가 덮는다")
+    print(f"도구 {len(bindings)}개가 부르는 경로를 HTTP 표면 {len(declared_paths)}자리가 덮는다")
 
 
 if __name__ == "__main__":

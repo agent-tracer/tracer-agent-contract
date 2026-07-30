@@ -40,10 +40,13 @@ Node에서는 `conformance/runner/contract.mjs`를, Python에서는 `conformance
 | 강제·기록 분류를 읽는다 | `readEnforcement()` | `read_enforcement()` |
 | 자리 하나의 분류를 낸다 | `enforcementLevel(path)` | `enforcement_level(path)` |
 | 추적 API 의존 경로를 낸다 | `readDependencyPaths()` | `read_dependency_paths()` |
+| 선언된 HTTP 경로 전부를 낸다 | `readDeclaredHttpPaths()` | `read_declared_http_paths()` |
+| 경로 변수 이름을 지운다 | `normalizePathTemplate(path)` | `normalize_path_template(path)` |
 | 도구가 부르는 경로를 낸다 | `readToolBindingPaths()` | `read_tool_binding_paths()` |
 
-`verify`가 대화 도구의 `bindings`가 가리키는 경로를 `http/tracer-dependency.openapi.yaml`이
-모두 적는지 대조한다. 도구가 부르는데 의존이 적지 않은 경로가 있으면 여기서 걸린다.
+`verify`가 대화 도구의 `bindings`가 가리키는 경로를 `http/`의 두 표면이 함께 덮는지 대조한다.
+도구는 추적 API도 부르고 에이전트 자신의 창구도 부르므로 어느 한 표면만 요구하면 제 창구를
+가리키는 도구가 걸린다. 경로 변수의 이름은 선언하는 쪽의 사정이라 대조 전에 지운다.
 
 구현체는 자기가 고정한 판을 `readVersion()`의 값과 대조해, 계약이 앞서 나간 것을 자기 CI에서
 먼저 본다. `node conformance/runner/verify.mjs`와 `python conformance/runner/verify.py`는
