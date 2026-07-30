@@ -249,6 +249,8 @@ paths:
                     properties:
                       data:
                         $ref: "#/components/schemas/ChatExecutionEnvelope"
+        "400":
+          $ref: "#/components/responses/EnvelopeUnissuable"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -544,8 +546,9 @@ components:
             $ref: "#/components/schemas/ErrorEnvelope"
     EnvelopeUnissuable:
       description: >-
-        봉투를 발급할 수 없다. 워크플로가 태우지 않는 잡 종류이거나 사용자 설정에 모델 자격이 없다.
+        봉투를 발급할 수 없다. 사용자 설정에 모델 자격이 없거나 워크플로가 태우지 않는 잡 종류다.
         같은 요청으로 다시 물어도 같은 답이 오므로 실행기는 이 거절에 재시도하지 않는다.
+        자격이 없을 때의 code는 대화 창구가 chat.llm-key-missing, 잡 창구가 job.llm-key-missing이다.
       content:
         application/json:
           schema:

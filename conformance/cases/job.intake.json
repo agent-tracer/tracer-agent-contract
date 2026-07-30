@@ -235,10 +235,16 @@
             "rule.generation"
         ],
         "envelopeRejection": {
-            "path": "/internal/jobs/{kind}/envelope",
             "status": 400,
-            "code": "job.llm-key-missing",
-            "meaning": "사용자 설정에 모델 자격이 없거나 워크플로가 태우지 않는 종류다"
+            "meaning": "봉투를 발급할 수 없다. 자격이 없거나 워크플로가 태우지 않는 종류다",
+            "chat": {
+                "path": "/internal/chat/executions/{executionId}/envelope",
+                "code": "chat.llm-key-missing"
+            },
+            "jobs": {
+                "path": "/internal/jobs/{kind}/envelope",
+                "code": "job.llm-key-missing"
+            }
         }
     }
 }
