@@ -66,10 +66,18 @@ CREATE TABLE IF NOT EXISTS "experiment_variants" (
     "experiment_id" text NOT NULL,
     "name" text NOT NULL,
     "backend" text NOT NULL,
-    "model" text NOT NULL,
-    "prompt_version_id" text NOT NULL,
+    "agent_name" text NOT NULL,
+    "prompt_version_id" text,
     "tool_contract_version" text NOT NULL,
     "limits" jsonb NOT NULL DEFAULT '{}',
+    "fragment_selections" jsonb NOT NULL DEFAULT '{}',
     "baseline" boolean NOT NULL DEFAULT false,
     CONSTRAINT "experiment_variants_pkey" PRIMARY KEY ("id")
 );
+
+ALTER TABLE "experiment_variants" ADD COLUMN IF NOT EXISTS "agent_name" text;
+ALTER TABLE "experiment_variants" ADD COLUMN IF NOT EXISTS "fragment_selections" jsonb NOT NULL DEFAULT '{}';
+ALTER TABLE "experiment_variants" DROP COLUMN IF EXISTS "model";
+UPDATE "experiment_variants" SET "agent_name" = 'chat' WHERE "agent_name" IS NULL;
+ALTER TABLE "experiment_variants" ALTER COLUMN "agent_name" SET NOT NULL;
+ALTER TABLE "experiment_variants" ALTER COLUMN "prompt_version_id" DROP NOT NULL;

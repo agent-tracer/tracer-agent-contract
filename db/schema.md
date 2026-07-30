@@ -51,3 +51,7 @@
 - `human_reviews.reviewer_user_id` → `users.user_id`
 - `human_reviews.execution_a_id` → `experiment_executions.id`
 - `human_reviews.execution_b_id` → `experiment_executions.id`
+- `experiment_executions.variant_id` → `experiment_variants.id`
+- `experiment_executions.example_id` → `evaluation_examples.id`
+- `evaluation_scores.execution_id` → `experiment_executions.id`
+- `evaluation_examples.dataset_id` → `evaluation_datasets.id`
