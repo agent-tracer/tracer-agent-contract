@@ -74,5 +74,48 @@
             "code": "validation_error",
             "message": "Invalid request"
         }
-    ]
+    ],
+    "response": {
+        "meaning": "접수와 조회와 취소가 모두 원장 행 하나를 같은 칸으로 낸다. 봉투를 벗긴 data를 대조한다.",
+        "jobFields": [
+            "id",
+            "userId",
+            "kind",
+            "executor",
+            "status",
+            "attempts",
+            "taskId",
+            "input",
+            "result",
+            "usage",
+            "error",
+            "createdAt",
+            "updatedAt",
+            "startedAt",
+            "completedAt"
+        ],
+        "enqueue": { "status": 202, "data": { "job": "jobFields" } },
+        "get": { "path": "/api/v1/jobs/{id}", "status": 200, "data": { "job": "jobFields" } },
+        "cancel": { "status": 200, "data": { "job": "jobFields" } },
+        "steps": {
+            "path": "/api/v1/jobs/{id}/steps",
+            "status": 200,
+            "order": ["attempt", "seq"],
+            "required": ["seq", "attempt", "role", "content", "truncated", "toolCalls"],
+            "optional": [
+                "toolName",
+                "toolCallId",
+                "inputTokens",
+                "outputTokens",
+                "cacheReadTokens",
+                "cacheCreationTokens",
+                "stopReason",
+                "nodeName",
+                "eventKind",
+                "durationMs"
+            ],
+            "omitsNull": true
+        },
+        "notFound": { "status": 404, "meaning": "남의 잡은 존재 여부도 드러내지 않으므로 같은 404를 낸다" }
+    }
 }
