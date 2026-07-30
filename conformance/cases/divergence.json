@@ -66,15 +66,6 @@
             "resolution": "성공 경로는 이미 같다. 실패 경로의 usage를 한 모양으로 정한다"
         },
         {
-            "id": "chat.step.content",
-            "area": "chat",
-            "summary": "궤적에 적는 모델 응답 본문의 표현이 다르다",
-            "canonical": "typescript",
-            "typescript": "assistant 한 줄의 content가 모델이 낸 텍스트 자체다",
-            "python": "assistant 한 줄의 content가 내용 블록 배열을 JSON으로 직렬화한 문자열이다",
-            "resolution": "블록 배열에서 텍스트를 뽑아 적는다. 계약이 content를 string으로만 적어 두 축의 화면이 다르게 보인다"
-        },
-        {
             "id": "job.id.source",
             "area": "job",
             "summary": "원장에 적는 잡 식별자의 출처가 다르다",
@@ -82,15 +73,6 @@
             "typescript": "접수가 식별자를 새로 만들고 idempotencyKey는 중복 접수 판정에만 쓴다",
             "python": "idempotencyKey를 그대로 잡 식별자로 쓴다",
             "resolution": "접수가 식별자를 만들고 멱등키는 판정에만 쓰게 한다"
-        },
-        {
-            "id": "job.usage.model",
-            "area": "job",
-            "summary": "usage에 적는 모델 식별자의 자세함이 다르다",
-            "canonical": "typescript",
-            "typescript": "별칭을 적는다 — claude-haiku-4-5",
-            "python": "판까지 붙은 완전한 식별자를 적는다 — claude-haiku-4-5-20251001",
-            "resolution": "무엇을 적을지 계약이 정한다. 화면이 모델명을 그대로 보여준다"
         }
     ],
     "canonical": "typescript가 정본이다. 항목의 canonical이 python이면 SDK나 LangGraph가 강제해 정본이 따라가야 하는 자리다."
