@@ -102,8 +102,7 @@
 
 ## 11. `GET /api/v1/jobs/{jobId}`
 
-- 먼저 `ai_jobs`에서 `id = :jobId`로 조회한다. 행이 있으면 application 계층에서 `user_id = :userId`를 검사해 결과를 내며, 다른 원장은 조회하지 않는다.
-- `ai_jobs`에 행이 없을 때만 `graph_job_executions`에서 `id = :jobId`로 조회한 뒤 `user_id = :userId`를 검사한다.
+- 조회: `ai_jobs`에서 `id = :jobId`. 행이 있으면 application 계층에서 `user_id = :userId`를 검사해 결과를 낸다.
 - `JOIN`, 정렬, 상한, soft-delete 조건: 지정 없음.
 
 ## 12. `GET /api/v1/chat/memories`
