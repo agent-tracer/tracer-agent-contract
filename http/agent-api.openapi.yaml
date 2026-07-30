@@ -535,6 +535,75 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /api/v1/chat/memories:
+    get:
+      operationId: recall_facts
+      tags: [chat, tool]
+      summary: 이 사용자의 장기기억 전체를 되읽는다
+      x-confirmation-gate: none
+      parameters:
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 기억을 낸다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [facts]
+                        properties:
+                          facts:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/ChatUserMemory"
+
+  /api/v1/chat/memories/{key}:
+    put:
+      operationId: remember_fact
+      tags: [chat, tool]
+      summary: 이 사용자의 장기기억 하나를 쓴다
+      x-confirmation-gate: none
+      parameters:
+        - $ref: "#/components/parameters/UserHeader"
+        - name: key
+          in: path
+          required: true
+          description: 재작성 대상을 찾는 슬러그이며 같은 key로 다시 쓰면 내용을 갈아치운다
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 4000
+      responses:
+        "200":
+          description: 쓴 기억을 낸다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ChatRememberedFact"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+
   /api/v1/jobs:
     get:
       operationId: listPendingJobs
@@ -1709,6 +1778,26 @@ components:
       properties:
         key: { type: string }
         content: { type: string }
+
+    ChatUserMemory:
+      type: object
+      description: 되읽는 장기기억 한 건이며 updatedAt이 마지막으로 갈아치운 시점이다
+      required: [key, content, updatedAt]
+      properties:
+        key: { type: string }
+        content: { type: string }
+        updatedAt: { type: string, format: date-time }
+
+    ChatRememberedFact:
+      type: object
+      description: 쓰기가 되돌려 주는 기억 한 건이며 status는 확인 게이트 없이 즉시 반영되었음을 알린다
+      required: [key, content, status]
+      properties:
+        key: { type: string }
+        content: { type: string }
+        status:
+          type: string
+          const: remembered
 
     ChatMessageRole:
       type: string

@@ -710,47 +710,6 @@ paths:
         "5XX":
           $ref: "#/components/responses/Failure"
 
-  /api/v1/chat/memories:
-    get:
-      operationId: recall_facts
-      tags: [tool]
-      summary: 사용자 장기기억을 되읽는다
-      x-confirmation-gate: none
-      responses:
-        "2XX":
-          $ref: "#/components/responses/Success"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-
-  /api/v1/chat/memories/{key}:
-    put:
-      operationId: remember_fact
-      tags: [tool]
-      summary: 사용자 장기기억 하나를 쓴다
-      x-confirmation-gate: none
-      parameters:
-        - name: key
-          in: path
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                content: {}
-      responses:
-        "2XX":
-          $ref: "#/components/responses/Success"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-
 components:
   responses:
     Success:
