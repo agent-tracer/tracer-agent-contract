@@ -10,9 +10,18 @@ naming:
   example: agent-chat
 
 queues:
-  chat: 대화 실행의 워크플로와 액티비티가 실행되는 큐다
-  jobs: 잡 워크플로와 짧은 액티비티가 실행되는 큐다
-  generate: 최대 15분인 생성 액티비티가 짧은 액티비티의 슬롯을 점유하지 않도록 분리한 큐다
+  chat:
+    meaning: 대화 실행의 워크플로와 액티비티가 실행되는 큐다
+    hostsWorkflows: true
+  jobs:
+    meaning: 잡과 평가의 워크플로와 짧은 액티비티가 실행되는 큐다
+    hostsWorkflows: true
+  generate:
+    meaning: 최대 15분인 생성 액티비티가 짧은 액티비티의 슬롯을 점유하지 않도록 분리한 큐다
+    hostsWorkflows: false
+    note: >-
+      이 큐를 폴링하는 워커는 액티비티만 등록한다. 워크플로를 여기 두면 그 워크플로는
+      영원히 대기하므로 워크플로의 queue 는 chat 이나 jobs 여야 한다.
 
 workflows:
   chatThread:
@@ -51,14 +60,15 @@ workflows:
 
   evaluationRun:
     name: evaluationRunWorkflow
-    queue: generate
+    queue: jobs
     activities:
       - name: runEvaluationAgent
         queue: generate
 
   evaluationExperiment:
     name: evaluationExperimentWorkflow
-    queue: generate
+    queue: jobs
+    id: "evaluation:{experimentId}"
     activities:
       - name: runNext
         queue: generate

@@ -4,66 +4,148 @@
     "path": "/api/v1/jobs",
     "cancelPath": "/api/v1/jobs/{id}/cancel",
     "acceptedStatus": 202,
-    "userHeader": { "name": "x-monitor-user", "defaultValue": "local" },
-    "kinds": ["title.suggestion", "recipe.scan", "task.cleanup"],
+    "userHeader": {
+        "name": "x-monitor-user",
+        "defaultValue": "local"
+    },
+    "kinds": [
+        "title.suggestion",
+        "recipe.scan",
+        "task.cleanup"
+    ],
     "body": {
-        "fields": ["kind", "input", "idempotencyKey"],
+        "fields": [
+            "kind",
+            "input",
+            "idempotencyKey"
+        ],
         "constraints": {
-            "kind": { "required": true, "enum": ["title.suggestion", "recipe.scan", "task.cleanup"] },
-            "input": { "required": false, "type": "object", "default": {} },
-            "idempotencyKey": { "required": false, "minLength": 1, "maxLength": 200 }
+            "kind": {
+                "required": true,
+                "enum": [
+                    "title.suggestion",
+                    "recipe.scan",
+                    "task.cleanup"
+                ]
+            },
+            "input": {
+                "required": false,
+                "type": "object",
+                "default": {}
+            },
+            "idempotencyKey": {
+                "required": false,
+                "minLength": 1,
+                "maxLength": 200
+            }
         }
     },
     "inputs": {
         "title.suggestion": {
-            "required": ["taskId"],
+            "required": [
+                "taskId"
+            ],
             "optional": [],
-            "constraints": { "taskId": { "minLength": 1, "maxLength": 64 } }
+            "constraints": {
+                "taskId": {
+                    "minLength": 1,
+                    "maxLength": 64
+                }
+            }
         },
         "recipe.scan": {
-            "required": ["taskId"],
-            "optional": ["userPrompt", "language", "trigger"],
+            "required": [
+                "taskId"
+            ],
+            "optional": [
+                "userPrompt",
+                "language",
+                "trigger"
+            ],
             "constraints": {
-                "taskId": { "minLength": 1, "maxLength": 64 },
-                "userPrompt": { "minLength": 1, "maxLength": 4000 },
-                "language": { "minLength": 1, "maxLength": 16 },
-                "trigger": { "enum": ["dashboard", "session"] }
+                "taskId": {
+                    "minLength": 1,
+                    "maxLength": 64
+                },
+                "userPrompt": {
+                    "minLength": 1,
+                    "maxLength": 4000
+                },
+                "language": {
+                    "minLength": 1,
+                    "maxLength": 16
+                },
+                "trigger": {
+                    "enum": [
+                        "dashboard",
+                        "session"
+                    ]
+                }
             }
         },
         "task.cleanup": {
             "required": [],
-            "optional": ["filters.maxSuggestions"],
-            "constraints": { "filters.maxSuggestions": { "minimum": 1, "maximum": 50 } }
+            "optional": [
+                "filters.maxSuggestions"
+            ],
+            "constraints": {
+                "filters.maxSuggestions": {
+                    "minimum": 1,
+                    "maximum": 50
+                }
+            }
         }
     },
     "cases": [
         {
             "name": "태스크에 매인 잡을 접수한다",
-            "body": { "kind": "title.suggestion", "input": { "taskId": "t1" } },
+            "body": {
+                "kind": "title.suggestion",
+                "input": {
+                    "taskId": "t1"
+                }
+            },
             "accepted": true
         },
         {
             "name": "레시피 스캔의 선택 입력을 함께 접수한다",
             "body": {
                 "kind": "recipe.scan",
-                "input": { "taskId": "t1", "language": "ko", "trigger": "dashboard" },
+                "input": {
+                    "taskId": "t1",
+                    "language": "ko",
+                    "trigger": "dashboard"
+                },
                 "idempotencyKey": "k1"
             },
             "accepted": true
         },
         {
             "name": "정리 제안은 도메인 입력 없이 접수한다",
-            "body": { "kind": "task.cleanup", "input": {} },
+            "body": {
+                "kind": "task.cleanup",
+                "input": {}
+            },
             "accepted": true
         },
         {
             "name": "필수 입력이 빠지면 거절한다",
-            "body": { "kind": "title.suggestion", "input": {} },
+            "body": {
+                "kind": "title.suggestion",
+                "input": {}
+            },
             "accepted": false
         },
         {
             "name": "상한을 넘는 제안 수를 거절한다",
-            "body": { "kind": "task.cleanup", "input": { "filters": { "maxSuggestions": 51 } } },
+            "body": {
+                "kind": "task.cleanup",
+                "input": {
+                    "filters": {
+                        "maxSuggestions": 51
+                    }
+                }
+            },
             "accepted": false
         }
     ],
@@ -94,14 +176,40 @@
             "startedAt",
             "completedAt"
         ],
-        "enqueue": { "status": 202, "data": { "job": "jobFields" } },
-        "get": { "path": "/api/v1/jobs/{id}", "status": 200, "data": { "job": "jobFields" } },
-        "cancel": { "status": 200, "data": { "job": "jobFields" } },
+        "enqueue": {
+            "status": 202,
+            "data": {
+                "job": "jobFields"
+            }
+        },
+        "get": {
+            "path": "/api/v1/jobs/{id}",
+            "status": 200,
+            "data": {
+                "job": "jobFields"
+            }
+        },
+        "cancel": {
+            "status": 200,
+            "data": {
+                "job": "jobFields"
+            }
+        },
         "steps": {
             "path": "/api/v1/jobs/{id}/steps",
             "status": 200,
-            "order": ["attempt", "seq"],
-            "required": ["seq", "attempt", "role", "content", "truncated", "toolCalls"],
+            "order": [
+                "attempt",
+                "seq"
+            ],
+            "required": [
+                "seq",
+                "attempt",
+                "role",
+                "content",
+                "truncated",
+                "toolCalls"
+            ],
             "optional": [
                 "toolName",
                 "toolCallId",
@@ -116,6 +224,21 @@
             ],
             "omitsNull": true
         },
-        "notFound": { "status": 404, "meaning": "남의 잡은 존재 여부도 드러내지 않으므로 같은 404를 낸다" }
+        "notFound": {
+            "status": 404,
+            "meaning": "남의 잡은 존재 여부도 드러내지 않으므로 같은 404를 낸다"
+        },
+        "ledgerKinds": [
+            "title.suggestion",
+            "recipe.scan",
+            "task.cleanup",
+            "rule.generation"
+        ],
+        "envelopeRejection": {
+            "path": "/internal/jobs/{kind}/envelope",
+            "status": 400,
+            "code": "job.llm-key-missing",
+            "meaning": "사용자 설정에 모델 자격이 없거나 워크플로가 태우지 않는 종류다"
+        }
     }
 }

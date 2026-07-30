@@ -289,7 +289,7 @@ paths:
                       data:
                         $ref: "#/components/schemas/JobExecutionEnvelope"
         "400":
-          $ref: "#/components/responses/InvalidRequest"
+          $ref: "#/components/responses/EnvelopeUnissuable"
 
   /internal/prompts/fragments/register-and-resolve:
     post:
@@ -542,6 +542,19 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorEnvelope"
+    EnvelopeUnissuable:
+      description: >-
+        봉투를 발급할 수 없다. 워크플로가 태우지 않는 잡 종류이거나 사용자 설정에 모델 자격이 없다.
+        같은 요청으로 다시 물어도 같은 답이 오므로 실행기는 이 거절에 재시도하지 않는다.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            ok: false
+            error:
+              code: job.llm-key-missing
+              message: Model credential is not configured
     IdempotencyConflict:
       description: 같은 요청 식별자가 다른 입력으로 이미 쓰였다
       content:
@@ -779,6 +792,14 @@ components:
     JobKind:
       type: string
       enum: [title.suggestion, recipe.scan, task.cleanup]
+      description: 두 구현체가 모두 접수하고 워크플로로 태우는 잡의 종류다
+
+    JobLedgerKind:
+      type: string
+      enum: [title.suggestion, recipe.scan, task.cleanup, rule.generation]
+      description: >-
+        원장에 남을 수 있는 잡의 종류이며 접수가 받는 것보다 넓다. rule.generation은 워크플로가
+        아니라 로컬 실행기가 집으므로 조회는 그 행을 내지만 접수 표면은 그것을 열지 않는다.
 
     JobStatus:
       type: string
@@ -812,7 +833,7 @@ components:
         id: { type: string }
         userId: { type: string }
         kind:
-          $ref: "#/components/schemas/JobKind"
+          $ref: "#/components/schemas/JobLedgerKind"
         executor:
           $ref: "#/components/schemas/JobExecutor"
         status:
