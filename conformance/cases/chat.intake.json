@@ -85,6 +85,12 @@
             "message": "Thread not found"
         },
         {
+            "name": "그 스레드가 이미 실행 중이다",
+            "status": 409,
+            "code": "chat.execution-active-conflict",
+            "message": "Chat thread already has an active turn"
+        },
+        {
             "name": "같은 요청 식별자가 다른 입력으로 이미 쓰였다",
             "status": 409,
             "code": "chat.execution-idempotency-conflict",

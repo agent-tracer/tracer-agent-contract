@@ -290,7 +290,7 @@ paths:
         "404":
           $ref: "#/components/responses/ThreadNotFound"
         "409":
-          $ref: "#/components/responses/IdempotencyConflict"
+          $ref: "#/components/responses/ChatTurnConflict"
 
   /api/agent/chat/threads/{threadId}/confirmations:
     post:
@@ -1339,17 +1339,25 @@ components:
             error:
               code: forbidden
               message: Chat draft callback is not authorized
-    IdempotencyConflict:
-      description: 같은 요청 식별자가 다른 입력으로 이미 쓰였다
+    ChatTurnConflict:
+      description: 그 스레드가 이미 실행 중이거나 같은 요청 식별자가 다른 입력으로 이미 쓰였다
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorEnvelope"
-          example:
-            ok: false
-            error:
-              code: chat.execution-idempotency-conflict
-              message: Client request id was already used with different chat input
+          examples:
+            activeTurn:
+              value:
+                ok: false
+                error:
+                  code: chat.execution-active-conflict
+                  message: Chat thread already has an active turn
+            idempotency:
+              value:
+                ok: false
+                error:
+                  code: chat.execution-idempotency-conflict
+                  message: Client request id was already used with different chat input
   schemas:
     SuccessEnvelope:
       type: object
