@@ -748,6 +748,8 @@ paths:
                             $ref: "#/components/schemas/Job"
         "400":
           $ref: "#/components/responses/InvalidRequest"
+        "409":
+          $ref: "#/components/responses/JobIdempotencyConflict"
 
   /api/agent/jobs/history:
     get:
@@ -1683,6 +1685,18 @@ components:
             error:
               code: forbidden
               message: Chat draft callback is not authorized
+    JobIdempotencyConflict:
+      description: 같은 멱등키가 다른 입력으로 이미 쓰였다
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            ok: false
+            error:
+              code: job.idempotency-conflict
+              message: Idempotency key was already used with different job input
+
     ChatTurnConflict:
       description: 그 스레드가 이미 실행 중이거나 같은 요청 식별자가 다른 입력으로 이미 쓰였다
       content:
@@ -1757,13 +1771,26 @@ components:
         kind:
           $ref: "#/components/schemas/JobKind"
         input:
-          type: object
           description: 잡 종류마다 다른 도메인 입력이며 실행 문맥은 워커가 직접 조립한다
+          oneOf:
+            - $ref: "#/components/schemas/RuleGenerationJobInput"
+            - type: object
           default: {}
         idempotencyKey:
           type: string
           minLength: 1
           maxLength: 200
+
+    RuleGenerationJobInput:
+      type: object
+      required: [taskId, anchorEventId]
+      description: 규칙 생성은 그 태스크에 속한 근거 이벤트 하나를 지목해야 접수된다
+      properties:
+        taskId: { type: string, minLength: 1 }
+        anchorEventId: { type: string, minLength: 1 }
+        focus: { type: string }
+        maxRules: { type: integer, minimum: 1 }
+        intent: { type: string }
 
     ExperimentStatus:
       type: string
@@ -2130,8 +2157,8 @@ components:
 
     JobKind:
       type: string
-      enum: [title.suggestion, recipe.scan, task.cleanup]
-      description: 두 구현체가 모두 접수하고 워크플로로 태우는 잡의 종류다
+      enum: [title.suggestion, recipe.scan, task.cleanup, rule.generation]
+      description: 두 구현체가 모두 접수하는 잡의 종류이며 rule.generation 만 로컬 실행기가 가져가고 나머지 셋은 워크플로로 실행된다
 
     JobLedgerKind:
       type: string

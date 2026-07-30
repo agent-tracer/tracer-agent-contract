@@ -11,7 +11,8 @@
     "kinds": [
         "title.suggestion",
         "recipe.scan",
-        "task.cleanup"
+        "task.cleanup",
+        "rule.generation"
     ],
     "body": {
         "fields": [
@@ -25,7 +26,8 @@
                 "enum": [
                     "title.suggestion",
                     "recipe.scan",
-                    "task.cleanup"
+                    "task.cleanup",
+                    "rule.generation"
                 ]
             },
             "input": {
@@ -155,6 +157,18 @@
             "status": 400,
             "code": "validation_error",
             "message": "Invalid request"
+        },
+        {
+            "name": "같은 멱등키에 다른 입력을 실었다",
+            "status": 409,
+            "code": "job.idempotency-conflict",
+            "message": "Idempotency key was already used with different job input"
+        },
+        {
+            "name": "규칙 생성의 근거 이벤트가 그 태스크의 것이 아니다",
+            "status": 400,
+            "code": "job.invalid-rule-anchor",
+            "message": "Rule generation anchor event does not belong to the task"
         }
     ],
     "response": {
@@ -186,6 +200,21 @@
                 "rateKey": "modelRates의 키와 같은 값이므로 한 기록 안에서 model과 costUsd가 같은 모델을 가리킨다",
                 "onFailure": "공급자가 답하기 전에 실패해도 봉투가 건넨 값을 알기 때문에 이 칸은 비지 않는다",
                 "actualModel": "공급자가 실제로 답한 판까지 붙은 식별자는 실행 관측 기록의 자기 칸이 갖는다. usage는 그것을 싣지 않는다"
+            },
+            "failed": {
+                "shape": "attempts",
+                "fields": [
+                    "attempt",
+                    "status",
+                    "subtype",
+                    "model",
+                    "costUsd",
+                    "durationMs",
+                    "usage",
+                    "errorMessage",
+                    "providerRequestId"
+                ],
+                "meaning": "끝내지 못한 잡은 시도마다의 기록을 attempts 배열 하나로 싣는다"
             }
         },
         "enqueue": {
@@ -334,5 +363,6 @@
                 "code": "job.llm-key-missing"
             }
         }
-    }
+    },
+    "kindsMeaning": "접수가 받는 잡 종류의 정본이며 두 구현체가 이 목록을 읽어 자기 접수 집합과 대조한다"
 }
