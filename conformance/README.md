@@ -18,11 +18,15 @@ TypeScript 구현이 정본이고 Python 구현이 그것을 따라간다. 그�
 하는 것이 아니다.
 
 어느 자리가 어느 쪽인지는 `enforcement.json`이 소유한다. 구현체는 `enforcementLevel(자리)` ·
-`enforcement_level(자리)`로 물어 자기 대조의 실패 여부를 가른다. 새 자리를 더하고 분류하지
-않으면 `verify`가 먼저 걸린다.
+`enforcement_level(자리)`로 물어 자기 대조의 실패 여부를 가른다. 케이스 파일도 자리이므로
+새 자리를 더하고 분류하지 않으면 `verify`가 먼저 걸린다.
 
-`agent/shared/prompt.fragment.integrity.json`의 해시는 정본의 자기 검사다. 조각 텍스트가
-의도치 않게 바뀌는 것을 막는 장치이지 두 구현체를 대조하는 것이 아니다.
+`agent/shared/prompt.fragment.integrity.json`의 세 케이스는 두 구현체가 자기 해시 함수로
+대조한다. 같은 본문이 같은 정규화와 같은 다이제스트를 거쳐야 한쪽에 등록한 조각을 다른 쪽이
+무결성 검사에서 거절하지 않는다.
+
+조회 응답의 칸은 열거하며 `object`라 적지 않는다. 칸 목록을 케이스가 소유하고 구현체는 그것을
+읽어 자기 응답과 대조한다. 손으로 옮겨 적은 목록은 다음 변경에서 갈라진다.
 
 ## 붙이는 법
 
@@ -58,7 +62,8 @@ Node에서는 `conformance/runner/contract.mjs`를, Python에서는 `conformance
 |---|---|
 | `envelope` | payload 하나를 응답 봉투로 성형한 결과와 봉투를 알아보는 판정 |
 | `chat.intake` | 대화 턴 접수의 본문 제약, 멱등 해시가 먹는 바이트, 거절 사유의 상태와 코드 |
-| `job.intake` | 잡 접수의 본문 제약, 잡 종류별 도메인 입력, 거절 사유의 상태와 코드 |
+| `chat.query` | 대화 조회 창구마다 봉투를 벗긴 `data`의 칸, 재생 계산의 규칙, 열린 연결의 프레임 |
+| `job.intake` | 잡 접수의 본문 제약, 잡 종류별 도메인 입력, 조회 창구의 칸과 정렬, 거절 사유 |
 | `divergence` | 두 구현체가 아직 다른 자리 |
 
 `divergence`는 통과·실패를 가리는 케이스가 아니라 **Python 구현이 아직 정본을 따라가지 못한

@@ -25,7 +25,10 @@ const version = readVersion();
 const cases = listCases();
 const surfaces = [];
 
-for (const name of cases) readCase(name);
+for (const name of cases) {
+    readCase(name);
+    surfaces.push(`conformance/cases/${name}.json`);
+}
 
 for (const agent of AGENTS) {
     const spec = readJson(`agent/${agent}/spec.json`);

@@ -1,0 +1,340 @@
+{
+    "name": "chat.query",
+    "meaning": "브라우저와 실행기가 구현체마다 다른 본문을 받지 않도록 대화 조회 표면의 칸을 대조한다. shapes가 칸 목록을 소유하고 windows가 창구마다 봉투를 벗긴 data의 모양을 shape 이름으로 가리킨다.",
+    "notation": {
+        "shape": "shapes의 이름 하나이며 그 칸 목록을 그대로 요구한다",
+        "shape[]": "그 모양의 배열이다",
+        "shape?": "그 모양이거나 비어 있다",
+        "boolean": "참거짓 하나이며 모양이 아니다",
+        "true": "언제나 참인 상수다"
+    },
+    "userHeader": {
+        "name": "x-monitor-user",
+        "defaultValue": "local"
+    },
+    "shapes": {
+        "thread": {
+            "meaning": "대화 스레드 하나이며 목록과 상세와 생성과 개명이 모두 이 칸을 낸다",
+            "fields": [
+                "id",
+                "userId",
+                "title",
+                "summary",
+                "backend",
+                "createdAt",
+                "updatedAt"
+            ]
+        },
+        "message": {
+            "meaning": "스레드에 쌓인 메시지 한 줄이며 값이 없는 칸도 null로 싣는다",
+            "fields": [
+                "id",
+                "threadId",
+                "role",
+                "content",
+                "toolCalls",
+                "toolCallId",
+                "createdAt"
+            ]
+        },
+        "execution": {
+            "meaning": "대화 턴 하나의 실행 원장 행이며 접수와 조회와 중단과 스냅샷이 모두 이 칸을 낸다",
+            "fields": [
+                "id",
+                "threadId",
+                "userMessageId",
+                "status",
+                "requestedBackend",
+                "draftText",
+                "draftSeq",
+                "assistantMessageId",
+                "modelUsed",
+                "costUsd",
+                "numTurns",
+                "stopReason",
+                "error",
+                "createdAt",
+                "updatedAt",
+                "startedAt",
+                "completedAt"
+            ]
+        },
+        "confirmation": {
+            "meaning": "지금 승인을 기다리는 도구 호출 하나다",
+            "fields": [
+                "id",
+                "toolName",
+                "args"
+            ]
+        },
+        "toolCall": {
+            "meaning": "모델이 제안한 도구 호출 한 건이며 args는 모델이 낸 원본 인자다",
+            "fields": [
+                "id",
+                "name",
+                "args"
+            ]
+        },
+        "step": {
+            "meaning": "대화 턴 하나가 부른 모델과 도구의 궤적 한 줄이며 값이 없는 칸은 싣지 않는다",
+            "order": [
+                "attempt",
+                "seq"
+            ],
+            "required": [
+                "seq",
+                "attempt",
+                "role",
+                "content",
+                "truncated",
+                "toolCalls"
+            ],
+            "optional": [
+                "toolName",
+                "toolCallId",
+                "inputTokens",
+                "outputTokens",
+                "cacheReadTokens",
+                "cacheCreationTokens",
+                "stopReason",
+                "nodeName",
+                "eventKind",
+                "durationMs"
+            ],
+            "omitsNull": true
+        },
+        "replay": {
+            "meaning": "한 턴이 모델에게 되돌려 줄 이력과 요약과 기억이며 어느 구현체가 태우든 같은 값이다",
+            "fields": [
+                "messages",
+                "summary",
+                "facts"
+            ]
+        },
+        "replayMessage": {
+            "meaning": "재생에 실리는 이전 메시지 한 건이며 짝을 잃은 도구 인용은 벗겨진 채로 온다",
+            "required": [
+                "role",
+                "content"
+            ],
+            "optional": [
+                "toolCalls",
+                "toolCallId"
+            ],
+            "omitsNull": true
+        },
+        "userFact": {
+            "meaning": "모델이 이 사용자에 대해 오래 기억하는 사실 한 건이다",
+            "fields": [
+                "key",
+                "content"
+            ]
+        },
+        "proposal": {
+            "meaning": "승인을 기다리는 도구 호출 하나이며 summary와 note는 대화에 그대로 보인다",
+            "fields": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "decision": {
+            "meaning": "대기 중이던 도구 호출 하나의 해소 결과다",
+            "fields": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "result"
+            ]
+        },
+        "snapshot": {
+            "meaning": "열린 연결이 한 프레임에 싣는 실행 상태와 대기 도구다",
+            "fields": [
+                "execution",
+                "confirmations"
+            ]
+        }
+    },
+    "enums": {
+        "messageRole": [
+            "user",
+            "assistant",
+            "tool"
+        ],
+        "stepRole": [
+            "system",
+            "user",
+            "assistant",
+            "tool",
+            "graph"
+        ],
+        "executionStatus": [
+            "queued",
+            "running",
+            "completed",
+            "failed",
+            "canceled"
+        ],
+        "terminalExecutionStatus": [
+            "completed",
+            "failed",
+            "canceled"
+        ],
+        "stopReason": [
+            "completed",
+            "deadline",
+            "stalled",
+            "budget_landed",
+            "turn_limit",
+            "canceled",
+            "failed"
+        ],
+        "confirmationStatus": [
+            "pending",
+            "approved",
+            "rejected"
+        ],
+        "stepEventKind": [
+            "node.started",
+            "node.completed",
+            "node.failed",
+            "route.selected",
+            "validation.failed"
+        ]
+    },
+    "windows": [
+        {
+            "name": "스레드를 최근 갱신순으로 조회한다",
+            "method": "GET",
+            "path": "/api/v1/chat/threads",
+            "status": 200,
+            "data": { "items": "thread[]" }
+        },
+        {
+            "name": "새 스레드를 연다",
+            "method": "POST",
+            "path": "/api/v1/chat/threads",
+            "status": 201,
+            "data": { "thread": "thread" }
+        },
+        {
+            "name": "스레드 하나를 조회한다",
+            "method": "GET",
+            "path": "/api/v1/chat/threads/{threadId}",
+            "status": 200,
+            "data": { "thread": "thread" }
+        },
+        {
+            "name": "스레드의 제목을 고친다",
+            "method": "PATCH",
+            "path": "/api/v1/chat/threads/{threadId}",
+            "status": 200,
+            "data": { "thread": "thread" }
+        },
+        {
+            "name": "스레드를 지운다",
+            "method": "DELETE",
+            "path": "/api/v1/chat/threads/{threadId}",
+            "status": 200,
+            "data": { "deleted": "true" }
+        },
+        {
+            "name": "스레드의 메시지를 쌓인 순서대로 조회한다",
+            "method": "GET",
+            "path": "/api/v1/chat/threads/{threadId}/messages",
+            "status": 200,
+            "data": { "items": "message[]" }
+        },
+        {
+            "name": "실행 이력과 대기 도구를 함께 조회한다",
+            "method": "GET",
+            "path": "/api/v1/chat/threads/{threadId}/executions",
+            "status": 200,
+            "data": { "items": "execution[]", "confirmations": "confirmation[]" }
+        },
+        {
+            "name": "턴 하나의 궤적을 순서대로 조회한다",
+            "method": "GET",
+            "path": "/api/v1/chat/threads/{threadId}/executions/{executionId}/steps",
+            "status": 200,
+            "data": { "items": "step[]" }
+        },
+        {
+            "name": "턴 하나를 중단한다",
+            "method": "POST",
+            "path": "/api/v1/chat/threads/{threadId}/executions/{executionId}/cancel",
+            "status": 200,
+            "data": { "execution": "execution" }
+        },
+        {
+            "name": "되돌려 줄 이력과 요약과 기억을 되읽는다",
+            "method": "GET",
+            "path": "/api/v1/chat/threads/{threadId}/executions/{executionId}/replay",
+            "status": 200,
+            "data": "replay"
+        },
+        {
+            "name": "확인이 필요한 도구 호출을 대기 행에 세운다",
+            "method": "POST",
+            "path": "/api/v1/chat/threads/{threadId}/confirmations",
+            "status": 201,
+            "data": "proposal"
+        },
+        {
+            "name": "대기 중인 도구 호출을 승인이나 거절로 해소한다",
+            "method": "POST",
+            "path": "/api/v1/chat/threads/{threadId}/confirmations/{confirmationId}",
+            "status": 200,
+            "data": "decision"
+        },
+        {
+            "name": "누적 답변을 원장에 통지한다",
+            "method": "POST",
+            "path": "/api/v1/chat/executions/{executionId}/drafts",
+            "status": 200,
+            "data": { "stored": "boolean", "terminal": "boolean" }
+        }
+    ],
+    "stream": {
+        "meaning": "실행 하나의 스냅샷을 연결이 살아 있는 동안 이어서 내며 종결 상태를 보낸 뒤 닫는다",
+        "method": "GET",
+        "path": "/api/v1/chat/threads/{threadId}/executions/{executionId}/events",
+        "contentType": "text/event-stream",
+        "event": "snapshot",
+        "frameId": "draftSeq와 updatedAt을 콜론으로 이은 값이다",
+        "resendIntervalMs": 20000,
+        "frame": "snapshot"
+    },
+    "replayRules": {
+        "meaning": "재생 계산이 두 축에서 같아야 하므로 창 자르기와 짝 맞추기를 여기에 못 박는다",
+        "window": "이번 턴의 사용자 메시지까지가 이력이며 그 뒤 행은 싣지 않는다",
+        "unpairedToolResult": "짝을 잃은 도구 결과는 버리지 않고 toolCallId만 벗겨 평문으로 싣는다",
+        "unpairedToolCall": "결과를 못 받은 호출은 벗기고 남은 본문이 비면 그 메시지를 싣지 않는다",
+        "summary": "요약이 있으면 그 값을 함께 내고 없으면 비어 있다"
+    },
+    "notFound": {
+        "meaning": "남의 스레드와 실행은 존재 여부도 드러내지 않으므로 같은 404를 낸다",
+        "status": 404,
+        "code": "not_found",
+        "messages": {
+            "thread": "Thread not found",
+            "execution": "Chat execution not found"
+        }
+    },
+    "rejections": [
+        {
+            "name": "본문이 스키마를 만족하지 않는다",
+            "status": 400,
+            "code": "validation_error",
+            "message": "Invalid request"
+        },
+        {
+            "name": "누적 답변 통지가 실은 토큰이 이 시도의 것이 아니다",
+            "status": 403,
+            "code": "forbidden",
+            "message": "Chat draft callback is not authorized"
+        }
+    ]
+}

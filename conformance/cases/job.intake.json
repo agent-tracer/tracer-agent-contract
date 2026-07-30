@@ -1,6 +1,6 @@
 {
     "name": "job.intake",
-    "meaning": "브라우저가 구현체마다 본문을 가르지 않도록 잡 접수 표면을 대조한다.",
+    "meaning": "브라우저가 구현체마다 본문을 가르지 않도록 잡 접수와 조회와 취소 표면을 대조한다.",
     "path": "/api/v1/jobs",
     "cancelPath": "/api/v1/jobs/{id}/cancel",
     "acceptedStatus": 202,
@@ -158,7 +158,7 @@
         }
     ],
     "response": {
-        "meaning": "접수와 조회와 취소가 모두 원장 행 하나를 같은 칸으로 낸다. 봉투를 벗긴 data를 대조한다.",
+        "meaning": "접수와 조회와 취소가 모두 원장 행 하나를 같은 칸으로 낸다. 봉투를 벗긴 data를 대조하며 jobFields라 적은 자리는 그 칸 목록을, jobFields[]는 그 배열을, jobFields?는 그 모양이거나 비어 있음을 요구한다.",
         "jobFields": [
             "id",
             "userId",
@@ -187,6 +187,82 @@
             "status": 200,
             "data": {
                 "job": "jobFields"
+            }
+        },
+        "pending": {
+            "meaning": "종류를 골라 대기 잡만 내며 status를 실으려면 pending이어야 한다",
+            "path": "/api/v1/jobs",
+            "status": 200,
+            "query": {
+                "kind": {
+                    "required": true,
+                    "enum": "ledgerKinds"
+                },
+                "status": {
+                    "required": false,
+                    "enum": [
+                        "pending"
+                    ]
+                }
+            },
+            "order": "createdAt 오름차순",
+            "data": {
+                "items": "jobFields[]"
+            }
+        },
+        "history": {
+            "meaning": "이력을 한 페이지씩 내고 상한과 건너뛰기를 뺀 전체 개수를 함께 싣는다",
+            "path": "/api/v1/jobs/history",
+            "status": 200,
+            "query": {
+                "kind": {
+                    "required": false,
+                    "enum": "ledgerKinds"
+                },
+                "status": {
+                    "required": false,
+                    "enum": [
+                        "pending",
+                        "running",
+                        "completed",
+                        "failed",
+                        "canceled"
+                    ]
+                },
+                "limit": {
+                    "required": false,
+                    "minimum": 1,
+                    "maximum": 100,
+                    "default": 50
+                },
+                "offset": {
+                    "required": false,
+                    "minimum": 0,
+                    "default": 0
+                }
+            },
+            "order": "createdAt 내림차순",
+            "data": {
+                "items": "jobFields[]",
+                "total": "integer"
+            }
+        },
+        "latest": {
+            "meaning": "사용자와 종류와 태스크 조합의 가장 최근 잡이며 없으면 job이 비어 있다",
+            "path": "/api/v1/jobs/latest",
+            "status": 200,
+            "query": {
+                "kind": {
+                    "required": true,
+                    "enum": "ledgerKinds"
+                },
+                "taskId": {
+                    "required": false,
+                    "minLength": 1
+                }
+            },
+            "data": {
+                "job": "jobFields?"
             }
         },
         "cancel": {

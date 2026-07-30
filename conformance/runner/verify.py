@@ -39,6 +39,7 @@ def main() -> None:
 
     for name in cases:
         read_case(name)
+        surfaces.append(f"conformance/cases/{name}.json")
 
     for agent in AGENTS:
         spec = read_json(f"agent/{agent}/spec.json")
