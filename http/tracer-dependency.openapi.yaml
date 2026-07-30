@@ -11,59 +11,12 @@ servers:
   - url: /
 
 tags:
-  - name: envelope
-    description: 실행 시도 하나가 쓸 모델과 자격과 단가와 한도
   - name: execution
     description: 대화 실행의 문맥 되읽기와 누적 답변 통지와 확인 대기 행
   - name: tool
     description: 대화 에이전트의 도구가 읽거나 부르는 표면
 
 paths:
-  /internal/chat/executions/{executionId}/envelope:
-    post:
-      operationId: issueChatExecutionEnvelope
-      tags: [envelope]
-      summary: 이번 대화 실행 시도가 쓸 모델과 자격과 단가와 한도를 낸다
-      parameters:
-        - name: executionId
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        "2XX":
-          $ref: "#/components/responses/Success"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-
-  /internal/jobs/{kind}/envelope:
-    post:
-      operationId: issueJobExecutionEnvelope
-      tags: [envelope]
-      summary: 이 잡 종류와 사용자가 쓸 모델과 자격과 단가와 한도를 낸다
-      parameters:
-        - name: kind
-          in: path
-          required: true
-          schema: { type: string }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [userId]
-              properties:
-                userId: { type: string, minLength: 1 }
-      responses:
-        "2XX":
-          $ref: "#/components/responses/Success"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-
   /api/v1/chat/threads/{threadId}/executions/{executionId}/replay:
     get:
       operationId: getChatReplay

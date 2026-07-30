@@ -18,6 +18,8 @@ tags:
     description: 에이전트 실행에 쓰는 설정값의 조회와 저장과 삭제
   - name: prompt
     description: 파일이 정본인 프롬프트와 그 조각의 등록과 해소
+  - name: envelope
+    description: 실행 시도 하나가 쓸 모델과 자격과 단가와 한도
   - name: health
     description: 신원 없이 열리는 프로브
 
@@ -131,12 +133,70 @@ paths:
                 allOf:
                   - $ref: "#/components/schemas/SuccessEnvelope"
                   - type: object
+                    required: [data]
                     properties:
                       data:
                         type: object
-                        description: 접수된 실행을 가리키는 식별자를 싣는다
+                        required: [job]
+                        properties:
+                          job:
+                            $ref: "#/components/schemas/Job"
         "400":
           $ref: "#/components/responses/InvalidRequest"
+
+  /api/v1/jobs/{id}:
+    get:
+      operationId: getJob
+      tags: [job]
+      summary: 잡 하나의 원장 행을 조회한다
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 잡 하나를 낸다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [job]
+                        properties:
+                          job:
+                            $ref: "#/components/schemas/Job"
+        "404":
+          $ref: "#/components/responses/JobNotFound"
+
+  /api/v1/jobs/{id}/steps:
+    get:
+      operationId: getJobSteps
+      tags: [job]
+      summary: 잡 하나가 남긴 실행 궤적을 순서대로 조회한다
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 궤적을 attempt와 seq의 오름차순으로 낸다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/JobStep"
+        "404":
+          $ref: "#/components/responses/JobNotFound"
 
   /api/v1/jobs/{id}/cancel:
     post:
@@ -155,12 +215,81 @@ paths:
                 allOf:
                   - $ref: "#/components/schemas/SuccessEnvelope"
                   - type: object
+                    required: [data]
                     properties:
                       data:
                         type: object
-                        description: 중단된 잡의 상태를 싣는다
+                        required: [job]
+                        properties:
+                          job:
+                            $ref: "#/components/schemas/Job"
         "404":
           $ref: "#/components/responses/JobNotFound"
+
+  /internal/chat/executions/{executionId}/envelope:
+    post:
+      operationId: issueChatExecutionEnvelope
+      tags: [envelope]
+      summary: 이번 대화 실행 시도가 쓸 모델과 자격과 단가와 한도를 낸다
+      description: >-
+        배포 단위 사이에서만 오가는 창구라 게이트웨이가 바깥에 열지 않는다. 단가표와 한도와 자격을
+        추적 서비스에서 받아 오더라도 그것을 실행 시도에 맞춰 발급하는 것은 에이전트다.
+      parameters:
+        - $ref: "#/components/parameters/ExecutionId"
+      responses:
+        "200":
+          description: 이 시도가 쓸 값 전부를 낸다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ChatExecutionEnvelope"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /internal/jobs/{kind}/envelope:
+    post:
+      operationId: issueJobExecutionEnvelope
+      tags: [envelope]
+      summary: 이 잡 종류와 사용자가 쓸 모델과 자격과 단가와 한도를 낸다
+      description: >-
+        배포 단위 사이에서만 오가는 창구라 게이트웨이가 바깥에 열지 않는다. 접수가 아직 원장 행을
+        만들지 않은 시점에도 발급되므로 잡 식별자가 아니라 종류와 사용자로 묻는다.
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/JobKind"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId]
+              properties:
+                userId: { type: string, minLength: 1 }
+      responses:
+        "200":
+          description: 이 시도가 쓸 값 전부를 낸다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/JobExecutionEnvelope"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
 
   /internal/prompts/fragments/register-and-resolve:
     post:
@@ -650,6 +779,193 @@ components:
     JobKind:
       type: string
       enum: [title.suggestion, recipe.scan, task.cleanup]
+
+    JobStatus:
+      type: string
+      enum: [pending, running, completed, failed, canceled]
+
+    JobExecutor:
+      type: string
+      enum: [temporal, local]
+      description: 잡 하나를 실제로 태운 주체이며 워크플로가 도는 것과 플러그인이 궤적을 넘기는 것을 가른다
+
+    Job:
+      type: object
+      description: 잡 원장 행 하나이며 접수와 조회와 취소가 모두 이 모양을 낸다
+      required:
+        - id
+        - userId
+        - kind
+        - executor
+        - status
+        - attempts
+        - taskId
+        - input
+        - result
+        - usage
+        - error
+        - createdAt
+        - updatedAt
+        - startedAt
+        - completedAt
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        kind:
+          $ref: "#/components/schemas/JobKind"
+        executor:
+          $ref: "#/components/schemas/JobExecutor"
+        status:
+          $ref: "#/components/schemas/JobStatus"
+        attempts:
+          type: integer
+          minimum: 0
+        taskId:
+          type: [string, "null"]
+        input:
+          type: object
+          description: 접수가 실은 도메인 입력이며 실을 것이 없으면 빈 객체다
+        result:
+          type: object
+          description: 종결이 적은 산출이며 아직 끝나지 않았으면 빈 객체다
+        usage:
+          type: object
+          description: 이 잡이 태운 토큰과 비용이며 아직 끝나지 않았으면 빈 객체다
+        error:
+          type: [string, "null"]
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        updatedAt:
+          $ref: "#/components/schemas/Timestamp"
+        startedAt:
+          oneOf:
+            - $ref: "#/components/schemas/Timestamp"
+            - type: "null"
+        completedAt:
+          oneOf:
+            - $ref: "#/components/schemas/Timestamp"
+            - type: "null"
+
+    JobStep:
+      type: object
+      description: >-
+        잡 하나가 부른 모델과 도구의 궤적 한 줄이다. 값이 없는 자리는 싣지 않으며,
+        한 단계로 세는 경계는 agent/shared/execution.vocabulary.json이 갖는다.
+      required: [seq, attempt, role, content, truncated, toolCalls]
+      properties:
+        seq:
+          type: integer
+          minimum: 0
+        attempt:
+          type: integer
+          minimum: 1
+          description: 실행 재시도 회차이며 시도마다 seq가 0부터 다시 시작해도 이 값으로 분리된다
+        role:
+          type: string
+          enum: [system, user, assistant, tool, graph]
+        content: { type: string }
+        truncated: { type: boolean }
+        toolCalls:
+          type: array
+          items: { type: object }
+        toolName: { type: string }
+        toolCallId: { type: string }
+        inputTokens: { type: integer }
+        outputTokens: { type: integer }
+        cacheReadTokens: { type: integer }
+        cacheCreationTokens: { type: integer }
+        stopReason: { type: string }
+        nodeName: { type: string }
+        eventKind:
+          type: string
+          enum: [node.started, node.completed, node.failed, route.selected, validation.failed]
+        durationMs: { type: integer }
+
+    ModelRate:
+      type: object
+      description: 백만 토큰당 USD 단가이며 캐시 쓰기와 읽기는 입력 단가에서 파생된 별도 값이다
+      required: [input, output, cacheWrite, cacheRead]
+      properties:
+        input: { type: number, exclusiveMinimum: 0 }
+        output: { type: number, exclusiveMinimum: 0 }
+        cacheWrite: { type: number, exclusiveMinimum: 0 }
+        cacheRead: { type: number, exclusiveMinimum: 0 }
+
+    ExecutionLimits:
+      type: object
+      description: 실행기가 자기 한도를 갖지 않으므로 카탈로그가 정한 한도를 봉투가 건넨다
+      required: [budgetUsd, maxTurns, maxOutputTokens]
+      properties:
+        budgetUsd: { type: number, exclusiveMinimum: 0 }
+        maxTurns: { type: integer, exclusiveMinimum: 0 }
+        maxOutputTokens: { type: integer, exclusiveMinimum: 0 }
+
+    ChatExecutionEnvelope:
+      type: object
+      description: 실행기가 대화 한 시도를 태우는 데 필요한 카탈로그 값과 자격 전부다
+      required:
+        - model
+        - apiKey
+        - modelRates
+        - limits
+        - deadlineMs
+        - readApiBaseUrl
+        - scopeToken
+        - toolDescriptions
+        - draft
+      properties:
+        model: { type: string, minLength: 1 }
+        apiKey:
+          type: string
+          description: 사용자 설정에 저장된 모델 자격이며 평문으로 건너간다
+        modelRates:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/ModelRate"
+        limits:
+          $ref: "#/components/schemas/ExecutionLimits"
+        deadlineMs:
+          type: integer
+          exclusiveMinimum: 0
+        readApiBaseUrl:
+          type: string
+          description: 도구가 추적 데이터를 읽을 때 부르는 상류의 기준 주소다
+        scopeToken:
+          type: string
+          description: 도구 호출을 이 사용자와 실행으로 묶는 자격이며 서명 비밀이 없으면 빈 문자열이다
+        toolDescriptions:
+          type: object
+          additionalProperties: { type: string }
+        draft:
+          type: object
+          description: 실행 시도 하나에만 유효한 draft 창구이며 평문은 실행기가 쓰고 지문은 원장이 든다
+          required: [url, token, tokenHash]
+          properties:
+            url: { type: string }
+            token: { type: string }
+            tokenHash: { type: string }
+
+    JobExecutionEnvelope:
+      type: object
+      description: 실행기가 잡 한 시도를 태우는 데 필요한 카탈로그 값과 자격 전부다
+      required: [model, fallbackModel, apiKey, modelRates, limits, deadlineMs]
+      properties:
+        model: { type: string, minLength: 1 }
+        fallbackModel:
+          type: [string, "null"]
+          description: 기본 모델이 답하지 못할 때 실행기가 물러설 모델이며 없으면 비어 있다
+        apiKey:
+          type: string
+          description: 사용자 설정에 저장된 모델 자격이며 평문으로 건너간다
+        modelRates:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/ModelRate"
+        limits:
+          $ref: "#/components/schemas/ExecutionLimits"
+        deadlineMs:
+          type: integer
+          exclusiveMinimum: 0
 
     ChatMessage:
       type: object
