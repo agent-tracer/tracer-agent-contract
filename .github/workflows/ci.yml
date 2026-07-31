@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install pyyaml
+
+      - name: 계약 파일
+        run: node scripts/check-contract-files.mjs
+
+      - name: 계약 YAML 과 큐 선언
+        run: python scripts/check_contract_yaml.py
+
+      - name: 검사기 테스트
+        run: node --test "scripts/*.test.mjs"
+
+      - name: Node 적합성 검사기
+        run: node conformance/runner/verify.mjs | tee "$RUNNER_TEMP/node.txt"
+
+      - name: Python 적합성 검사기
+        run: python conformance/runner/verify.py | tee "$RUNNER_TEMP/python.txt"
+
+      # 두 검사기가 같은 계약을 읽고 다른 결론을 내면 구현체마다 다른 계약을 본다.
+      - name: 두 검사기의 결론 대조
+        run: diff "$RUNNER_TEMP/node.txt" "$RUNNER_TEMP/python.txt"
+
+  history:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: 커밋 범위 결정
+        id: range
+        run: |
+          set -euo pipefail
+          # force-push은 이전 tip을 버리므로 그 커밋이 아직 있는지 확인하고 없으면 새 커밋만 본다.
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "value=${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          elif git cat-file -e "${{ github.event.before }}^{commit}" 2>/dev/null; then
+            echo "value=${{ github.event.before }}..${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=HEAD~1..HEAD" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 커밋 메시지
+        run: |
+          set -euo pipefail
+          # 범위가 성립하지 않으면 조용히 0건을 검사하고 통과하므로 먼저 목록을 세운다.
+          shas=$(git log "${{ steps.range.outputs.value }}" --format=%H)
+          failed=0
+          for sha in $shas; do
+            git log -1 --format=%B "$sha" > "$RUNNER_TEMP/msg"
+            # 어느 커밋이 걸렸는지 없으면 위반 목록만 여러 벌 쌓여 원인을 못 찾는다.
+            node scripts/check-commit-msg.mjs "$RUNNER_TEMP/msg" \
+              || { echo "  ↳ $(git log -1 --format='%h %s' "$sha")"; failed=1; }
+          done
+          exit $failed
+
+      - name: 공동 작성자
+        run: node scripts/check-coauthors.mjs --range "${{ steps.range.outputs.value }}"
