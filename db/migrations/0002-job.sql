@@ -71,7 +71,6 @@ CREATE TABLE IF NOT EXISTS "agent_run_observations" (
     "model_requested" text NOT NULL,
     "model_actual" text,
     "prompt_version" text NOT NULL,
-    "prompt_content_hash" text NOT NULL,
     "tool_contract_version" text NOT NULL,
     "status" text NOT NULL,
     "duration_ms" integer NOT NULL,
