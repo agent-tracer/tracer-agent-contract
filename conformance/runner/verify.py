@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 import urllib.request
 
@@ -20,6 +21,7 @@ from contract import (
     read_agent_tools,
     read_case,
     read_declared_http_paths,
+    read_axis_label_names,
     read_job_ledger_axis_column,
     read_json,
     read_openapi_enum,
@@ -76,6 +78,8 @@ STANDALONE = [
 AXIS_VALUES = ["ts", "python"]
 NON_AXIS_WORDS = ["claude-sdk", "typescript"]
 AXIS_DURATION_UNIT = "seconds"
+# 지표 창구는 수집기를 지나지 않으므로 Prometheus 의 고전 라벨 이름 규칙을 그대로 받는다.
+LABEL_NAME = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
 
 def main() -> None:
@@ -130,6 +134,7 @@ def main() -> None:
     ]
     axis_column = read_job_ledger_axis_column()
     worker_metrics = read_worker_sdk_metrics()
+    axis_label = read_axis_label_names()
 
     topics = read_json("wire/topics.json")
     incomplete_topics = [
@@ -192,6 +197,19 @@ def main() -> None:
             f"워커 지표 창구는 포트와 {AXIS_DURATION_UNIT} 단위를 함께 적어야 한다 — "
             f"포트 {port}, 단위 {unit}"
         )
+    attribute_key = axis_label["attributeKey"]
+    label_name = axis_label["labelName"]
+    if attribute_key is None or label_name is None:
+        raise SystemExit("축의 라벨은 계측이 쓰는 속성 이름과 창구가 싣는 라벨 이름을 함께 적어야 한다")
+    if LABEL_NAME.match(label_name) is None:
+        raise SystemExit(
+            f"지표 창구가 싣는 라벨 이름은 Prometheus 가 그대로 읽을 수 있어야 한다 — {label_name}"
+        )
+    if attribute_key.replace(".", "_") != label_name:
+        raise SystemExit(
+            f"수집기가 점을 밑줄로 바꾼 이름이 라벨 이름과 같아야 한다 — "
+            f"{attribute_key} 와 {label_name}"
+        )
 
     declared_routes = read_agent_api_routes()
     recorded_unserved = [
@@ -234,6 +252,7 @@ def main() -> None:
         f"워커 SDK 지표 창구는 포트 {worker_metrics['port']} 를 열고 "
         f"{worker_metrics['durationUnit']} 단위로 낸다"
     )
+    print(f"축의 라벨은 계측에서 {attribute_key} 이고 창구에서 {label_name} 이다")
 
 
 if __name__ == "__main__":

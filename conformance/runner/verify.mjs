@@ -12,6 +12,7 @@ import {
     readAgentTools,
     readCase,
     readDeclaredHttpPaths,
+    readAxisLabelNames,
     readJobLedgerAxisColumn,
     readJson,
     readText,
@@ -65,6 +66,8 @@ const STREAM_PLACES = STREAM_KEYS.length + Object.values(STREAM_NESTED).flat().l
 const AXIS_VALUES = ["ts", "python"];
 const NON_AXIS_WORDS = ["claude-sdk", "typescript"];
 const AXIS_DURATION_UNIT = "seconds";
+// 지표 창구는 수집기를 지나지 않으므로 Prometheus 의 고전 라벨 이름 규칙을 그대로 받는다.
+const LABEL_NAME = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 
 const version = readVersion();
 const cases = listCases();
@@ -130,6 +133,7 @@ const strayAxisNames = axisSurfaces.flatMap((surface) => {
 });
 const axisColumn = readJobLedgerAxisColumn();
 const workerMetrics = readWorkerSdkMetrics();
+const axisLabel = readAxisLabelNames();
 
 const topics = readJson("wire/topics.json");
 const incompleteTopics = Object.entries(topics)
@@ -176,6 +180,20 @@ if (workerMetrics.port === null || workerMetrics.durationUnit !== AXIS_DURATION_
             `포트 ${workerMetrics.port ?? "없음"}, 단위 ${workerMetrics.durationUnit ?? "없음"}`,
     );
 }
+if (axisLabel.attributeKey === null || axisLabel.labelName === null) {
+    throw new Error("축의 라벨은 계측이 쓰는 속성 이름과 창구가 싣는 라벨 이름을 함께 적어야 한다");
+}
+if (!LABEL_NAME.test(axisLabel.labelName)) {
+    throw new Error(
+        `지표 창구가 싣는 라벨 이름은 Prometheus 가 그대로 읽을 수 있어야 한다 — ${axisLabel.labelName}`,
+    );
+}
+if (axisLabel.attributeKey.replaceAll(".", "_") !== axisLabel.labelName) {
+    throw new Error(
+        `수집기가 점을 밑줄로 바꾼 이름이 라벨 이름과 같아야 한다 — ` +
+            `${axisLabel.attributeKey} 와 ${axisLabel.labelName}`,
+    );
+}
 
 const declaredRoutes = readAgentApiRoutes();
 const recordedUnserved = readCase("divergence").items.flatMap((item) => item.unservedPaths ?? []);
@@ -212,4 +230,7 @@ console.log(`축의 이름을 담을 수 있는 자리 ${axisSurfaces.length}개
 console.log(`잡 원장이 축의 칸을 갖는다 — ${axisColumn}`);
 console.log(
     `워커 SDK 지표 창구는 포트 ${workerMetrics.port} 를 열고 ${workerMetrics.durationUnit} 단위로 낸다`,
+);
+console.log(
+    `축의 라벨은 계측에서 ${axisLabel.attributeKey} 이고 창구에서 ${axisLabel.labelName} 이다`,
 );

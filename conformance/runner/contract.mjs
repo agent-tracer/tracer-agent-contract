@@ -65,6 +65,17 @@ export function readWorkerSdkMetrics() {
     return { port: port === null ? null : Number(port[1]), durationUnit: unit === null ? null : unit[1] };
 }
 
+/** 축을 싣는 두 이름을 낸다. 계측이 쓰는 속성 이름과 지표 창구가 싣는 라벨 이름이다. */
+export function readAxisLabelNames() {
+    const declared = readText("workflow/metrics.yaml");
+    const attribute = /^ {4}attributeKey: (\S+)$/m.exec(declared);
+    const label = /^ {4}labelName: (\S+)$/m.exec(declared);
+    return {
+        attributeKey: attribute === null ? null : attribute[1],
+        labelName: label === null ? null : label[1],
+    };
+}
+
 /** 적합성 케이스의 이름을 사전순으로 낸다. */
 export function listCases() {
     return readdirSync(CASES)

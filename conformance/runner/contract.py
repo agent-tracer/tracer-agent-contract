@@ -72,6 +72,17 @@ def read_worker_sdk_metrics() -> dict[str, Any]:
     }
 
 
+def read_axis_label_names() -> dict[str, str | None]:
+    """축을 싣는 두 이름을 낸다. 계측이 쓰는 속성 이름과 지표 창구가 싣는 라벨 이름이다."""
+    declared = read_text("workflow/metrics.yaml")
+    attribute = re.search(r"^ {4}attributeKey: (\S+)$", declared, re.MULTILINE)
+    label = re.search(r"^ {4}labelName: (\S+)$", declared, re.MULTILINE)
+    return {
+        "attributeKey": None if attribute is None else attribute.group(1),
+        "labelName": None if label is None else label.group(1),
+    }
+
+
 def list_cases() -> list[str]:
     """적합성 케이스의 이름을 사전순으로 낸다."""
     return sorted(path.stem for path in CASES.glob(f"*{SUFFIX}"))
