@@ -1,0 +1,371 @@
+{
+    "agent": "recipe-scan",
+    "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "recipe.scan.candidate.list",
+        "type": "object",
+        "required": [
+            "recipes"
+        ],
+        "properties": {
+            "recipes": {
+                "type": "array",
+                "maxItems": 4,
+                "default": [],
+                "items": {
+                    "$ref": "#/$defs/candidate"
+                }
+            }
+        },
+        "$defs": {
+            "candidate": {
+                "type": "object",
+                "required": [
+                    "title",
+                    "intent",
+                    "description",
+                    "summary_md",
+                    "request",
+                    "contributing_slices",
+                    "rationale"
+                ],
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "trim": true,
+                        "minLength": 1,
+                        "maxLength": 120
+                    },
+                    "intent": {
+                        "type": "string",
+                        "trim": true,
+                        "minLength": 1,
+                        "maxLength": 200
+                    },
+                    "description": {
+                        "type": "string",
+                        "trim": true,
+                        "minLength": 1,
+                        "maxLength": 400
+                    },
+                    "summary_md": {
+                        "type": "string",
+                        "trim": true,
+                        "minLength": 1,
+                        "maxLength": 4000
+                    },
+                    "request": {
+                        "type": "string",
+                        "trim": true,
+                        "minLength": 1,
+                        "maxLength": 2000
+                    },
+                    "corrections": {
+                        "type": "array",
+                        "maxItems": 20,
+                        "default": [],
+                        "items": {
+                            "$ref": "#/$defs/correction"
+                        }
+                    },
+                    "pitfalls": {
+                        "type": "array",
+                        "maxItems": 20,
+                        "default": [],
+                        "items": {
+                            "$ref": "#/$defs/pitfall"
+                        }
+                    },
+                    "governing_rules": {
+                        "type": "array",
+                        "maxItems": 50,
+                        "default": [],
+                        "items": {
+                            "type": "string",
+                            "trim": true,
+                            "minLength": 1
+                        }
+                    },
+                    "revises_recipe_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "trim": true,
+                        "minLength": 1,
+                        "maxLength": 200
+                    },
+                    "steps": {
+                        "$ref": "#/$defs/steps"
+                    },
+                    "touched_files": {
+                        "type": "array",
+                        "maxItems": 30,
+                        "default": [],
+                        "items": {
+                            "$ref": "#/$defs/touchedFile"
+                        }
+                    },
+                    "contributing_slices": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 20,
+                        "items": {
+                            "$ref": "#/$defs/slice"
+                        }
+                    },
+                    "rationale": {
+                        "type": "string",
+                        "trim": true,
+                        "minLength": 1,
+                        "maxLength": 500
+                    }
+                }
+            },
+            "correction": {
+                "type": "object",
+                "required": [
+                    "whatAgentDid",
+                    "howCorrected",
+                    "evidence"
+                ],
+                "description": "근거 없는 지적은 검증할 수 없는 주장이라 최소 하나의 근거 이벤트를 강제한다",
+                "properties": {
+                    "whatAgentDid": {
+                        "type": "string",
+                        "trim": true,
+                        "minLength": 1,
+                        "maxLength": 500
+                    },
+                    "howCorrected": {
+                        "type": "string",
+                        "trim": true,
+                        "minLength": 1,
+                        "maxLength": 500
+                    },
+                    "evidence": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 50,
+                        "items": {
+                            "type": "string",
+                            "trim": true,
+                            "minLength": 1
+                        }
+                    }
+                }
+            },
+            "pitfall": {
+                "type": "object",
+                "required": [
+                    "pitfall",
+                    "whyNonObvious",
+                    "evidence"
+                ],
+                "properties": {
+                    "pitfall": {
+                        "type": "string",
+                        "trim": true,
+                        "minLength": 1,
+                        "maxLength": 500
+                    },
+                    "whyNonObvious": {
+                        "type": "string",
+                        "trim": true,
+                        "minLength": 1,
+                        "maxLength": 500
+                    },
+                    "evidence": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 50,
+                        "items": {
+                            "type": "string",
+                            "trim": true,
+                            "minLength": 1
+                        }
+                    }
+                }
+            },
+            "steps": {
+                "type": "array",
+                "maxItems": 20,
+                "default": [],
+                "items": {
+                    "$ref": "#/$defs/step"
+                },
+                "consecutiveOrderFrom": 1,
+                "description": "절차의 순서가 곧 의미이므로 order는 1부터 빈칸 없이 이어져야 한다"
+            },
+            "step": {
+                "type": "object",
+                "required": [
+                    "order",
+                    "action"
+                ],
+                "properties": {
+                    "order": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 50
+                    },
+                    "action": {
+                        "type": "string",
+                        "trim": true,
+                        "minLength": 1,
+                        "maxLength": 200
+                    },
+                    "rationale": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "trim": true,
+                        "maxLength": 300
+                    },
+                    "verify": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/$defs/verifyCommand"
+                            },
+                            {
+                                "$ref": "#/$defs/verifyPattern"
+                            },
+                            {
+                                "$ref": "#/$defs/verifyAction"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    }
+                }
+            },
+            "verifyCommand": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "kind",
+                    "commandMatches"
+                ],
+                "properties": {
+                    "kind": {
+                        "type": "string",
+                        "const": "command"
+                    },
+                    "commandMatches": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 20,
+                        "items": {
+                            "type": "string",
+                            "trim": true,
+                            "minLength": 1,
+                            "maxLength": 200
+                        }
+                    }
+                }
+            },
+            "verifyPattern": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "kind",
+                    "pattern"
+                ],
+                "properties": {
+                    "kind": {
+                        "type": "string",
+                        "const": "pattern"
+                    },
+                    "pattern": {
+                        "type": "string",
+                        "trim": true,
+                        "minLength": 1,
+                        "maxLength": 500
+                    }
+                }
+            },
+            "verifyAction": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "kind",
+                    "tool"
+                ],
+                "description": "레시피 스텝의 이행을 원장 이벤트로 확인할 수 있게 하는 관측 가능한 신호이며 규칙 도메인의 비슷한 어휘와는 독립된 어휘다",
+                "properties": {
+                    "kind": {
+                        "type": "string",
+                        "const": "action"
+                    },
+                    "tool": {
+                        "type": "string",
+                        "enum": [
+                            "command",
+                            "file-read",
+                            "file-write",
+                            "web"
+                        ]
+                    }
+                }
+            },
+            "touchedFile": {
+                "type": "object",
+                "required": [
+                    "path",
+                    "role"
+                ],
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "trim": true,
+                        "minLength": 1,
+                        "maxLength": 500
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "read",
+                            "write",
+                            "both"
+                        ]
+                    }
+                }
+            },
+            "slice": {
+                "type": "object",
+                "required": [
+                    "taskId"
+                ],
+                "properties": {
+                    "taskId": {
+                        "type": "string",
+                        "trim": true,
+                        "minLength": 1
+                    },
+                    "turnIds": {
+                        "type": "array",
+                        "maxItems": 50,
+                        "default": [],
+                        "items": {
+                            "type": "string",
+                            "trim": true,
+                            "minLength": 1
+                        }
+                    },
+                    "eventIds": {
+                        "type": "array",
+                        "maxItems": 200,
+                        "default": [],
+                        "items": {
+                            "type": "string",
+                            "trim": true,
+                            "minLength": 1
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

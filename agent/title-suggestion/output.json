@@ -1,0 +1,39 @@
+{
+    "agent": "title-suggestion",
+    "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "title.suggestion.list",
+        "description": "지금의 제목이 적절하면 빈 배열이고 아니면 2~3개이며, 모자란 개수는 구현체의 검증기가 잡고 여기에는 폭주를 끊는 상한만 둔다.",
+        "type": "object",
+        "required": [
+            "suggestions"
+        ],
+        "properties": {
+            "suggestions": {
+                "type": "array",
+                "maxItems": 3,
+                "items": {
+                    "type": "object",
+                    "required": [
+                        "title",
+                        "rationale"
+                    ],
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "trim": true,
+                            "minLength": 1,
+                            "maxLength": 80
+                        },
+                        "rationale": {
+                            "type": "string",
+                            "trim": true,
+                            "minLength": 1,
+                            "maxLength": 200
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

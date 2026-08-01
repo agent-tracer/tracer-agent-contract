@@ -1,0 +1,5 @@
+{
+    "id": "title-suggestion",
+    "jobKind": "title.suggestion",
+    "route": "/agents/title-suggestion"
+}

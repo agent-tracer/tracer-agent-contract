@@ -1,0 +1,5 @@
+{
+    "id": "recipe-scan",
+    "jobKind": "recipe.scan",
+    "route": "/agents/recipe-scan"
+}

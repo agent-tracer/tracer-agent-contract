@@ -1,0 +1,46 @@
+{
+    "agent": "chat",
+    "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "chat.turn.result",
+        "description": "어느 구현체로 실행하든 대화 턴 하나가 돌려주는 구조화 출력이다.",
+        "type": "object",
+        "required": [
+            "assistantText",
+            "proposedWrites"
+        ],
+        "properties": {
+            "assistantText": {
+                "type": "string"
+            },
+            "proposedWrites": {
+                "type": "array",
+                "description": "도구 호출 시점에 확인 창구로 세운 대기 행이다",
+                "items": {
+                    "type": "object",
+                    "required": [
+                        "confirmationId",
+                        "toolName",
+                        "args"
+                    ],
+                    "properties": {
+                        "confirmationId": {
+                            "type": "string",
+                            "trim": true,
+                            "minLength": 1,
+                            "description": "승인 결과 메시지가 인용할 도구 호출 식별자다"
+                        },
+                        "toolName": {
+                            "type": "string",
+                            "trim": true,
+                            "minLength": 1
+                        },
+                        "args": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

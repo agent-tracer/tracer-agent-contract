@@ -1,0 +1,475 @@
+{
+    "agent": "recipe-scan",
+    "cases": {
+        "anchorTaskId": "task-1",
+        "provenance": {
+            "eventIdsByTask": {
+                "task-1": [
+                    "event-1",
+                    "event-2"
+                ],
+                "task-2": [
+                    "event-3"
+                ]
+            },
+            "turnIdsByTask": {
+                "task-1": [
+                    "turn-1"
+                ],
+                "task-2": [
+                    "turn-2"
+                ]
+            },
+            "ruleIds": [
+                "rule-1"
+            ],
+            "recipeRevs": {
+                "recipe-1": 3
+            }
+        },
+        "candidateDefaults": {
+            "title": "Add a safe migration",
+            "intent": "Apply a schema change without hiding deployment prerequisites.",
+            "description": "Use when a persisted field requires a coordinated migration.",
+            "summary_md": "- Define the schema change",
+            "request": "The user asked to add a migration.",
+            "corrections": [],
+            "pitfalls": [],
+            "governing_rules": [],
+            "steps": [],
+            "touched_files": [],
+            "contributing_slices": [
+                {
+                    "taskId": "task-1",
+                    "turnIds": [
+                        "turn-1"
+                    ],
+                    "eventIds": [
+                        "event-1"
+                    ]
+                }
+            ],
+            "rationale": "The evidence demonstrates a reusable sequence."
+        },
+        "cases": [
+            {
+                "name": "근거가 없어 후보를 내지 않은 빈 출력은 옳은 답이다",
+                "candidates": [],
+                "expect": {
+                    "valid": true,
+                    "errors": []
+                }
+            },
+            {
+                "name": "관측한 근거만 인용한 후보는 통과한다",
+                "candidates": [
+                    {}
+                ],
+                "expect": {
+                    "valid": true,
+                    "errors": []
+                }
+            },
+            {
+                "name": "후보 상한을 넘으면 다른 검사를 보지 않고 그 사유만 낸다",
+                "candidates": [
+                    {},
+                    {},
+                    {},
+                    {},
+                    {}
+                ],
+                "expect": {
+                    "valid": false,
+                    "errors": [
+                        "At most 4 recipe candidates may be returned."
+                    ]
+                }
+            },
+            {
+                "name": "앵커 태스크를 인용하지 않은 후보는 거부한다",
+                "candidates": [
+                    {
+                        "contributing_slices": [
+                            {
+                                "taskId": "task-2",
+                                "turnIds": [],
+                                "eventIds": [
+                                    "event-3"
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "errors": [
+                        "Recipe 1: contributing_slices must include anchor task task-1."
+                    ]
+                }
+            },
+            {
+                "name": "앵커 슬라이스가 이벤트를 하나도 인용하지 않으면 거부한다",
+                "candidates": [
+                    {
+                        "contributing_slices": [
+                            {
+                                "taskId": "task-1",
+                                "turnIds": [],
+                                "eventIds": []
+                            }
+                        ]
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "errors": [
+                        "Recipe 1: The anchor contributing slice must cite at least one anchor event ID.",
+                        "Recipe 1: At least one representative event ID must be cited in contributing_slices."
+                    ]
+                }
+            },
+            {
+                "name": "이벤트를 읽은 적 없는 태스크는 기여 슬라이스로 인정하지 않는다",
+                "candidates": [
+                    {
+                        "contributing_slices": [
+                            {
+                                "taskId": "task-1",
+                                "turnIds": [
+                                    "turn-1"
+                                ],
+                                "eventIds": [
+                                    "event-1"
+                                ]
+                            },
+                            {
+                                "taskId": "task-9",
+                                "turnIds": [],
+                                "eventIds": []
+                            }
+                        ]
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "errors": [
+                        "Recipe 1: Unsupported contributing task ID: task-9."
+                    ]
+                }
+            },
+            {
+                "name": "도구가 준 적 없는 eventId를 인용하면 정렬된 목록으로 거부한다",
+                "candidates": [
+                    {
+                        "contributing_slices": [
+                            {
+                                "taskId": "task-1",
+                                "turnIds": [],
+                                "eventIds": [
+                                    "event-9",
+                                    "event-8"
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "errors": [
+                        "Recipe 1: Unsupported event IDs for task task-1: event-8, event-9."
+                    ]
+                }
+            },
+            {
+                "name": "같은 미관측 eventId를 두 번 인용해도 한 번만 센다",
+                "candidates": [
+                    {
+                        "contributing_slices": [
+                            {
+                                "taskId": "task-1",
+                                "turnIds": [],
+                                "eventIds": [
+                                    "event-9",
+                                    "event-9"
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "errors": [
+                        "Recipe 1: Unsupported event IDs for task task-1: event-9."
+                    ]
+                }
+            },
+            {
+                "name": "다른 태스크에서 본 이벤트를 이 태스크 슬라이스에 인용하면 거부한다",
+                "candidates": [
+                    {
+                        "contributing_slices": [
+                            {
+                                "taskId": "task-1",
+                                "turnIds": [],
+                                "eventIds": [
+                                    "event-3"
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "errors": [
+                        "Recipe 1: Unsupported event IDs for task task-1: event-3."
+                    ]
+                }
+            },
+            {
+                "name": "도구가 준 적 없는 turnId를 인용하면 거부한다",
+                "candidates": [
+                    {
+                        "contributing_slices": [
+                            {
+                                "taskId": "task-1",
+                                "turnIds": [
+                                    "turn-9"
+                                ],
+                                "eventIds": [
+                                    "event-1"
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "errors": [
+                        "Recipe 1: Unsupported turn IDs for task task-1: turn-9."
+                    ]
+                }
+            },
+            {
+                "name": "정정 근거가 어느 태스크에서도 관측되지 않으면 거부한다",
+                "candidates": [
+                    {
+                        "corrections": [
+                            {
+                                "whatAgentDid": "Treated the change as a plain edit.",
+                                "howCorrected": "Registered a migration instead.",
+                                "evidence": [
+                                    "event-9"
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "errors": [
+                        "Recipe 1: Correction 1 cites unsupported event IDs: event-9."
+                    ]
+                }
+            },
+            {
+                "name": "정정 근거는 태스크를 가로질러도 관측했으면 통과한다",
+                "candidates": [
+                    {
+                        "corrections": [
+                            {
+                                "whatAgentDid": "Treated the change as a plain edit.",
+                                "howCorrected": "Registered a migration instead.",
+                                "evidence": [
+                                    "event-3"
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "expect": {
+                    "valid": true,
+                    "errors": []
+                }
+            },
+            {
+                "name": "함정 근거가 어느 태스크에서도 관측되지 않으면 거부한다",
+                "candidates": [
+                    {
+                        "pitfalls": [
+                            {
+                                "pitfall": "Retry attempts reuse sequence numbers.",
+                                "whyNonObvious": "Single-attempt tests never collide.",
+                                "evidence": [
+                                    "event-9"
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "errors": [
+                        "Recipe 1: Pitfall 1 cites unsupported event IDs: event-9."
+                    ]
+                }
+            },
+            {
+                "name": "관측하지 않은 규칙을 인용하면 정렬된 목록으로 거부한다",
+                "candidates": [
+                    {
+                        "governing_rules": [
+                            "rule-z",
+                            "rule-a"
+                        ]
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "errors": [
+                        "Recipe 1: Unsupported governing rule IDs: rule-a, rule-z."
+                    ]
+                }
+            },
+            {
+                "name": "관측한 규칙을 인용하면 통과한다",
+                "candidates": [
+                    {
+                        "governing_rules": [
+                            "rule-1"
+                        ]
+                    }
+                ],
+                "expect": {
+                    "valid": true,
+                    "errors": []
+                }
+            },
+            {
+                "name": "개정 번호를 본 적 없는 레시피를 수정 대상으로 삼으면 거부한다",
+                "candidates": [
+                    {
+                        "revises_recipe_id": "recipe-9"
+                    }
+                ],
+                "expect": {
+                    "valid": false,
+                    "errors": [
+                        "Recipe 1: Unsupported revises_recipe_id: recipe-9."
+                    ]
+                }
+            },
+            {
+                "name": "개정 번호까지 본 레시피는 수정 대상으로 통과한다",
+                "candidates": [
+                    {
+                        "revises_recipe_id": "recipe-1"
+                    }
+                ],
+                "expect": {
+                    "valid": true,
+                    "errors": []
+                }
+            },
+            {
+                "name": "같은 turn을 두 후보가 나눠 가지면 뒤엣것을 거부한다",
+                "candidates": [
+                    {},
+                    {}
+                ],
+                "expect": {
+                    "valid": false,
+                    "errors": [
+                        "Recipe 2: turn turn-1 was already claimed by recipe 1."
+                    ]
+                }
+            },
+            {
+                "name": "서로 다른 근거를 쓰면 두 후보가 함께 통과한다",
+                "candidates": [
+                    {},
+                    {
+                        "contributing_slices": [
+                            {
+                                "taskId": "task-1",
+                                "turnIds": [],
+                                "eventIds": [
+                                    "event-2"
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "expect": {
+                    "valid": true,
+                    "errors": []
+                }
+            }
+        ]
+    },
+    "resultExample": {
+        "recipes": [
+            {
+                "title": "Add a safe migration",
+                "intent": "Apply a schema change without hiding deployment prerequisites.",
+                "description": "Use when a persisted field requires a coordinated migration and application cutover.",
+                "summary_md": "- Define the schema change\n- Register the migration\n- Verify both application boundaries",
+                "request": "The user asked to add graph trajectory fields and preserve existing job history.",
+                "corrections": [
+                    {
+                        "whatAgentDid": "Initially treated graph events as ordinary messages.",
+                        "howCorrected": "Added explicit node and event metadata to the stored trajectory contract.",
+                        "evidence": [
+                            "event-1"
+                        ]
+                    }
+                ],
+                "pitfalls": [
+                    {
+                        "pitfall": "Retry attempts reuse sequence numbers.",
+                        "whyNonObvious": "A UI key based only on sequence looks unique in single-attempt tests.",
+                        "evidence": [
+                            "event-2"
+                        ]
+                    }
+                ],
+                "governing_rules": [
+                    "rule-1"
+                ],
+                "revises_recipe_id": "recipe-1",
+                "steps": [
+                    {
+                        "order": 1,
+                        "action": "Add and register the migration.",
+                        "rationale": "The application never synchronizes schema at startup.",
+                        "verify": {
+                            "kind": "command",
+                            "commandMatches": [
+                                "migration:generate"
+                            ]
+                        }
+                    }
+                ],
+                "touched_files": [
+                    {
+                        "path": "src/migrations/add-graph-fields.ts",
+                        "role": "write"
+                    }
+                ],
+                "contributing_slices": [
+                    {
+                        "taskId": "task-1",
+                        "turnIds": [
+                            "turn-1"
+                        ],
+                        "eventIds": [
+                            "event-1",
+                            "event-2"
+                        ]
+                    }
+                ],
+                "rationale": "The evidence demonstrates a reusable schema-and-consumer cutover sequence."
+            }
+        ]
+    }
+}

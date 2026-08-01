@@ -1,0 +1,5 @@
+{
+    "id": "task-cleanup",
+    "jobKind": "task.cleanup",
+    "route": "/agents/task-cleanup"
+}

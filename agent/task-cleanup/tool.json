@@ -1,0 +1,130 @@
+{
+    "agent": "task-cleanup",
+    "outputKinds": [
+        "archive"
+    ],
+    "limits": {
+        "maxSuggestions": 50,
+        "maxEvidenceEventIds": 100
+    },
+    "orchestration": {
+        "workerMaxTurns": 4,
+        "maxRedispatchRounds": 1,
+        "coordinatorTools": [],
+        "emptyAssignmentEndsEmpty": true,
+        "roles": {
+            "cleanup-candidate-reviewer": [
+                "get_task_events"
+            ]
+        },
+        "workerReport": {
+            "required": [
+                "taskId",
+                "archivable",
+                "reason",
+                "citedEventIds"
+            ]
+        },
+        "redispatchRequest": {
+            "required": [
+                "taskId",
+                "weight"
+            ],
+            "maxTasks": 50
+        }
+    },
+    "tools": {
+        "list_candidate_tasks": {
+            "required": [],
+            "optional": [
+                "limit",
+                "cursor"
+            ],
+            "limit": {
+                "default": 30,
+                "min": 1,
+                "max": 100
+            }
+        },
+        "get_task_events": {
+            "required": [
+                "taskId"
+            ],
+            "optional": [
+                "limit",
+                "cursor",
+                "order"
+            ],
+            "limit": {
+                "default": 100,
+                "min": 1,
+                "max": 300
+            },
+            "order": {
+                "default": "asc",
+                "values": [
+                    "asc",
+                    "desc"
+                ]
+            }
+        }
+    },
+    "responses": {
+        "list_candidate_tasks": {
+            "page": [
+                "candidates",
+                "truncated",
+                "nextCursor",
+                "total",
+                "moreCandidatesOutsideBatch"
+            ],
+            "item": [
+                "id",
+                "visibleTitle",
+                "status",
+                "lastEventAt",
+                "hasEvents",
+                "activeChildCount",
+                "candidateReasons"
+            ]
+        },
+        "get_task_events": {
+            "page": [
+                "events",
+                "truncated",
+                "nextCursor",
+                "total"
+            ],
+            "item": [
+                "id",
+                "seq",
+                "kind",
+                "title",
+                "body",
+                "toolName",
+                "filePaths",
+                "occurredAt"
+            ]
+        }
+    },
+    "failures": {
+        "toolFailed": "Tool {tool} failed: {reason}. Do not call it again more than once. Continue with the evidence you already have, and state in your rationale which evidence you could not check.",
+        "workerFailed": "Investigation failed: {reason}"
+    },
+    "argDescriptions": {
+        "list_candidate_tasks": {
+            "limit": "Max candidates in this page (default 30, hard cap 100)",
+            "cursor": "Opaque cursor from a previous call's nextCursor. Omit to start from the first candidate."
+        },
+        "get_task_events": {
+            "taskId": "The task ID",
+            "limit": "Max events to return in this page (default 100, hard cap 300)",
+            "cursor": "Opaque cursor from a previous call's nextCursor. Omit to start from the first page.",
+            "order": "Reading direction: \"asc\" (default) pages from the earliest event forward; \"desc\" pages from the latest event backward."
+        }
+    },
+    "descriptions": {
+        "list_candidate_tasks": "List the cleanup candidates the server already qualified for this scan (hidden, active, and recently touched tasks are excluded before you see them). Each entry carries visibleTitle, status, lastEventAt, hasEvents, activeChildCount and the server-detected candidateReasons. Call this first, and page with cursor until truncated is false if you want the whole batch. Only task ids returned here may be proposed. moreCandidatesOutsideBatch=true means the server itself capped this batch; the leftover tasks are outside your reach and a future scan will pick them up.",
+        "get_task_events": "Get a page of a task's chronological event sequence (user messages, assistant messages, tool runs), up to 300 events per page. You choose how much to read: pick limit, pass the response's nextCursor back as cursor to keep paging, and set order=\"desc\" to start from the latest events (e.g. to see how a long task ended). truncated/total tell you whether more events exist. Call this whenever you need to see what actually happened in a task before judging it."
+    }
+}

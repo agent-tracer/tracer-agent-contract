@@ -1,0 +1,1491 @@
+{
+    "agent": "chat",
+    "tools": {
+        "search_tasks": {
+            "required": [],
+            "optional": [
+                "status",
+                "origin",
+                "archived",
+                "root",
+                "parentTaskId",
+                "cursor",
+                "limit"
+            ],
+            "mutation": false,
+            "status": {
+                "values": [
+                    "running",
+                    "waiting",
+                    "completed",
+                    "errored"
+                ]
+            },
+            "origin": {
+                "values": [
+                    "user",
+                    "server-sdk"
+                ]
+            },
+            "archived": {
+                "values": [
+                    "true",
+                    "false"
+                ]
+            },
+            "root": {
+                "values": [
+                    "true",
+                    "false"
+                ]
+            },
+            "limit": {
+                "default": 30,
+                "min": 1,
+                "max": 100
+            }
+        },
+        "get_task": {
+            "required": [
+                "taskId"
+            ],
+            "optional": [],
+            "mutation": false
+        },
+        "get_timeline": {
+            "required": [
+                "taskId"
+            ],
+            "optional": [
+                "cursor",
+                "limit"
+            ],
+            "mutation": false,
+            "limit": {
+                "default": 100,
+                "min": 1,
+                "max": 500
+            }
+        },
+        "search_events": {
+            "required": [],
+            "optional": [
+                "q",
+                "taskId",
+                "kind",
+                "lane",
+                "from",
+                "to",
+                "limit"
+            ],
+            "mutation": false,
+            "limit": {
+                "default": 20,
+                "min": 1,
+                "max": 100
+            }
+        },
+        "list_memos": {
+            "required": [],
+            "optional": [
+                "taskId",
+                "eventId"
+            ],
+            "mutation": false
+        },
+        "list_rules": {
+            "required": [],
+            "optional": [
+                "taskId",
+                "all"
+            ],
+            "mutation": false,
+            "all": {
+                "values": [
+                    "true"
+                ]
+            }
+        },
+        "get_rule_evidence": {
+            "required": [
+                "ruleId"
+            ],
+            "optional": [
+                "taskId"
+            ],
+            "mutation": false
+        },
+        "list_tags": {
+            "required": [],
+            "optional": [],
+            "mutation": false
+        },
+        "list_recipes": {
+            "required": [],
+            "optional": [
+                "status"
+            ],
+            "mutation": false,
+            "status": {
+                "values": [
+                    "candidate",
+                    "active",
+                    "dismissed",
+                    "superseded",
+                    "retired"
+                ]
+            }
+        },
+        "list_cleanup_suggestions": {
+            "required": [],
+            "optional": [
+                "status"
+            ],
+            "mutation": false,
+            "status": {
+                "values": [
+                    "pending",
+                    "accepted",
+                    "dismissed"
+                ]
+            }
+        },
+        "get_job": {
+            "required": [
+                "jobId"
+            ],
+            "optional": [],
+            "mutation": false
+        },
+        "recall_facts": {
+            "required": [],
+            "optional": [],
+            "mutation": false
+        },
+        "remember_fact": {
+            "required": [
+                "key",
+                "content"
+            ],
+            "optional": [],
+            "mutation": false
+        },
+        "update_task": {
+            "required": [
+                "taskId"
+            ],
+            "optional": [
+                "title",
+                "status"
+            ],
+            "mutation": true,
+            "status": {
+                "values": [
+                    "running",
+                    "waiting",
+                    "completed",
+                    "errored"
+                ]
+            }
+        },
+        "archive_task": {
+            "required": [
+                "taskId"
+            ],
+            "optional": [],
+            "mutation": true
+        },
+        "unarchive_task": {
+            "required": [
+                "taskId"
+            ],
+            "optional": [],
+            "mutation": true
+        },
+        "delete_task": {
+            "required": [
+                "taskId"
+            ],
+            "optional": [],
+            "mutation": true
+        },
+        "create_memo": {
+            "required": [
+                "taskId",
+                "body"
+            ],
+            "optional": [
+                "eventId"
+            ],
+            "mutation": true
+        },
+        "update_memo": {
+            "required": [
+                "memoId",
+                "body"
+            ],
+            "optional": [],
+            "mutation": true
+        },
+        "delete_memo": {
+            "required": [
+                "memoId"
+            ],
+            "optional": [],
+            "mutation": true
+        },
+        "create_rule": {
+            "required": [
+                "taskId",
+                "anchorEventId",
+                "name",
+                "expectation"
+            ],
+            "optional": [
+                "severity",
+                "rationale"
+            ],
+            "mutation": true,
+            "severity": {
+                "values": [
+                    "info",
+                    "warn",
+                    "block"
+                ]
+            }
+        },
+        "update_rule": {
+            "required": [
+                "ruleId"
+            ],
+            "optional": [
+                "name",
+                "expectation",
+                "severity",
+                "rationale"
+            ],
+            "mutation": true,
+            "severity": {
+                "values": [
+                    "info",
+                    "warn",
+                    "block"
+                ]
+            }
+        },
+        "delete_rule": {
+            "required": [
+                "ruleId"
+            ],
+            "optional": [],
+            "mutation": true
+        },
+        "approve_rule": {
+            "required": [
+                "ruleId"
+            ],
+            "optional": [],
+            "mutation": true
+        },
+        "reevaluate_rule": {
+            "required": [
+                "ruleId"
+            ],
+            "optional": [],
+            "mutation": true
+        },
+        "create_tag": {
+            "required": [
+                "name"
+            ],
+            "optional": [
+                "color",
+                "description"
+            ],
+            "mutation": true
+        },
+        "update_tag": {
+            "required": [
+                "tagId"
+            ],
+            "optional": [
+                "name",
+                "color",
+                "description"
+            ],
+            "mutation": true
+        },
+        "delete_tag": {
+            "required": [
+                "tagId"
+            ],
+            "optional": [],
+            "mutation": true
+        },
+        "set_task_tags": {
+            "required": [
+                "taskId",
+                "tagIds"
+            ],
+            "optional": [],
+            "mutation": true
+        },
+        "accept_recipe": {
+            "required": [
+                "recipeId"
+            ],
+            "optional": [],
+            "mutation": true
+        },
+        "dismiss_recipe": {
+            "required": [
+                "recipeId"
+            ],
+            "optional": [],
+            "mutation": true
+        },
+        "retire_recipe": {
+            "required": [
+                "recipeId"
+            ],
+            "optional": [],
+            "mutation": true
+        },
+        "accept_cleanup": {
+            "required": [
+                "suggestionId"
+            ],
+            "optional": [],
+            "mutation": true
+        },
+        "dismiss_cleanup": {
+            "required": [
+                "suggestionId"
+            ],
+            "optional": [],
+            "mutation": true
+        },
+        "enqueue_job": {
+            "required": [
+                "kind",
+                "input"
+            ],
+            "optional": [],
+            "mutation": true,
+            "kind": {
+                "values": [
+                    "title.suggestion",
+                    "recipe.scan",
+                    "task.cleanup",
+                    "rule.generation"
+                ]
+            }
+        }
+    },
+    "responses": {
+        "search_tasks": {
+            "page": [
+                "items",
+                "total",
+                "nextCursor"
+            ],
+            "item": [
+                "id",
+                "userId",
+                "title",
+                "slug",
+                "status",
+                "taskKind",
+                "origin",
+                "workspacePath",
+                "parentTaskId",
+                "archived",
+                "createdAt",
+                "updatedAt",
+                "lastEventAt"
+            ]
+        },
+        "get_task": {
+            "object": [
+                "task",
+                "sessions",
+                "resumeTarget"
+            ],
+            "task": [
+                "id",
+                "userId",
+                "title",
+                "slug",
+                "status",
+                "taskKind",
+                "origin",
+                "workspacePath",
+                "parentTaskId",
+                "archived",
+                "createdAt",
+                "updatedAt",
+                "lastEventAt"
+            ],
+            "session": [
+                "id",
+                "taskId",
+                "runtimeSource",
+                "runtimeSessionId",
+                "status",
+                "summary",
+                "startedAt",
+                "endedAt"
+            ],
+            "resumeTarget": [
+                "taskId",
+                "runtimeSource",
+                "runtimeSessionId",
+                "workspacePath"
+            ]
+        },
+        "get_timeline": {
+            "page": [
+                "items",
+                "nextCursor"
+            ],
+            "item": [
+                "id",
+                "seq",
+                "taskId",
+                "sessionId",
+                "turnId",
+                "kind",
+                "lane",
+                "title",
+                "displayTitle",
+                "body",
+                "toolName",
+                "filePaths",
+                "metadata",
+                "occurredAt",
+                "subtype",
+                "evidenceLevel"
+            ]
+        },
+        "search_events": {
+            "page": [
+                "items"
+            ],
+            "item": [
+                "id",
+                "taskId",
+                "sessionId",
+                "turnId",
+                "kind",
+                "lane",
+                "title",
+                "body",
+                "toolName",
+                "filePaths",
+                "seq",
+                "occurredAt"
+            ],
+            "memoItem": [
+                "hitType",
+                "id",
+                "taskId",
+                "eventId",
+                "author",
+                "body",
+                "updatedAt"
+            ]
+        },
+        "list_memos": {
+            "page": [
+                "items"
+            ],
+            "item": [
+                "id",
+                "userId",
+                "taskId",
+                "eventId",
+                "body",
+                "author",
+                "lastEditedBy",
+                "rev",
+                "createdAt",
+                "updatedAt"
+            ]
+        },
+        "list_rules": {
+            "page": [
+                "items"
+            ],
+            "item": [
+                "reviewState",
+                "id",
+                "userId",
+                "name",
+                "expectation",
+                "taskId",
+                "source",
+                "severity",
+                "rationale",
+                "signature",
+                "userEdited",
+                "lastEditedBy",
+                "rev",
+                "sourceJobId",
+                "anchorEventId",
+                "citedTurnIds",
+                "citedEventIds",
+                "createdAt",
+                "matchCount",
+                "verdictStatus",
+                "nudgeCount",
+                "escalated"
+            ]
+        },
+        "get_rule_evidence": {
+            "object": [
+                "taskId",
+                "ruleId",
+                "anchorEventId",
+                "status",
+                "triggers",
+                "expects"
+            ],
+            "event": [
+                "eventId",
+                "kind",
+                "title",
+                "body",
+                "command",
+                "filePath",
+                "toolName",
+                "decidedAt",
+                "createdAt",
+                "matchKind",
+                "matchedBy",
+                "unfulfilled"
+            ]
+        },
+        "list_tags": {
+            "page": [
+                "items"
+            ],
+            "item": [
+                "id",
+                "userId",
+                "name",
+                "color",
+                "description",
+                "createdAt",
+                "updatedAt",
+                "taskCount"
+            ]
+        },
+        "list_recipes": {
+            "page": [
+                "items",
+                "taskTitles"
+            ],
+            "item": [
+                "id",
+                "userId",
+                "status",
+                "title",
+                "intent",
+                "description",
+                "summaryMd",
+                "request",
+                "corrections",
+                "pitfalls",
+                "governingRules",
+                "steps",
+                "touchedFiles",
+                "contributingSlices",
+                "rationale",
+                "language",
+                "rev",
+                "parentRecipeId",
+                "sourceJobId",
+                "userEdited",
+                "lastEditedBy",
+                "error",
+                "createdAt",
+                "updatedAt",
+                "resolvedAt",
+                "stats"
+            ]
+        },
+        "list_cleanup_suggestions": {
+            "page": [
+                "items"
+            ],
+            "item": [
+                "id",
+                "userId",
+                "jobId",
+                "taskId",
+                "kind",
+                "currentValue",
+                "proposedValue",
+                "rationale",
+                "status",
+                "error",
+                "createdAt",
+                "resolvedAt"
+            ]
+        },
+        "get_job": {
+            "object": [
+                "job"
+            ],
+            "job": [
+                "id",
+                "userId",
+                "kind",
+                "executor",
+                "status",
+                "attempts",
+                "taskId",
+                "input",
+                "result",
+                "usage",
+                "error",
+                "createdAt",
+                "updatedAt",
+                "startedAt",
+                "completedAt"
+            ]
+        },
+        "recall_facts": {
+            "page": [
+                "facts"
+            ],
+            "fact": [
+                "key",
+                "content",
+                "updatedAt"
+            ]
+        },
+        "remember_fact": {
+            "memory": [
+                "key",
+                "content",
+                "status"
+            ]
+        },
+        "update_task": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "archive_task": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "unarchive_task": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "delete_task": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "create_memo": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "update_memo": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "delete_memo": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "create_rule": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "update_rule": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "delete_rule": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "approve_rule": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "reevaluate_rule": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "create_tag": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "update_tag": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "delete_tag": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "set_task_tags": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "accept_recipe": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "dismiss_recipe": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "retire_recipe": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "accept_cleanup": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "dismiss_cleanup": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "enqueue_job": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        }
+    },
+    "proposalNote": "Queued for user confirmation. This action has NOT run yet and will only run after the user approves it. Tell the user you are awaiting their confirmation; never claim the change is already done.",
+    "failures": {
+        "toolFailed": "Tool {tool} failed: {reason}. Do not call it again more than once. Continue with what you already know, and tell the user plainly which information you could not read."
+    },
+    "argDescriptions": {
+        "search_tasks": {
+            "status": "Keep only tasks in this lifecycle state: running, waiting, completed, or errored. Omit to see every state.",
+            "origin": "Keep only tasks started by \"user\" (the person working) or \"server-sdk\" (this system's own agent runs). Omit to see both.",
+            "archived": "Pass \"true\" to list archived tasks instead of live ones. Omit to list only live tasks.",
+            "root": "Pass \"true\" to keep only top-level tasks and drop the subagent runs the user never sees. Use it unless the question is about subagents.",
+            "parentTaskId": "Keep only the subagent runs launched inside this task. Use it to look inside one task instead of listing everything.",
+            "cursor": "Opaque cursor from a previous call's nextCursor. Omit to start from the newest page.",
+            "limit": "Max tasks in this page, 1 to 100, default 30. Every row you pull stays in your context, so ask for the narrowest page that answers the question."
+        },
+        "get_task": {
+            "taskId": "The task to load, as returned by search_tasks."
+        },
+        "get_timeline": {
+            "taskId": "The task whose timeline to read.",
+            "cursor": "Opaque cursor from a previous call's nextCursor. Omit to start from the newest entries and page backwards in time.",
+            "limit": "Max timeline entries in this page, 1 to 500, default 100."
+        },
+        "search_events": {
+            "q": "Free-text query matched against event titles and bodies. Omit to browse by filters alone.",
+            "taskId": "Keep only hits inside this task. Omit to search across all of the user's tasks.",
+            "kind": "Keep only events of this kind, for example execute_tool or agent_tracer.user.message.",
+            "lane": "Keep only events in this lane: user, assistant, exploration, planning, implementation, questions, todos, background, coordination, telemetry, or rule.",
+            "from": "Keep only events at or after this ISO-8601 timestamp.",
+            "to": "Keep only events at or before this ISO-8601 timestamp.",
+            "limit": "Max hits to return, 1 to 100, default 20."
+        },
+        "list_memos": {
+            "taskId": "Keep only memos on this task. Omit to list every memo the user wrote.",
+            "eventId": "Keep only the memos threaded on this single event. Pass it together with taskId when the user asks about one moment."
+        },
+        "list_rules": {
+            "taskId": "The task whose applicable rules to list, both global and task-scoped.",
+            "all": "Pass \"true\" to list every rule the user has instead of the ones that apply to one task. Do not combine it with taskId."
+        },
+        "get_rule_evidence": {
+            "ruleId": "The rule whose verdict you want the ledger evidence for, as returned by list_rules.",
+            "taskId": "Narrow the evidence to one task when the rule is global and has verdicts on several tasks."
+        },
+        "list_tags": {},
+        "list_recipes": {
+            "status": "Keep only recipes in this state: candidate, active, dismissed, superseded, or retired. Omit to list every recipe."
+        },
+        "list_cleanup_suggestions": {
+            "status": "Keep only suggestions in this state: pending, accepted, or dismissed. Omit to list every suggestion."
+        },
+        "get_job": {
+            "jobId": "The AI job to report on."
+        },
+        "recall_facts": {},
+        "remember_fact": {
+            "key": "Short slug naming the fact, for example \"preferred_language\". Remembering the same key again overwrites the old content.",
+            "content": "The fact itself, written so it still makes sense in a different thread weeks from now."
+        },
+        "update_task": {
+            "taskId": "The task to change.",
+            "title": "The new title. Omit to leave the title as it is.",
+            "status": "The new lifecycle state: running, waiting, completed, or errored. Omit to leave the status as it is."
+        },
+        "archive_task": {
+            "taskId": "The task to archive."
+        },
+        "unarchive_task": {
+            "taskId": "The archived task to restore."
+        },
+        "delete_task": {
+            "taskId": "The task to hide, together with its subagent descendants."
+        },
+        "create_memo": {
+            "taskId": "The task the memo belongs to.",
+            "body": "The memo text to write.",
+            "eventId": "Thread the memo on this single event. Omit to attach it to the task as a whole."
+        },
+        "update_memo": {
+            "memoId": "The memo to rewrite.",
+            "body": "The new memo text, which replaces the old body entirely."
+        },
+        "delete_memo": {
+            "memoId": "The memo to delete."
+        },
+        "create_rule": {
+            "taskId": "The task the rule watches.",
+            "anchorEventId": "The single utterance the rule hangs on, normally the user message that stated the request.",
+            "name": "Short human-readable name for the rule.",
+            "expectation": "JSON object saying what must happen: {\"kind\":\"command\",\"commandMatches\":[...]}, {\"kind\":\"pattern\",\"pattern\":\"...\",\"tool\":\"...\"}, or {\"kind\":\"action\",\"tool\":\"...\"}.",
+            "severity": "How hard an unmet rule pushes back: info, warn, or block. Omit to take the server's default.",
+            "rationale": "Why the rule exists, shown to the user when the verdict is unmet."
+        },
+        "update_rule": {
+            "ruleId": "The rule to edit.",
+            "name": "The new name. Omit to leave it as it is.",
+            "expectation": "The new expectation as a JSON object in the same form create_rule takes. Omit to leave it as it is.",
+            "severity": "The new severity: info, warn, or block. Omit to leave it as it is.",
+            "rationale": "The new rationale. Omit to leave it as it is."
+        },
+        "delete_rule": {
+            "ruleId": "The rule to delete."
+        },
+        "approve_rule": {
+            "ruleId": "The proposed rule to approve and backfill over its task."
+        },
+        "reevaluate_rule": {
+            "ruleId": "The rule whose verdict to re-run over its task."
+        },
+        "create_tag": {
+            "name": "The tag name the user will see.",
+            "color": "Lowercase #rrggbb hex color. Omit to let the server pick one.",
+            "description": "What the tag is for. Omit when the name already says it."
+        },
+        "update_tag": {
+            "tagId": "The tag to edit.",
+            "name": "The new name. Omit to leave it as it is.",
+            "color": "The new lowercase #rrggbb hex color. Omit to leave it as it is.",
+            "description": "The new description. Omit to leave it as it is."
+        },
+        "delete_tag": {
+            "tagId": "The tag to delete and detach from every task."
+        },
+        "set_task_tags": {
+            "taskId": "The task whose tags to replace.",
+            "tagIds": "JSON array of tag ids that becomes the task's full tag set. An empty array detaches every tag."
+        },
+        "accept_recipe": {
+            "recipeId": "The recipe to accept, activating it."
+        },
+        "dismiss_recipe": {
+            "recipeId": "The recipe to dismiss."
+        },
+        "retire_recipe": {
+            "recipeId": "The active recipe to retire."
+        },
+        "accept_cleanup": {
+            "suggestionId": "The cleanup suggestion to accept and apply."
+        },
+        "dismiss_cleanup": {
+            "suggestionId": "The cleanup suggestion to dismiss."
+        },
+        "enqueue_job": {
+            "kind": "Which job to launch: title.suggestion, recipe.scan, task.cleanup, or rule.generation.",
+            "input": "JSON object carrying what that kind needs, for example {\"taskId\":\"...\"} for title.suggestion and recipe.scan."
+        }
+    },
+    "descriptions": {
+        "search_tasks": "List the user's tasks newest-first. total tells you how many match the filter before you page, so check it first and narrow instead of paging blindly. Most tasks are subagent runs the user never sees: pass root=\"true\" to get only the top-level tasks they actually work on. Narrow further with status (running/waiting/completed/errored), origin (user/server-sdk), archived, or a parentTaskId to look inside one task's subagents. Page with cursor: pass the response's nextCursor back as cursor until it is null. limit is up to 100 per page, default 30. Every page you pull stays in your context and slows the rest of the turn, so pull the narrowest set that answers the question.",
+        "get_task": "Get one task by taskId: its header (title, status, origin, workspace, parent, timestamps), its runtime sessions, and a resumeTarget when the task can be resumed. Call this after search_tasks to load the details of a single task the user asked about.",
+        "get_timeline": "Get a page of a task's timeline (chronological user messages, assistant messages, tool runs and derived activity) newest-first. Pass taskId; page older with cursor until nextCursor is null. limit is up to 500 per page, default 100. Use this to read what actually happened in a task.",
+        "search_events": "Full-text search across indexed events (and matching memos), ranked by relevance and recency. Combine q with optional taskId, kind, lane, and a from/to time range. limit is up to 100, default 20. Results are a mix: event hits and memo hits (marked hitType). Use this to find corrections, instructions, or specific moments across many tasks.",
+        "list_memos": "List memos the user wrote. With no arguments it returns every memo; pass taskId to scope to one task, and additionally eventId to get the memos threaded on a single event. Use this to recall notes the user attached to their work.",
+        "list_rules": "List the verification rules that govern the user's work. Pass taskId to see the global and task-scoped rules that apply to that task, or all=\"true\" to list every rule the user has. Each rule carries its expectation, review state, and latest verdict status. Use this to explain what rules apply or why one is unmet.",
+        "get_rule_evidence": "Get the ledger evidence behind one rule's verdict by ruleId (optionally scoped to a taskId): the anchor event, the current status, and the trigger and expectation events that decided it, each with the text and how it matched. Use this after list_rules to show why a rule is satisfied or unmet.",
+        "list_tags": "List the user's tags with their color, description, and how many tasks each is applied to. Use this to answer questions about how the user organizes their tasks.",
+        "list_recipes": "List the user's recipes (reusable workflows distilled from past tasks), optionally filtered by status (candidate/active/dismissed/superseded/retired). Each entry carries the full recipe (intent, steps, pitfalls, touched files) plus application stats. Use this to surface or explain a saved workflow.",
+        "list_cleanup_suggestions": "List task-cleanup suggestions produced for the user, optionally filtered by status (pending/accepted/dismissed). Each names the task it targets, the proposed change, and the rationale. Use this to report what cleanup the system has proposed.",
+        "get_job": "Get one AI job by jobId: its kind, executor, status, attempt count, the task it ran against, and its input/result/usage. Use this to report on the outcome of an agent job the user is asking about.",
+        "recall_facts": "List the durable facts you have remembered about this user, each a short key and its content. Takes no arguments and runs immediately. These same facts are already injected at the top of your context each turn; call this only to re-read them explicitly, for example before deciding whether to remember_fact a new one.",
+        "remember_fact": "Remember a durable fact about this user that should persist across ALL of their chat threads — a stated preference or a stable detail about how they work, not a one-off detail of the current task. Pass a short slug key (for example \"preferred_language\") and the content; remembering the same key again overwrites it. This runs immediately and is NOT a proposal: it is saved at once and the user sees it happen, so you may say plainly that you have remembered it.",
+        "update_task": "PROPOSAL (requires user confirmation, does not run immediately): change a task's title and/or status by taskId. status is one of running/waiting/completed/errored. Pass at least one of title or status. The change is queued and only applied after the user approves; tell the user you are awaiting their confirmation.",
+        "archive_task": "PROPOSAL (requires user confirmation): archive a task by taskId so it drops out of the default listing. Queued until the user approves — never claim it is archived yet.",
+        "unarchive_task": "PROPOSAL (requires user confirmation): restore an archived task by taskId. Queued until the user approves.",
+        "delete_task": "PROPOSAL (requires user confirmation): hide a task by taskId (and its subagent descendants) from the user's views. Queued until the user approves — never claim it is deleted yet.",
+        "create_memo": "PROPOSAL (requires user confirmation): write a new memo with body on a task (taskId), optionally threaded on an eventId. Queued until the user approves.",
+        "update_memo": "PROPOSAL (requires user confirmation): replace the body of an existing memo by memoId. Queued until the user approves.",
+        "delete_memo": "PROPOSAL (requires user confirmation): delete a memo by memoId. Queued until the user approves.",
+        "create_rule": "PROPOSAL (requires user confirmation): create a verification rule on a task. Pass taskId, anchorEventId, a name, and expectation as a JSON object of the form {\"kind\":\"command\",\"commandMatches\":[...]} or {\"kind\":\"pattern\",\"pattern\":\"...\",\"tool\":\"...\"} or {\"kind\":\"action\",\"tool\":\"...\"}; severity is info/warn/block. Queued until the user approves.",
+        "update_rule": "PROPOSAL (requires user confirmation): edit a rule by ruleId — its name, expectation (JSON object as in create_rule), severity (info/warn/block), or rationale. Queued until the user approves.",
+        "delete_rule": "PROPOSAL (requires user confirmation): delete a rule by ruleId. Queued until the user approves.",
+        "approve_rule": "PROPOSAL (requires user confirmation): approve a proposed rule by ruleId and backfill its verdict over the task. Queued until the user approves.",
+        "reevaluate_rule": "PROPOSAL (requires user confirmation): re-run a rule's verdict over its task by ruleId. Queued until the user approves.",
+        "create_tag": "PROPOSAL (requires user confirmation): create a tag with name, optional color (#rrggbb lowercase hex), and optional description. Queued until the user approves.",
+        "update_tag": "PROPOSAL (requires user confirmation): edit a tag by tagId — its name, color (#rrggbb), or description. Queued until the user approves.",
+        "delete_tag": "PROPOSAL (requires user confirmation): delete a tag by tagId and detach it from every task. Queued until the user approves.",
+        "set_task_tags": "PROPOSAL (requires user confirmation): replace the full set of tags on a task. Pass taskId and tagIds as a JSON array of tag ids (an empty array detaches all). Queued until the user approves.",
+        "accept_recipe": "PROPOSAL (requires user confirmation): accept a recipe by recipeId, activating it. Queued until the user approves.",
+        "dismiss_recipe": "PROPOSAL (requires user confirmation): dismiss a recipe by recipeId. Queued until the user approves.",
+        "retire_recipe": "PROPOSAL (requires user confirmation): retire an active recipe by recipeId. Queued until the user approves.",
+        "accept_cleanup": "PROPOSAL (requires user confirmation): accept a task-cleanup suggestion by suggestionId, applying its proposed change. Queued until the user approves.",
+        "dismiss_cleanup": "PROPOSAL (requires user confirmation): dismiss a task-cleanup suggestion by suggestionId. Queued until the user approves.",
+        "enqueue_job": "PROPOSAL (requires user confirmation, and running it starts a real, metered agent run that costs money): launch an AI job. kind is one of title.suggestion (auto-title a task), recipe.scan (distill a recipe from a task), task.cleanup (suggest cleanup across tasks), or rule.generation (draft verification rules for a task). input is a JSON object with the fields that kind needs: title.suggestion takes {\"taskId\":\"...\"}; recipe.scan takes {\"taskId\":\"...\"} plus optional userPrompt, language, and trigger (dashboard/session); task.cleanup takes {} or {\"filters\":{\"maxSuggestions\":N}}; rule.generation requires {\"taskId\":\"...\",\"anchorEventId\":\"...\"} and may also include focus (recent), maxRules, and intent describing what to verify. Queued until the user approves — never claim the job has started yet."
+    },
+    "bindings": {
+        "bindings": {
+            "search_tasks": {
+                "method": "GET",
+                "path": "/api/v1/tasks",
+                "gate": "none",
+                "pathArgs": [],
+                "query": {
+                    "status": "status",
+                    "origin": "origin",
+                    "archived": "archived",
+                    "root": "root",
+                    "parentTaskId": "parentTaskId",
+                    "cursor": "cursor",
+                    "limit": "limit"
+                },
+                "body": {},
+                "bodyConstants": {}
+            },
+            "get_task": {
+                "method": "GET",
+                "path": "/api/v1/tasks/{taskId}",
+                "gate": "none",
+                "pathArgs": [
+                    "taskId"
+                ],
+                "query": {},
+                "body": {},
+                "bodyConstants": {}
+            },
+            "get_timeline": {
+                "method": "GET",
+                "path": "/api/v1/tasks/{taskId}/timeline",
+                "gate": "none",
+                "pathArgs": [
+                    "taskId"
+                ],
+                "query": {
+                    "cursor": "cursor",
+                    "limit": "limit"
+                },
+                "body": {},
+                "bodyConstants": {}
+            },
+            "search_events": {
+                "method": "GET",
+                "path": "/api/v1/events/search",
+                "gate": "none",
+                "pathArgs": [],
+                "query": {
+                    "q": "q",
+                    "taskId": "taskId",
+                    "kind": "kind",
+                    "lane": "lane",
+                    "from": "from",
+                    "to": "to",
+                    "limit": "limit"
+                },
+                "body": {},
+                "bodyConstants": {}
+            },
+            "list_memos": {
+                "method": "GET",
+                "path": "/api/v1/memos",
+                "gate": "none",
+                "pathArgs": [],
+                "query": {
+                    "taskId": "taskId",
+                    "eventId": "eventId"
+                },
+                "body": {},
+                "bodyConstants": {}
+            },
+            "list_rules": {
+                "method": "GET",
+                "path": "/api/v1/rules",
+                "gate": "none",
+                "pathArgs": [],
+                "query": {
+                    "taskId": "taskId",
+                    "all": "all"
+                },
+                "body": {},
+                "bodyConstants": {}
+            },
+            "get_rule_evidence": {
+                "method": "GET",
+                "path": "/api/v1/rules/{ruleId}/evidence",
+                "gate": "none",
+                "pathArgs": [
+                    "ruleId"
+                ],
+                "query": {
+                    "taskId": "taskId"
+                },
+                "body": {},
+                "bodyConstants": {}
+            },
+            "list_tags": {
+                "method": "GET",
+                "path": "/api/v1/tags",
+                "gate": "none",
+                "pathArgs": [],
+                "query": {},
+                "body": {},
+                "bodyConstants": {}
+            },
+            "list_recipes": {
+                "method": "GET",
+                "path": "/api/v1/recipes",
+                "gate": "none",
+                "pathArgs": [],
+                "query": {
+                    "status": "status"
+                },
+                "body": {},
+                "bodyConstants": {}
+            },
+            "list_cleanup_suggestions": {
+                "method": "GET",
+                "path": "/api/v1/task-cleanup/suggestions",
+                "gate": "none",
+                "pathArgs": [],
+                "query": {
+                    "status": "status"
+                },
+                "body": {},
+                "bodyConstants": {}
+            },
+            "get_job": {
+                "method": "GET",
+                "path": "/api/agent/jobs/{jobId}",
+                "gate": "none",
+                "pathArgs": [
+                    "jobId"
+                ],
+                "query": {},
+                "body": {},
+                "bodyConstants": {}
+            },
+            "update_task": {
+                "method": "PATCH",
+                "path": "/api/v1/tasks/{taskId}",
+                "gate": "confirm",
+                "pathArgs": [
+                    "taskId"
+                ],
+                "query": {},
+                "body": {
+                    "title": "title",
+                    "status": "status"
+                },
+                "bodyConstants": {}
+            },
+            "archive_task": {
+                "method": "POST",
+                "path": "/api/v1/tasks/{taskId}/archive",
+                "gate": "confirm",
+                "pathArgs": [
+                    "taskId"
+                ],
+                "query": {},
+                "body": {},
+                "bodyConstants": {}
+            },
+            "unarchive_task": {
+                "method": "DELETE",
+                "path": "/api/v1/tasks/{taskId}/archive",
+                "gate": "confirm",
+                "pathArgs": [
+                    "taskId"
+                ],
+                "query": {},
+                "body": {},
+                "bodyConstants": {}
+            },
+            "delete_task": {
+                "method": "DELETE",
+                "path": "/api/v1/tasks/{taskId}",
+                "gate": "confirm",
+                "pathArgs": [
+                    "taskId"
+                ],
+                "query": {},
+                "body": {},
+                "bodyConstants": {}
+            },
+            "create_memo": {
+                "method": "POST",
+                "path": "/api/v1/memos",
+                "gate": "confirm",
+                "pathArgs": [],
+                "query": {},
+                "body": {
+                    "taskId": "taskId",
+                    "body": "body",
+                    "eventId": "eventId"
+                },
+                "bodyConstants": {
+                    "author": "agent"
+                }
+            },
+            "update_memo": {
+                "method": "PATCH",
+                "path": "/api/v1/memos/{memoId}",
+                "gate": "confirm",
+                "pathArgs": [
+                    "memoId"
+                ],
+                "query": {},
+                "body": {
+                    "body": "body"
+                },
+                "bodyConstants": {}
+            },
+            "delete_memo": {
+                "method": "DELETE",
+                "path": "/api/v1/memos/{memoId}",
+                "gate": "confirm",
+                "pathArgs": [
+                    "memoId"
+                ],
+                "query": {},
+                "body": {},
+                "bodyConstants": {}
+            },
+            "create_rule": {
+                "method": "POST",
+                "path": "/api/v1/rules",
+                "gate": "confirm",
+                "pathArgs": [],
+                "query": {},
+                "body": {
+                    "taskId": "taskId",
+                    "anchorEventId": "anchorEventId",
+                    "name": "name",
+                    "expectation": "expect",
+                    "severity": "severity",
+                    "rationale": "rationale"
+                },
+                "bodyConstants": {}
+            },
+            "update_rule": {
+                "method": "PATCH",
+                "path": "/api/v1/rules/{ruleId}",
+                "gate": "confirm",
+                "pathArgs": [
+                    "ruleId"
+                ],
+                "query": {},
+                "body": {
+                    "name": "name",
+                    "expectation": "expect",
+                    "severity": "severity",
+                    "rationale": "rationale"
+                },
+                "bodyConstants": {}
+            },
+            "delete_rule": {
+                "method": "DELETE",
+                "path": "/api/v1/rules/{ruleId}",
+                "gate": "confirm",
+                "pathArgs": [
+                    "ruleId"
+                ],
+                "query": {},
+                "body": {},
+                "bodyConstants": {}
+            },
+            "approve_rule": {
+                "method": "POST",
+                "path": "/api/v1/rules/{ruleId}/approve",
+                "gate": "confirm",
+                "pathArgs": [
+                    "ruleId"
+                ],
+                "query": {},
+                "body": {},
+                "bodyConstants": {}
+            },
+            "reevaluate_rule": {
+                "method": "POST",
+                "path": "/api/v1/rules/{ruleId}/reevaluate",
+                "gate": "confirm",
+                "pathArgs": [
+                    "ruleId"
+                ],
+                "query": {},
+                "body": {},
+                "bodyConstants": {}
+            },
+            "create_tag": {
+                "method": "POST",
+                "path": "/api/v1/tags",
+                "gate": "confirm",
+                "pathArgs": [],
+                "query": {},
+                "body": {
+                    "name": "name",
+                    "color": "color",
+                    "description": "description"
+                },
+                "bodyConstants": {}
+            },
+            "update_tag": {
+                "method": "PATCH",
+                "path": "/api/v1/tags/{tagId}",
+                "gate": "confirm",
+                "pathArgs": [
+                    "tagId"
+                ],
+                "query": {},
+                "body": {
+                    "name": "name",
+                    "color": "color",
+                    "description": "description"
+                },
+                "bodyConstants": {}
+            },
+            "delete_tag": {
+                "method": "DELETE",
+                "path": "/api/v1/tags/{tagId}",
+                "gate": "confirm",
+                "pathArgs": [
+                    "tagId"
+                ],
+                "query": {},
+                "body": {},
+                "bodyConstants": {}
+            },
+            "set_task_tags": {
+                "method": "PUT",
+                "path": "/api/v1/task-tags",
+                "gate": "confirm",
+                "pathArgs": [],
+                "query": {},
+                "body": {
+                    "taskId": "taskId",
+                    "tagIds": "tagIds"
+                },
+                "bodyConstants": {}
+            },
+            "accept_recipe": {
+                "method": "POST",
+                "path": "/api/v1/recipes/{recipeId}/accept",
+                "gate": "confirm",
+                "pathArgs": [
+                    "recipeId"
+                ],
+                "query": {},
+                "body": {},
+                "bodyConstants": {}
+            },
+            "dismiss_recipe": {
+                "method": "POST",
+                "path": "/api/v1/recipes/{recipeId}/dismiss",
+                "gate": "confirm",
+                "pathArgs": [
+                    "recipeId"
+                ],
+                "query": {},
+                "body": {},
+                "bodyConstants": {}
+            },
+            "retire_recipe": {
+                "method": "POST",
+                "path": "/api/v1/recipes/{recipeId}/retire",
+                "gate": "confirm",
+                "pathArgs": [
+                    "recipeId"
+                ],
+                "query": {},
+                "body": {},
+                "bodyConstants": {}
+            },
+            "accept_cleanup": {
+                "method": "POST",
+                "path": "/api/v1/task-cleanup/suggestions/{suggestionId}/accept",
+                "gate": "confirm",
+                "pathArgs": [
+                    "suggestionId"
+                ],
+                "query": {},
+                "body": {},
+                "bodyConstants": {}
+            },
+            "dismiss_cleanup": {
+                "method": "POST",
+                "path": "/api/v1/task-cleanup/suggestions/{suggestionId}/dismiss",
+                "gate": "confirm",
+                "pathArgs": [
+                    "suggestionId"
+                ],
+                "query": {},
+                "body": {},
+                "bodyConstants": {}
+            },
+            "enqueue_job": {
+                "method": "POST",
+                "path": "/api/agent/jobs",
+                "gate": "confirm",
+                "pathArgs": [],
+                "query": {},
+                "body": {
+                    "kind": "kind",
+                    "input": "input"
+                },
+                "bodyConstants": {}
+            },
+            "recall_facts": {
+                "method": "GET",
+                "path": "/api/agent/chat/memories",
+                "gate": "none",
+                "pathArgs": [],
+                "query": {},
+                "body": {},
+                "bodyConstants": {}
+            },
+            "remember_fact": {
+                "method": "PUT",
+                "path": "/api/agent/chat/memories/{key}",
+                "gate": "none",
+                "pathArgs": [
+                    "key"
+                ],
+                "query": {},
+                "body": {
+                    "content": "content"
+                },
+                "bodyConstants": {}
+            }
+        },
+        "local": []
+    }
+}

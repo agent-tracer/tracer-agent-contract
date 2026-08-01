@@ -1,0 +1,49 @@
+{
+    "agent": "title-suggestion",
+    "fragments": {
+        "contextShape": {
+            "content": [
+                "The user message carries the task's current title and an excerpt of its conversation turns (what the",
+                "user asked, what the agent reported back): the oldest user turn plus the most recent turns. Turns in",
+                "the middle are dropped when the task is long, and the excerpt says so when that happened."
+            ]
+        },
+        "titleSpec": {
+            "content": [
+                "Each title must be concrete — naming the area or action — under 80 characters, and normally 4-9 words",
+                "in languages where words are space-delimited. Prefer an imperative or noun phrase, as in \"Fix auth",
+                "middleware token leak\" or \"Migrate billing schema to v2\". Never use a placeholder such as \"Task 123\",",
+                "\"Untitled\", or \"Test\"."
+            ]
+        },
+        "answerShape": {
+            "content": [
+                "If the current title is already concrete, accurate, and readable, return an empty list: that is a",
+                "real answer, not a failure. Otherwise return exactly 2-3 distinct alternatives. Do not repeat the",
+                "current title or another suggestion. Each rationale is one evidence-grounded sentence under 200",
+                "characters explaining what drove the suggestion. Do not invent work the evidence does not show."
+            ]
+        },
+        "repairDirective": {
+            "content": [
+                "Change only what is necessary to satisfy these errors. Return either an empty suggestions list or 2-3",
+                "distinct alternatives. Do not repeat the current title, use placeholder titles, or invent work the",
+                "evidence does not show. Then return the complete repaired suggestion list."
+            ]
+        }
+    },
+    "templates": {
+        "title-suggestion.investigator.system": {
+            "slots": [
+                "contextShape",
+                "titleSpec",
+                "answerShape"
+            ]
+        },
+        "title-suggestion.investigator.repair": {
+            "slots": [
+                "repairDirective"
+            ]
+        }
+    }
+}
