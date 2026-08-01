@@ -34,7 +34,12 @@ Node에서는 `conformance/runner/contract.mjs`를, Python에서는 `conformance
 | 계약의 판을 읽는다 | `readVersion()` | `read_version()` |
 | 케이스 이름을 낸다 | `listCases()` | `list_cases()` |
 | 케이스 하나를 읽는다 | `readCase(name)` | `read_case(name)` |
-| 에이전트 명세를 읽는다 | `readAgentSpec(agentId)` | `read_agent_spec(agent_id)` |
+| 에이전트가 갖는 계약 파일을 낸다 | `listAgentFiles(agentId)` | `list_agent_files(agent_id)` |
+| 에이전트의 정체를 읽는다 | `readAgentMeta(agentId)` | `read_agent_meta(agent_id)` |
+| 에이전트의 프롬프트를 읽는다 | `readAgentPrompt(agentId)` | `read_agent_prompt(agent_id)` |
+| 에이전트의 도구를 읽는다 | `readAgentTools(agentId)` | `read_agent_tools(agent_id)` |
+| 에이전트의 출력 스키마를 읽는다 | `readAgentOutput(agentId)` | `read_agent_output(agent_id)` |
+| 에이전트의 판정 케이스를 읽는다 | `readAgentCases(agentId)` | `read_agent_cases(agent_id)` |
 | 공유 계약을 읽는다 | `readShared(fileName)` | `read_shared(file_name)` |
 | 계약 파일 하나를 읽는다 | `readJson(relative)` | `read_json(relative)` |
 | 강제·기록 분류를 읽는다 | `readEnforcement()` | `read_enforcement()` |

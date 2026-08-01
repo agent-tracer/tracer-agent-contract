@@ -8,9 +8,15 @@ import urllib.request
 
 from contract import (
     enforcement_level,
+    list_agent_files,
     list_cases,
     normalize_path_template,
     read_agent_api_routes,
+    read_agent_cases,
+    read_agent_meta,
+    read_agent_output,
+    read_agent_prompt,
+    read_agent_tools,
     read_case,
     read_declared_http_paths,
     read_json,
@@ -30,7 +36,6 @@ def read_served_routes(base_url: str) -> set[str]:
     return {route_key(route) for route in body["data"]["routes"]}
 
 AGENTS = ["chat", "recipe-scan", "title-suggestion", "task-cleanup", "rule-generation"]
-SECTIONS = ["tools", "output", "bindings", "prompt"]
 SHARED = [
     "language.directives.json",
     "error.subtypes.json",
@@ -55,9 +60,19 @@ def main() -> None:
         read_case(name)
         surfaces.append(f"conformance/cases/{name}.json")
 
+    agent_readers = {
+        "agent.json": read_agent_meta,
+        "prompt.json": read_agent_prompt,
+        "tool.json": read_agent_tools,
+        "output.json": read_agent_output,
+        "cases.json": read_agent_cases,
+    }
+    agent_file_count = 0
     for agent in AGENTS:
-        spec = read_json(f"agent/{agent}/spec.json")
-        surfaces.extend(f"agent/{agent}/spec.json#{section}" for section in SECTIONS if section in spec)
+        for file_name in list_agent_files(agent):
+            agent_readers[file_name](agent)
+            surfaces.append(f"agent/{agent}/{file_name}")
+            agent_file_count += 1
     for file_name in SHARED:
         read_json(f"agent/shared/{file_name}")
         surfaces.append(f"agent/shared/{file_name}")
@@ -139,6 +154,7 @@ def main() -> None:
 
     names = ", ".join(topic["name"] for topic in topics.values())
     print(f"계약 {version}: 케이스 {len(cases)}개를 읽었다 — {', '.join(cases)}")
+    print(f"에이전트 {len(AGENTS)}개의 계약 파일 {agent_file_count}개를 읽었다")
     print(f"강제 {len(grouped['enforced'])}자리, 기록 {len(grouped['recorded'])}자리")
     print(f"도구 {len(bindings)}개가 부르는 경로를 HTTP 표면 {len(declared_paths)}자리가 덮는다")
     print(

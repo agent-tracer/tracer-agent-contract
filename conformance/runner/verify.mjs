@@ -1,8 +1,14 @@
 import {
     enforcementLevel,
+    listAgentFiles,
     listCases,
     normalizePathTemplate,
     readAgentApiRoutes,
+    readAgentCases,
+    readAgentMeta,
+    readAgentOutput,
+    readAgentPrompt,
+    readAgentTools,
     readCase,
     readDeclaredHttpPaths,
     readJson,
@@ -43,11 +49,20 @@ for (const name of cases) {
     surfaces.push(`conformance/cases/${name}.json`);
 }
 
+const AGENT_READERS = {
+    "agent.json": readAgentMeta,
+    "prompt.json": readAgentPrompt,
+    "tool.json": readAgentTools,
+    "output.json": readAgentOutput,
+    "cases.json": readAgentCases,
+};
+
+let agentFileCount = 0;
 for (const agent of AGENTS) {
-    const spec = readJson(`agent/${agent}/spec.json`);
-    for (const section of ["tools", "output", "bindings", "prompt"]) {
-        if (spec[section] === undefined) continue;
-        surfaces.push(`agent/${agent}/spec.json#${section}`);
+    for (const file of listAgentFiles(agent)) {
+        AGENT_READERS[file](agent);
+        surfaces.push(`agent/${agent}/${file}`);
+        agentFileCount += 1;
     }
 }
 for (const file of SHARED) surfaces.push(`agent/shared/${file}`);
@@ -114,6 +129,7 @@ if (baseUrl !== undefined) {
 }
 
 console.log(`계약 ${version}: 케이스 ${cases.length}개를 읽었다 — ${cases.join(", ")}`);
+console.log(`에이전트 ${AGENTS.length}개의 계약 파일 ${agentFileCount}개를 읽었다`);
 console.log(`강제 ${grouped.enforced.length}자리, 기록 ${grouped.recorded.length}자리`);
 console.log(`도구 ${bindings.length}개가 부르는 경로를 HTTP 표면 ${declaredPaths.size}자리가 덮는다`);
 console.log(`접수가 받는 잡 종류 ${intakeKinds.length}개를 세 자리가 같게 적는다 — ${intakeKinds.join(", ")}`);

@@ -6,6 +6,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const CASES = join(ROOT, "conformance", "cases");
 const SUFFIX = ".json";
 const HTTP_SURFACES = ["agent-api.openapi.yaml", "tracer-dependency.openapi.yaml"];
+const AGENT_FILES = ["agent.json", "prompt.json", "tool.json", "output.json", "cases.json"];
 
 /** 계약 뿌리의 절대 경로이며 스위트를 붙인 구현체는 이 아래만 읽는다. */
 export function contractRoot() {
@@ -35,9 +36,39 @@ export function readCase(name) {
     return JSON.parse(readFileSync(join(CASES, `${name}${SUFFIX}`), "utf8"));
 }
 
-/** 에이전트 하나의 명세를 읽는다. */
-export function readAgentSpec(agentId) {
-    return readJson(join("agent", agentId, "spec.json"));
+/** 에이전트 하나가 갖는 계약 파일의 이름을 정해진 순서로 낸다. */
+export function listAgentFiles(agentId) {
+    const present = new Set(readdirSync(join(ROOT, "agent", agentId)));
+    return AGENT_FILES.filter((file) => present.has(file));
+}
+
+/** 에이전트의 정체를 읽는다. */
+export function readAgentMeta(agentId) {
+    return readAgentFile(agentId, "agent.json");
+}
+
+/** 에이전트의 프롬프트 조각과 템플릿을 읽는다. */
+export function readAgentPrompt(agentId) {
+    return readAgentFile(agentId, "prompt.json");
+}
+
+/** 에이전트의 도구와 인자와 상한을 읽는다. */
+export function readAgentTools(agentId) {
+    return readAgentFile(agentId, "tool.json");
+}
+
+/** 에이전트의 구조화 출력 스키마를 읽는다. */
+export function readAgentOutput(agentId) {
+    return readAgentFile(agentId, "output.json");
+}
+
+/** 에이전트의 판정 케이스를 읽는다. */
+export function readAgentCases(agentId) {
+    return readAgentFile(agentId, "cases.json");
+}
+
+function readAgentFile(agentId, fileName) {
+    return readJson(join("agent", agentId, fileName));
 }
 
 /** 네 에이전트가 함께 쓰는 계약 파일 하나를 읽는다. */
@@ -100,7 +131,7 @@ export function routeKey(route) {
 
 /** 대화 도구가 어느 경로의 뷰인지를 도구 이름 순으로 낸다. */
 export function readToolBindingPaths() {
-    const { bindings } = readAgentSpec("chat").bindings;
+    const { bindings } = readAgentTools("chat").bindings;
     return Object.entries(bindings)
         .sort(([left], [right]) => (left < right ? -1 : 1))
         .map(([name, binding]) => ({ name, method: binding.method, path: binding.path }));

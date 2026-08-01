@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 CASES = ROOT / "conformance" / "cases"
 SUFFIX = ".json"
 HTTP_SURFACES = ["agent-api.openapi.yaml", "tracer-dependency.openapi.yaml"]
+AGENT_FILES = ["agent.json", "prompt.json", "tool.json", "output.json", "cases.json"]
 
 
 def contract_root() -> Path:
@@ -38,9 +39,35 @@ def read_case(name: str) -> Any:
     return json.loads((CASES / f"{name}{SUFFIX}").read_text(encoding="utf-8"))
 
 
-def read_agent_spec(agent_id: str) -> Any:
-    """에이전트 하나의 명세를 읽는다."""
-    return read_json(f"agent/{agent_id}/spec.json")
+def list_agent_files(agent_id: str) -> list[str]:
+    """에이전트 하나가 갖는 계약 파일의 이름을 정해진 순서로 낸다."""
+    present = {path.name for path in (ROOT / "agent" / agent_id).iterdir()}
+    return [name for name in AGENT_FILES if name in present]
+
+
+def read_agent_meta(agent_id: str) -> Any:
+    """에이전트의 정체를 읽는다."""
+    return read_json(f"agent/{agent_id}/agent.json")
+
+
+def read_agent_prompt(agent_id: str) -> Any:
+    """에이전트의 프롬프트 조각과 템플릿을 읽는다."""
+    return read_json(f"agent/{agent_id}/prompt.json")
+
+
+def read_agent_tools(agent_id: str) -> Any:
+    """에이전트의 도구와 인자와 상한을 읽는다."""
+    return read_json(f"agent/{agent_id}/tool.json")
+
+
+def read_agent_output(agent_id: str) -> Any:
+    """에이전트의 구조화 출력 스키마를 읽는다."""
+    return read_json(f"agent/{agent_id}/output.json")
+
+
+def read_agent_cases(agent_id: str) -> Any:
+    """에이전트의 판정 케이스를 읽는다."""
+    return read_json(f"agent/{agent_id}/cases.json")
 
 
 def read_shared(file_name: str) -> Any:
@@ -112,7 +139,7 @@ def read_agent_api_routes() -> list[dict[str, str]]:
 
 def read_tool_binding_paths() -> list[dict[str, str]]:
     """대화 도구가 어느 경로의 뷰인지를 도구 이름 순으로 낸다."""
-    bindings = read_agent_spec("chat")["bindings"]["bindings"]
+    bindings = read_agent_tools("chat")["bindings"]["bindings"]
     return [
         {"name": name, "method": binding["method"], "path": binding["path"]}
         for name, binding in sorted(bindings.items())
