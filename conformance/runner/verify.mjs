@@ -18,6 +18,8 @@ import {
     readText,
     readToolBindingPaths,
     readOpenApiEnum,
+    readRedaction,
+    readTraceAttributeNames,
     readVersion,
     readWorkerSdkMetrics,
     routeKey,
@@ -70,6 +72,15 @@ const AXIS_DURATION_UNIT = "seconds";
 // 지표 창구는 수집기를 지나지 않으므로 Prometheus 의 고전 라벨 이름 규칙을 그대로 받는다.
 const LABEL_NAME = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 const NAME_SUFFIXES = ["countersTotalSuffix", "unitSuffix"];
+const REDACTION_PLACES = ["marker", "matching", "keys", "values", "onSuspect", "stages"];
+const REDACTION_STAGES = ["trace", "query", "output"];
+const ON_SUSPECT_ACTIONS = ["redact", "discard"];
+// 실행에 실험의 자리가 없으므로 이 이름은 어느 속성으로도 나가지 않는다.
+const RETIRED_ATTRIBUTES = [
+    "agent_tracer.experiment.id",
+    "agent_tracer.example.id",
+    "agent_tracer.variant.id",
+];
 
 const version = readVersion();
 const cases = listCases();
@@ -138,6 +149,24 @@ const axisColumn = readJobLedgerAxisColumn();
 const workerMetrics = readWorkerSdkMetrics();
 const axisLabel = readAxisLabelNames();
 
+const redaction = readRedaction();
+const missingRedaction = REDACTION_PLACES.filter((place) => redaction[place] === undefined);
+const redactionWords = {
+    keys: redaction.keys?.words ?? [],
+    values: redaction.values?.words ?? [],
+};
+const emptyRedactionWords = Object.entries(redactionWords)
+    .filter(([, words]) => words.length === 0)
+    .map(([name]) => name);
+const stages = redaction.stages ?? {};
+const missingStages = REDACTION_STAGES.filter((name) => stages[name] === undefined);
+const strayOnSuspect = REDACTION_STAGES.filter(
+    (name) => stages[name] !== undefined && !ON_SUSPECT_ACTIONS.includes(stages[name].onSuspect),
+).map((name) => `${name} ${stages[name].onSuspect ?? "없음"}`);
+const traceAttributes = readTraceAttributeNames();
+const traceAttributeText = readText("workflow/trace.attributes.yaml");
+const retiredAttributes = RETIRED_ATTRIBUTES.filter((name) => traceAttributeText.includes(name));
+
 const topics = readJson("wire/topics.json");
 const incompleteTopics = Object.entries(topics)
     .filter(([, topic]) => TOPIC_FIELDS.some((field) => topic[field] === undefined))
@@ -202,6 +231,31 @@ if (axisLabel.attributeKey.replaceAll(".", "_") !== axisLabel.labelName) {
             `${axisLabel.attributeKey} 와 ${axisLabel.labelName}`,
     );
 }
+if (missingRedaction.length > 0) {
+    throw new Error(`가리는 규칙에 있어야 할 자리가 없다 — ${missingRedaction.join(", ")}`);
+}
+if (typeof redaction.marker !== "string" || redaction.marker.length === 0) {
+    throw new Error("가린 자리에 넣는 표시는 비어 있지 않은 문자열 하나다");
+}
+if (emptyRedactionWords.length > 0) {
+    throw new Error(`가릴 낱말이 비어 있으면 규칙이 아무것도 가리지 못한다 — ${emptyRedactionWords.join(", ")}`);
+}
+if (missingStages.length > 0) {
+    throw new Error(
+        `가리는 자리 ${REDACTION_STAGES.join(" · ")} 가 다 있어야 한다 — ${missingStages.join(", ")} 가 없다`,
+    );
+}
+if (strayOnSuspect.length > 0) {
+    throw new Error(
+        `자리마다 ${ON_SUSPECT_ACTIONS.join(" 이나 ")} 를 하나 골라야 한다 — ${strayOnSuspect.join(", ")}`,
+    );
+}
+if (traceAttributes.length === 0) {
+    throw new Error("추적이 나르는 속성을 계약이 하나도 선언하지 않는다");
+}
+if (retiredAttributes.length > 0) {
+    throw new Error(`실행에 자리가 없는 이름이 추적 속성 표에 있다 — ${retiredAttributes.join(", ")}`);
+}
 
 const declaredRoutes = readAgentApiRoutes();
 const recordedUnserved = readCase("divergence").items.flatMap((item) => item.unservedPaths ?? []);
@@ -246,3 +300,12 @@ console.log(
     `지표의 이름을 빚는 값 ${NAME_SUFFIXES.length}개를 계약이 적는다 — ` +
         NAME_SUFFIXES.map((name) => `${name} ${workerMetrics[name]}`).join(", "),
 );
+console.log(
+    `가리는 규칙은 key 낱말 ${redactionWords.keys.length}개와 값의 모양 ${redactionWords.values.length}개를 ` +
+        `${redaction.marker} 로 바꾼다`,
+);
+console.log(
+    `가리는 자리 ${REDACTION_STAGES.length}개가 걸린 것을 어떻게 할지 적는다 — ` +
+        REDACTION_STAGES.map((name) => `${name} ${stages[name].onSuspect}`).join(", "),
+);
+console.log(`추적이 나르는 속성 ${traceAttributes.length}개를 계약이 갖는다`);

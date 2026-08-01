@@ -90,6 +90,25 @@ export function readAxisLabelNames() {
     };
 }
 
+/** 가릴 낱말과 비교 절차와 표시와 자리를 읽는다. */
+export function readRedaction() {
+    return readJson("agent/shared/redaction.json");
+}
+
+/** 추적이 나르는 속성의 이름을 선언한 순서로 낸다. */
+export function readTraceAttributeNames() {
+    const found = [];
+    let inside = false;
+    for (const line of readText("workflow/trace.attributes.yaml").split("\n")) {
+        if (/^\S/.test(line)) inside = line === "attributes:";
+        else if (inside) {
+            const declared = /^ {2}([\w.]+):$/.exec(line);
+            if (declared !== null) found.push(declared[1]);
+        }
+    }
+    return found;
+}
+
 /** 적합성 케이스의 이름을 사전순으로 낸다. */
 export function listCases() {
     return readdirSync(CASES)

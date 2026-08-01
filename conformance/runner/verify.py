@@ -25,8 +25,10 @@ from contract import (
     read_job_ledger_axis_column,
     read_json,
     read_openapi_enum,
+    read_redaction,
     read_text,
     read_tool_binding_paths,
+    read_trace_attribute_names,
     read_version,
     read_worker_sdk_metrics,
     route_key,
@@ -83,6 +85,15 @@ AXIS_DURATION_UNIT = "seconds"
 # 지표 창구는 수집기를 지나지 않으므로 Prometheus 의 고전 라벨 이름 규칙을 그대로 받는다.
 LABEL_NAME = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 NAME_SUFFIXES = ["countersTotalSuffix", "unitSuffix"]
+REDACTION_PLACES = ["marker", "matching", "keys", "values", "onSuspect", "stages"]
+REDACTION_STAGES = ["trace", "query", "output"]
+ON_SUSPECT_ACTIONS = ["redact", "discard"]
+# 실행에 실험의 자리가 없으므로 이 이름은 어느 속성으로도 나가지 않는다.
+RETIRED_ATTRIBUTES = [
+    "agent_tracer.experiment.id",
+    "agent_tracer.example.id",
+    "agent_tracer.variant.id",
+]
 
 
 def main() -> None:
@@ -138,6 +149,24 @@ def main() -> None:
     axis_column = read_job_ledger_axis_column()
     worker_metrics = read_worker_sdk_metrics()
     axis_label = read_axis_label_names()
+
+    redaction = read_redaction()
+    missing_redaction = [place for place in REDACTION_PLACES if place not in redaction]
+    redaction_words = {
+        "keys": redaction.get("keys", {}).get("words", []),
+        "values": redaction.get("values", {}).get("words", []),
+    }
+    empty_redaction_words = [name for name, words in redaction_words.items() if not words]
+    stages = redaction.get("stages", {})
+    missing_stages = [name for name in REDACTION_STAGES if name not in stages]
+    stray_on_suspect = [
+        f"{name} {stages[name].get('onSuspect', '없음')}"
+        for name in REDACTION_STAGES
+        if name in stages and stages[name].get("onSuspect") not in ON_SUSPECT_ACTIONS
+    ]
+    trace_attributes = read_trace_attribute_names()
+    trace_attribute_text = read_text("workflow/trace.attributes.yaml")
+    retired_attributes = [name for name in RETIRED_ATTRIBUTES if name in trace_attribute_text]
 
     topics = read_json("wire/topics.json")
     incomplete_topics = [
@@ -217,6 +246,30 @@ def main() -> None:
             f"수집기가 점을 밑줄로 바꾼 이름이 라벨 이름과 같아야 한다 — "
             f"{attribute_key} 와 {label_name}"
         )
+    if missing_redaction:
+        raise SystemExit(f"가리는 규칙에 있어야 할 자리가 없다 — {', '.join(missing_redaction)}")
+    if not isinstance(redaction["marker"], str) or not redaction["marker"]:
+        raise SystemExit("가린 자리에 넣는 표시는 비어 있지 않은 문자열 하나다")
+    if empty_redaction_words:
+        raise SystemExit(
+            f"가릴 낱말이 비어 있으면 규칙이 아무것도 가리지 못한다 — {', '.join(empty_redaction_words)}"
+        )
+    if missing_stages:
+        places = " · ".join(REDACTION_STAGES)
+        raise SystemExit(
+            f"가리는 자리 {places} 가 다 있어야 한다 — {', '.join(missing_stages)} 가 없다"
+        )
+    if stray_on_suspect:
+        actions = " 이나 ".join(ON_SUSPECT_ACTIONS)
+        raise SystemExit(
+            f"자리마다 {actions} 를 하나 골라야 한다 — {', '.join(stray_on_suspect)}"
+        )
+    if not trace_attributes:
+        raise SystemExit("추적이 나르는 속성을 계약이 하나도 선언하지 않는다")
+    if retired_attributes:
+        raise SystemExit(
+            f"실행에 자리가 없는 이름이 추적 속성 표에 있다 — {', '.join(retired_attributes)}"
+        )
 
     declared_routes = read_agent_api_routes()
     recorded_unserved = [
@@ -262,6 +315,13 @@ def main() -> None:
     print(f"축의 라벨은 계측에서 {attribute_key} 이고 창구에서 {label_name} 이다")
     shaped = ", ".join(f"{name} {str(worker_metrics[name]).lower()}" for name in NAME_SUFFIXES)
     print(f"지표의 이름을 빚는 값 {len(NAME_SUFFIXES)}개를 계약이 적는다 — {shaped}")
+    print(
+        f"가리는 규칙은 key 낱말 {len(redaction_words['keys'])}개와 "
+        f"값의 모양 {len(redaction_words['values'])}개를 {redaction['marker']} 로 바꾼다"
+    )
+    chosen = ", ".join(f"{name} {stages[name]['onSuspect']}" for name in REDACTION_STAGES)
+    print(f"가리는 자리 {len(REDACTION_STAGES)}개가 걸린 것을 어떻게 할지 적는다 — {chosen}")
+    print(f"추적이 나르는 속성 {len(trace_attributes)}개를 계약이 갖는다")
 
 
 if __name__ == "__main__":

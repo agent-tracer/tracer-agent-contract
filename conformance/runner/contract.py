@@ -93,6 +93,25 @@ def read_axis_label_names() -> dict[str, str | None]:
     }
 
 
+def read_redaction() -> Any:
+    """가릴 낱말과 비교 절차와 표시와 자리를 읽는다."""
+    return read_json("agent/shared/redaction.json")
+
+
+def read_trace_attribute_names() -> list[str]:
+    """추적이 나르는 속성의 이름을 선언한 순서로 낸다."""
+    found: list[str] = []
+    inside = False
+    for line in read_text("workflow/trace.attributes.yaml").split("\n"):
+        if re.match(r"^\S", line):
+            inside = line == "attributes:"
+        elif inside:
+            declared = re.match(r"^ {2}([\w.]+):$", line)
+            if declared is not None:
+                found.append(declared.group(1))
+    return found
+
+
 def list_cases() -> list[str]:
     """적합성 케이스의 이름을 사전순으로 낸다."""
     return sorted(path.stem for path in CASES.glob(f"*{SUFFIX}"))
