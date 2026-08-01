@@ -10,6 +10,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 
 const SEMVER_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 const MIGRATION_PATTERN = /^(\d{4})-[a-z0-9-]+\.sql$/;
+const CONTRACT_VERSION_PATTERN = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
 function trackedFiles() {
   return execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" }).trim().split("\n");
@@ -40,11 +41,27 @@ export function checkMigrationOrder(fileNames) {
   return errors;
 }
 
+/** 에이전트 계약이 적은 판이 v<major>.<minor>.<patch> 인지 검사한다. */
+export function checkContractVersions(label, document) {
+  return collectVersions(document).flatMap((version) =>
+    CONTRACT_VERSION_PATTERN.test(version) ? [] : [`${label} 의 판이 vX.Y.Z 가 아니다: "${version}"`],
+  );
+}
+
+function collectVersions(value) {
+  if (Array.isArray(value)) return value.flatMap(collectVersions);
+  if (value === null || typeof value !== "object") return [];
+  return Object.entries(value).flatMap(([key, nested]) =>
+    key === "version" && typeof nested === "string" ? [nested] : collectVersions(nested),
+  );
+}
+
 function checkJson(files) {
   const errors = [];
   for (const file of files) {
     try {
-      JSON.parse(fs.readFileSync(path.join(repoRoot, file), "utf8"));
+      const document = JSON.parse(fs.readFileSync(path.join(repoRoot, file), "utf8"));
+      if (file.startsWith("agent/")) errors.push(...checkContractVersions(file, document));
     } catch (cause) {
       errors.push(`${file} 이 JSON 으로 읽히지 않는다: ${cause.message}`);
     }
