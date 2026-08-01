@@ -1244,6 +1244,38 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /api/agent/evaluation/evaluators/sets:
+    get:
+      operationId: listEvaluatorSets
+      tags: [evaluation]
+      summary: 실험이 고를 수 있는 평가자 묶음의 판을 낸다
+      description: 실험을 만드는 화면이 판을 손으로 적지 않도록 고를 수 있는 묶음을 낸다.
+      parameters:
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 고를 수 있는 묶음을 실었다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        required: [sets]
+                        properties:
+                          sets:
+                            type: array
+                            items:
+                              type: object
+                              required: [version, createdAt, evaluatorCount]
+                              properties:
+                                version: { type: string }
+                                createdAt: { type: string, format: date-time }
+                                evaluatorCount: { type: integer, minimum: 0 }
+
   /api/agent/evaluation/experiments:
     get:
       operationId: listExperiments
