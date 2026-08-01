@@ -16,6 +16,7 @@
     "scope": {
         "chat": "답변 본문",
         "title-suggestion": "제목과 근거",
+        "recipe-scan": "레시피의 산문 칸",
         "task-cleanup": "근거"
     },
     "default": "auto"
