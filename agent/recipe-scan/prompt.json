@@ -21,6 +21,9 @@
                 "one. Your only tool is ${checkCitationsTool}: before you emit final candidates, pass the IDs you intend",
                 "to cite and it names the ones the merged ledger cannot back. An ID no specialist surfaced is not",
                 "citable, so never guess IDs."
+            ],
+            "placeholders": [
+                "checkCitationsTool"
             ]
         },
         "citationDiscipline": {
@@ -32,6 +35,9 @@
                 "saved. Verify with ${checkCitationsTool} first.",
                 "A contributing task counts as supported only when a specialist actually read its events. A task a",
                 "specialist merely named without reading is not enough."
+            ],
+            "placeholders": [
+                "checkCitationsTool"
             ]
         },
         "turnSplitting": {
@@ -47,6 +53,9 @@
             "content": [
                 "Return zero recipes if the evidence is too thin, otherwise one candidate per distinct reusable",
                 "workflow, up to ${recipeCandidateLimit}."
+            ],
+            "placeholders": [
+                "recipeCandidateLimit"
             ]
         },
         "redispatchProtocol": {
@@ -59,6 +68,10 @@
                 "you. You get at most ${maxRedispatchRounds} such round; after it, finalize from what you have.",
                 "Redispatch only for a gap a specialist can actually close, not to re-read evidence you already hold.",
                 "Return either recipes or a redispatch request, never both."
+            ],
+            "placeholders": [
+                "maxRedispatchProbes",
+                "maxRedispatchRounds"
             ]
         },
         "outputFields": {
@@ -121,6 +134,9 @@
                 "  - Identifiers (file paths, tool names, commands) MUST be preserved verbatim even when prose is",
                 "    translated.",
                 "  - The model may suggest recipe content only. It has no authority to overwrite an existing recipe."
+            ],
+            "placeholders": [
+                "recipeCandidateLimit"
             ]
         },
         "repairDirective": {
@@ -130,6 +146,9 @@
                 "surfaced. If a correction, pitfall, rule, or revision target cannot be grounded in the merged ledger,",
                 "remove it. Confirm with ${checkCitationsTool} before you resubmit. Then return the complete repaired",
                 "candidate list."
+            ],
+            "placeholders": [
+                "checkCitationsTool"
             ]
         },
         "specialistCatalog": {
@@ -151,6 +170,9 @@
                 "weight where the evidence is; a specialist you do not need is a specialist you should not dispatch.",
                 "Weights are relative to each other, not a count you can run out of or ask more of than exists, and the",
                 "budget is split between specialists in proportion to them."
+            ],
+            "placeholders": [
+                "maxProbeWeight"
             ]
         },
         "emptyPlan": {
@@ -176,6 +198,9 @@
                 "to write from — quote the evidence rather than summarising it away, because the coordinator cannot",
                 "see what you read. Every excerpt must name the event it came from. Verify with ${checkCitationsTool}",
                 "before you report: an ID the coordinator cannot cite is worse than no evidence at all."
+            ],
+            "placeholders": [
+                "checkCitationsTool"
             ]
         }
     },

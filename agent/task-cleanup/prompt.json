@@ -40,6 +40,9 @@
                 "    since creation\", \"only a Read with no edits and no conclusion\").",
                 "  - evidenceEventIds: up to ${maxEvidenceEventIds} IDs, exactly as the reviewer cited them.",
                 "  - Task ids and the \"kind\" enum stay literal; only the rationale follows the output language."
+            ],
+            "placeholders": [
+                "maxEvidenceEventIds"
             ]
         },
         "redispatchProtocol": {
@@ -52,6 +55,9 @@
                 "round; after it, decide from what you have. Redispatch only for a candidate a reviewer can actually",
                 "settle, not to re-read a report you already hold. Return either suggestions or a redispatch request,",
                 "never both."
+            ],
+            "placeholders": [
+                "maxRedispatchRounds"
             ]
         },
         "repairDirective": {
@@ -92,6 +98,9 @@
                 "a long-running one deserves more, and a hasEvents=false shell just 1, since its reviewer only has to",
                 "confirm the shell is empty. Weight sets each reviewer's share of the inspection budget; weights are",
                 "relative to each other, not a count you can run out of or ask more of than exists."
+            ],
+            "placeholders": [
+                "maxInspectWeight"
             ]
         },
         "reviewerCharter": {

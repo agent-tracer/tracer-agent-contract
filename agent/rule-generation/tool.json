@@ -1,7 +1,6 @@
 {
     "agent": "rule-generation",
     "version": "v0.0.1",
-    "maxTurns": 15,
     "limits": {
         "maxBudgetUsd": 2,
         "maxOutputTokens": 8000,
@@ -10,10 +9,14 @@
     },
     "tools": {
         "get_task_turns": {
-            "required": [
-                "taskId"
-            ],
-            "optional": [],
+            "args": {
+                "taskId": {
+                    "type": "string",
+                    "required": true,
+                    "trim": true,
+                    "minLength": 1
+                }
+            },
             "responseFields": [
                 "turnId",
                 "turnIndex",
@@ -22,17 +25,19 @@
             ]
         },
         "get_task_events": {
-            "required": [
-                "taskId"
-            ],
-            "optional": [
-                "limit"
-            ],
-            "numbers": {
+            "args": {
+                "taskId": {
+                    "type": "string",
+                    "required": true,
+                    "trim": true,
+                    "minLength": 1
+                },
                 "limit": {
-                    "default": 50,
+                    "type": "integer",
+                    "required": false,
                     "min": 1,
-                    "max": 100
+                    "max": 100,
+                    "default": 50
                 }
             },
             "responseFields": [
@@ -44,14 +49,14 @@
             ]
         },
         "list_rules": {
-            "required": [],
-            "optional": [],
+            "args": {},
             "responseFields": [
                 "name",
                 "expect"
             ]
         }
     },
+    "maxTurns": 15,
     "workspaceTools": [
         "Read",
         "Glob",

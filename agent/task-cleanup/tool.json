@@ -1,72 +1,66 @@
 {
     "agent": "task-cleanup",
     "version": "v0.0.1",
-    "outputKinds": [
-        "archive"
-    ],
     "limits": {
         "maxSuggestions": 50,
-        "maxEvidenceEventIds": 100
-    },
-    "orchestration": {
-        "workerMaxTurns": 4,
+        "maxEvidenceEventIds": 100,
         "maxRedispatchRounds": 1,
-        "coordinatorTools": [],
-        "emptyAssignmentEndsEmpty": true,
-        "roles": {
-            "cleanup-candidate-reviewer": [
-                "get_task_events"
-            ]
-        },
-        "workerReport": {
-            "required": [
-                "taskId",
-                "archivable",
-                "reason",
-                "citedEventIds"
-            ]
-        },
-        "redispatchRequest": {
-            "required": [
-                "taskId",
-                "weight"
-            ],
-            "maxTasks": 50
-        }
+        "maxInspectWeight": 4
     },
     "tools": {
         "list_candidate_tasks": {
-            "required": [],
-            "optional": [
-                "limit",
-                "cursor"
-            ],
-            "limit": {
-                "default": 30,
-                "min": 1,
-                "max": 100
+            "description": "List the cleanup candidates the server already qualified for this scan (hidden, active, and recently touched tasks are excluded before you see them). Each entry carries visibleTitle, status, lastEventAt, hasEvents, activeChildCount and the server-detected candidateReasons. Call this first, and page with cursor until truncated is false if you want the whole batch. Only task ids returned here may be proposed. moreCandidatesOutsideBatch=true means the server itself capped this batch; the leftover tasks are outside your reach and a future scan will pick them up.",
+            "args": {
+                "limit": {
+                    "type": "integer",
+                    "required": false,
+                    "min": 1,
+                    "max": 100,
+                    "default": 30,
+                    "description": "Max candidates in this page (default 30, hard cap 100)"
+                },
+                "cursor": {
+                    "type": "string",
+                    "required": false,
+                    "trim": true,
+                    "description": "Opaque cursor from a previous call's nextCursor. Omit to start from the first candidate."
+                }
             }
         },
         "get_task_events": {
-            "required": [
-                "taskId"
-            ],
-            "optional": [
-                "limit",
-                "cursor",
-                "order"
-            ],
-            "limit": {
-                "default": 100,
-                "min": 1,
-                "max": 300
-            },
-            "order": {
-                "default": "asc",
-                "values": [
-                    "asc",
-                    "desc"
-                ]
+            "description": "Get a page of a task's chronological event sequence (user messages, assistant messages, tool runs), up to 300 events per page. You choose how much to read: pick limit, pass the response's nextCursor back as cursor to keep paging, and set order=\"desc\" to start from the latest events (e.g. to see how a long task ended). truncated/total tell you whether more events exist. Call this whenever you need to see what actually happened in a task before judging it.",
+            "args": {
+                "taskId": {
+                    "type": "string",
+                    "required": true,
+                    "trim": true,
+                    "minLength": 1,
+                    "description": "The task ID"
+                },
+                "limit": {
+                    "type": "integer",
+                    "required": false,
+                    "min": 1,
+                    "max": 300,
+                    "default": 100,
+                    "description": "Max events to return in this page (default 100, hard cap 300)"
+                },
+                "cursor": {
+                    "type": "string",
+                    "required": false,
+                    "trim": true,
+                    "description": "Opaque cursor from a previous call's nextCursor. Omit to start from the first page."
+                },
+                "order": {
+                    "type": "enum",
+                    "required": false,
+                    "values": [
+                        "asc",
+                        "desc"
+                    ],
+                    "default": "asc",
+                    "description": "Reading direction: \"asc\" (default) pages from the earliest event forward; \"desc\" pages from the latest event backward."
+                }
             }
         }
     },
@@ -112,20 +106,32 @@
         "toolFailed": "Tool {tool} failed: {reason}. Do not call it again more than once. Continue with the evidence you already have, and state in your rationale which evidence you could not check.",
         "workerFailed": "Investigation failed: {reason}"
     },
-    "argDescriptions": {
-        "list_candidate_tasks": {
-            "limit": "Max candidates in this page (default 30, hard cap 100)",
-            "cursor": "Opaque cursor from a previous call's nextCursor. Omit to start from the first candidate."
+    "outputKinds": [
+        "archive"
+    ],
+    "orchestration": {
+        "workerMaxTurns": 4,
+        "coordinatorTools": [],
+        "emptyAssignmentEndsEmpty": true,
+        "roles": {
+            "cleanup-candidate-reviewer": [
+                "get_task_events"
+            ]
         },
-        "get_task_events": {
-            "taskId": "The task ID",
-            "limit": "Max events to return in this page (default 100, hard cap 300)",
-            "cursor": "Opaque cursor from a previous call's nextCursor. Omit to start from the first page.",
-            "order": "Reading direction: \"asc\" (default) pages from the earliest event forward; \"desc\" pages from the latest event backward."
+        "workerReport": {
+            "required": [
+                "taskId",
+                "archivable",
+                "reason",
+                "citedEventIds"
+            ]
+        },
+        "redispatchRequest": {
+            "required": [
+                "taskId",
+                "weight"
+            ],
+            "maxTasks": 50
         }
-    },
-    "descriptions": {
-        "list_candidate_tasks": "List the cleanup candidates the server already qualified for this scan (hidden, active, and recently touched tasks are excluded before you see them). Each entry carries visibleTitle, status, lastEventAt, hasEvents, activeChildCount and the server-detected candidateReasons. Call this first, and page with cursor until truncated is false if you want the whole batch. Only task ids returned here may be proposed. moreCandidatesOutsideBatch=true means the server itself capped this batch; the leftover tasks are outside your reach and a future scan will pick them up.",
-        "get_task_events": "Get a page of a task's chronological event sequence (user messages, assistant messages, tool runs), up to 300 events per page. You choose how much to read: pick limit, pass the response's nextCursor back as cursor to keep paging, and set order=\"desc\" to start from the latest events (e.g. to see how a long task ended). truncated/total tell you whether more events exist. Call this whenever you need to see what actually happened in a task before judging it."
     }
 }

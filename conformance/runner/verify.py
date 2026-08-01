@@ -40,7 +40,6 @@ SHARED = [
     "language.directives.json",
     "error.subtypes.json",
     "execution.vocabulary.json",
-    "prompt.placeholders.json",
 ]
 WIRE = ["envelope.json", "headers.json", "topics.json", "job.kinds.json"]
 TOPIC_FIELDS = ["name", "key", "payload", "delivery"]

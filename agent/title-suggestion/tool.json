@@ -5,26 +5,42 @@
         "recentTurnLimit": 20,
         "maxContextTurns": 21
     },
-    "getTaskEvents": {
-        "required": [
-            "taskId"
-        ],
-        "optional": [
-            "limit",
-            "cursor",
-            "order"
-        ],
-        "limit": {
-            "default": 100,
-            "min": 1,
-            "max": 300
-        },
-        "order": {
-            "default": "asc",
-            "values": [
-                "asc",
-                "desc"
-            ]
+    "tools": {
+        "get_task_events": {
+            "description": "Get a page of a task's chronological event sequence (user messages, assistant messages, tool runs), up to 300 events per page. You choose how much to read: pick limit, pass the response's nextCursor back as cursor to keep paging, and set order=\"desc\" to start from the latest events (e.g. to see how a long task ended). truncated/total tell you whether more events exist. Call this when the conversation excerpt in the prompt is too thin to name the work.",
+            "args": {
+                "taskId": {
+                    "type": "string",
+                    "required": true,
+                    "trim": true,
+                    "minLength": 1,
+                    "description": "The task ID"
+                },
+                "limit": {
+                    "type": "integer",
+                    "required": false,
+                    "min": 1,
+                    "max": 300,
+                    "default": 100,
+                    "description": "Max events to return in this page (default 100, hard cap 300)"
+                },
+                "cursor": {
+                    "type": "string",
+                    "required": false,
+                    "trim": true,
+                    "description": "Opaque cursor from a previous call's nextCursor. Omit to start from the first page."
+                },
+                "order": {
+                    "type": "enum",
+                    "required": false,
+                    "values": [
+                        "asc",
+                        "desc"
+                    ],
+                    "default": "asc",
+                    "description": "Reading direction: \"asc\" (default) pages from the earliest event forward; \"desc\" pages from the latest event backward."
+                }
+            }
         }
     },
     "responses": {
@@ -49,16 +65,5 @@
     },
     "failures": {
         "toolFailed": "Tool {tool} failed: {reason}. Do not call it again more than once. Continue with the evidence you already have, and state in your rationale which evidence you could not check."
-    },
-    "argDescriptions": {
-        "get_task_events": {
-            "taskId": "The task ID",
-            "limit": "Max events to return in this page (default 100, hard cap 300)",
-            "cursor": "Opaque cursor from a previous call's nextCursor. Omit to start from the first page.",
-            "order": "Reading direction: \"asc\" (default) pages from the earliest event forward; \"desc\" pages from the latest event backward."
-        }
-    },
-    "descriptions": {
-        "get_task_events": "Get a page of a task's chronological event sequence (user messages, assistant messages, tool runs), up to 300 events per page. You choose how much to read: pick limit, pass the response's nextCursor back as cursor to keep paging, and set order=\"desc\" to start from the latest events (e.g. to see how a long task ended). truncated/total tell you whether more events exist. Call this when the conversation excerpt in the prompt is too thin to name the work."
     }
 }
