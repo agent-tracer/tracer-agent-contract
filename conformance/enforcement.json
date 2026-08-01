@@ -11,6 +11,7 @@
                 "wire/job.kinds.json",
                 "workflow/",
                 "http/agent-api.openapi.yaml",
+                "http/tracer-dependency.openapi.yaml",
                 "db/",
                 "conformance/cases/envelope.json",
                 "conformance/cases/chat.intake.json",
@@ -22,7 +23,6 @@
         "recorded": {
             "meaning": "정본이 지금 무엇을 하는지 적어 둔 것이며 어긋나면 차이로 보고하고 실패시키지 않는다",
             "paths": [
-                "http/tracer-dependency.openapi.yaml",
                 "tracer/",
                 "conformance/cases/divergence.json"
             ]
