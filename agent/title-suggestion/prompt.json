@@ -34,6 +34,26 @@
                 "distinct alternatives. Do not repeat the current title, use placeholder titles, or invent work the",
                 "evidence does not show. Then return the complete repaired suggestion list."
             ]
+        },
+        "languageDirective": {
+            "version": "v0.0.1",
+            "byLanguage": {
+                "auto": [
+                    "Mirror the user's language: reuse the language of the current title and the user's messages (Korean to Korean, English to English)."
+                ],
+                "ko": [
+                    "Write every title and rationale in Korean (한국어). Translate source text written in another language rather than echoing it, including names and keywords where a natural translation exists."
+                ],
+                "en": [
+                    "Write every title and rationale in English. Translate source text written in another language rather than echoing it, including names and keywords where a natural translation exists."
+                ],
+                "ja": [
+                    "Write every title and rationale in Japanese (日本語). Translate source text written in another language rather than echoing it, including names and keywords where a natural translation exists."
+                ],
+                "zh": [
+                    "Write every title and rationale in Simplified Chinese (简体中文). Translate source text written in another language rather than echoing it, including names and keywords where a natural translation exists."
+                ]
+            }
         }
     },
     "templates": {

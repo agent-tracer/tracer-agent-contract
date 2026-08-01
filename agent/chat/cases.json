@@ -1299,5 +1299,57 @@
                 ]
             }
         ]
+    },
+    "language": {
+        "fragment": "languageDirective",
+        "scope": "답변 본문",
+        "cases": [
+            {
+                "input": {
+                    "language": "auto"
+                },
+                "expect": {
+                    "variant": "auto"
+                }
+            },
+            {
+                "input": {
+                    "language": "ko"
+                },
+                "expect": {
+                    "variant": "ko"
+                }
+            },
+            {
+                "input": {
+                    "language": "en"
+                },
+                "expect": {
+                    "variant": "en"
+                }
+            },
+            {
+                "input": {
+                    "language": "ja"
+                },
+                "expect": {
+                    "variant": "ja"
+                }
+            },
+            {
+                "input": {
+                    "language": "zh"
+                },
+                "expect": {
+                    "variant": "zh"
+                }
+            },
+            {
+                "input": {},
+                "expect": {
+                    "variant": "auto"
+                }
+            }
+        ]
     }
 }

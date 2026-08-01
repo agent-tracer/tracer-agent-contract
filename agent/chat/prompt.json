@@ -30,6 +30,26 @@
                 "that you have remembered something. Save only stable preferences or durable facts about how this user",
                 "works, never one-off details of the current task."
             ]
+        },
+        "languageDirective": {
+            "version": "v0.0.1",
+            "byLanguage": {
+                "auto": [
+                    "Reply in the language the user is writing in."
+                ],
+                "ko": [
+                    "Reply in Korean (한국어). Translate technical terms naturally."
+                ],
+                "en": [
+                    "Reply in English. Translate technical terms naturally."
+                ],
+                "ja": [
+                    "Reply in Japanese (日本語). Translate technical terms naturally."
+                ],
+                "zh": [
+                    "Reply in Simplified Chinese (简体中文). Translate technical terms naturally."
+                ]
+            }
         }
     },
     "templates": {

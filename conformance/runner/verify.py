@@ -37,7 +37,7 @@ def read_served_routes(base_url: str) -> set[str]:
 
 AGENTS = ["chat", "recipe-scan", "title-suggestion", "task-cleanup", "rule-generation"]
 SHARED = [
-    "language.directives.json",
+    "languages.json",
     "error.subtypes.json",
     "execution.vocabulary.json",
 ]

@@ -111,6 +111,26 @@
                 "archival when its own events are cited. If the task turns out to hold real work, say so; refusing to",
                 "archive is as useful an answer as approving it."
             ]
+        },
+        "languageDirective": {
+            "version": "v0.0.1",
+            "byLanguage": {
+                "auto": [
+                    "Reuse the dominant language of the candidate task titles (Korean to Korean, English to English)."
+                ],
+                "ko": [
+                    "Write every rationale in Korean (한국어). Translate source text written in another language rather than echoing it, and render technical terms naturally."
+                ],
+                "en": [
+                    "Write every rationale in English. Translate source text written in another language rather than echoing it, and render technical terms naturally."
+                ],
+                "ja": [
+                    "Write every rationale in Japanese (日本語). Translate source text written in another language rather than echoing it, and render technical terms naturally."
+                ],
+                "zh": [
+                    "Write every rationale in Simplified Chinese (简体中文). Translate source text written in another language rather than echoing it, and render technical terms naturally."
+                ]
+            }
         }
     },
     "templates": {

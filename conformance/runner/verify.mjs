@@ -32,7 +32,7 @@ async function readServedRoutes(baseUrl) {
 
 const AGENTS = ["chat", "recipe-scan", "title-suggestion", "task-cleanup", "rule-generation"];
 const SHARED = [
-    "language.directives.json",
+    "languages.json",
     "error.subtypes.json",
     "execution.vocabulary.json",
 ];
