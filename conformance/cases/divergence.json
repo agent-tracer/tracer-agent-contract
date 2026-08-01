@@ -19,6 +19,15 @@
             "typescript": "잡 종류마다 워크플로 하나를 두고 준비·생성·종결 액티비티로 나누며 생성만 generate 큐로 보낸다",
             "python": "셋을 agentJobWorkflow 하나가 받고 준비와 종결을 실행 액티비티 안에서 처리하며 그 하나를 generate 큐로 보낸다",
             "resolution": "궤적 단계 경계는 이미 같다. 남은 것은 워크플로와 액티비티의 수이며 재시도 경계가 그것에 매여 있다"
+        },
+        {
+            "id": "chat.execution.cases",
+            "area": "agent",
+            "summary": "실행 회수 케이스를 한 축만 돌린다",
+            "canonical": "python",
+            "typescript": "판정이 TypeORM 의 SQL 이고 두 배포 단위에 나뉘어 있다. SQL 을 실행할 자리가 없어 케이스를 돌리지 않는다",
+            "python": "sqlite 대역 원장이 같은 SQL 을 실행해 여덟 창구의 케이스 마흔둘을 전부 돌린다",
+            "resolution": "TypeScript 가 SQL 을 실행할 자리를 갖거나, 판정을 SQL 밖으로 꺼내 두 축이 같은 코드로 판정한다"
         }
     ],
     "canonical": "typescript가 정본이다. 항목의 canonical이 python이면 SDK나 LangGraph가 강제해 정본이 따라가야 하는 자리다.",
