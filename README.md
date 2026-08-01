@@ -42,7 +42,7 @@ python conformance/runner/verify.py http://127.0.0.1:8800
 - 모든 적합성 케이스와 `agent`·`shared`·`wire` 파일을 읽을 수 있는가
 - 모든 표면이 `enforced` 또는 `recorded`로 분류되었는가
 - 에이전트 도구가 부르는 경로를 두 OpenAPI 표면이 덮는가
-- 잡 종류·토픽·프롬프트 조각 등록부의 목록과 승격 경로가 서로 맞는가
+- 잡 종류와 토픽의 목록이 자리마다 같은가
 - 전달한 주소의 `/internal/surface`가 계약 경로를 실제로 제공하는가
 
 `conformance/cases/divergence.json`은 실패 케이스가 아니라 현재의 구현 차이를 기록하는 파일입니다. 차이를 더하거나 해소할 때는 정본 구현의 방향과 영향 범위를 함께 갱신합니다. 기록되었다는 사실이 그 차이를 허용한다는 뜻은 아닙니다.
@@ -69,7 +69,7 @@ git submodule update --init --recursive
 tracer-agent-contract/
 ├── agent/
 │   ├── chat/ recipe-scan/ rule-generation/ task-cleanup/ title-suggestion/
-│   └── shared/                  공통 오류·어휘·프롬프트·평가 계약
+│   └── shared/                  공통 오류·어휘·프롬프트 계약
 ├── conformance/
 │   ├── cases/                   봉투·대화·잡·차이 케이스
 │   ├── runner/                  Node·Python 적재기와 검사기
