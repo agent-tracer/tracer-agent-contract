@@ -87,6 +87,7 @@ LABEL_NAME = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 NAME_SUFFIXES = ["countersTotalSuffix", "unitSuffix"]
 REDACTION_PLACES = ["marker", "matching", "keys", "values", "onSuspect", "stages"]
 REDACTION_STAGES = ["trace", "query", "output"]
+VALUE_BODY_PLACES = ["minLength", "charset", "skipSpaceBetween"]
 ON_SUSPECT_ACTIONS = ["redact", "discard"]
 # 실행에 실험의 자리가 없으므로 이 이름은 어느 속성으로도 나가지 않는다.
 RETIRED_ATTRIBUTES = [
@@ -157,6 +158,9 @@ def main() -> None:
         "values": redaction.get("values", {}).get("words", []),
     }
     empty_redaction_words = [name for name, words in redaction_words.items() if not words]
+    # 값 쪽 낱말은 사람이 쓴 본문에도 나오므로 몸통을 요구하는 자리가 없으면 답이 통째로 가려진다.
+    trailing_body = redaction.get("values", {}).get("requiresTrailingBody", {})
+    missing_trailing_body = [place for place in VALUE_BODY_PLACES if place not in trailing_body]
     stages = redaction.get("stages", {})
     missing_stages = [name for name in REDACTION_STAGES if name not in stages]
     stray_on_suspect = [
@@ -253,6 +257,11 @@ def main() -> None:
     if empty_redaction_words:
         raise SystemExit(
             f"가릴 낱말이 비어 있으면 규칙이 아무것도 가리지 못한다 — {', '.join(empty_redaction_words)}"
+        )
+    if missing_trailing_body:
+        raise SystemExit(
+            "값 쪽 낱말은 뒤에 이어질 몸통의 조건을 함께 적어야 한다 — "
+            f"{', '.join(missing_trailing_body)} 가 없다"
         )
     if missing_stages:
         places = " · ".join(REDACTION_STAGES)

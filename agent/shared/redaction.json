@@ -31,13 +31,27 @@
     },
     "values": {
         "meaning": "key 가 무해해도 값 자체가 자격 증명의 모양이면 걸린다.",
+        "matching": {
+            "meaning": "값은 key 와 다른 절차로 견준다. 구분자를 지우지 않으며 낱말 뒤에 자격의 몸통이 이어질 때만 걸린다.",
+            "normalize": [
+                "casefold"
+            ],
+            "compare": "contains",
+            "note": "접두사의 대시와 밑줄이 곧 그 자격의 모양이므로 지우지 않는다. key 처럼 구분자를 지우면 sk-ant- 가 skant 가 되어 그 모양이 뜻을 잃는다."
+        },
         "words": [
             "sk-ant-",
             "lsv2_",
-            "bearer",
-            "oauth",
-            "api key"
-        ]
+            "bearer"
+        ],
+        "requiresTrailingBody": {
+            "meaning": "낱말 뒤에 자격의 몸통이 이어질 때만 걸리며 낱말만 있는 평범한 문장은 지나간다.",
+            "skipSpaceBetween": true,
+            "minLength": 16,
+            "charset": "영문자와 숫자와 - 와 _ 와 .",
+            "reason": "값 쪽 낱말은 사람이 쓴 본문에도 나온다. 몸통을 요구하지 않으면 자격을 말하기만 한 답이 통째로 표시로 바뀐다."
+        },
+        "note": "api key 와 oauth 는 값 쪽에 두지 않는다. 자격의 모양이 아니라 자격을 부르는 이름이므로 keys 가 그 자리를 갖는다. Authorization 헤더의 bearer 토큰도 그 key 가 먼저 걸린다."
     },
     "onSuspect": {
         "meaning": "걸린 자리를 어떻게 하는지의 어휘이며 자리마다 하나를 고른다.",

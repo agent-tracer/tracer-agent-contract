@@ -74,6 +74,7 @@ const LABEL_NAME = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 const NAME_SUFFIXES = ["countersTotalSuffix", "unitSuffix"];
 const REDACTION_PLACES = ["marker", "matching", "keys", "values", "onSuspect", "stages"];
 const REDACTION_STAGES = ["trace", "query", "output"];
+const VALUE_BODY_PLACES = ["minLength", "charset", "skipSpaceBetween"];
 const ON_SUSPECT_ACTIONS = ["redact", "discard"];
 // 실행에 실험의 자리가 없으므로 이 이름은 어느 속성으로도 나가지 않는다.
 const RETIRED_ATTRIBUTES = [
@@ -158,6 +159,10 @@ const redactionWords = {
 const emptyRedactionWords = Object.entries(redactionWords)
     .filter(([, words]) => words.length === 0)
     .map(([name]) => name);
+// 값 쪽 낱말은 사람이 쓴 본문에도 나오므로 몸통을 요구하는 자리가 없으면 답이 통째로 가려진다.
+const missingTrailingBody = VALUE_BODY_PLACES.filter(
+    (place) => redaction.values?.requiresTrailingBody?.[place] === undefined,
+);
 const stages = redaction.stages ?? {};
 const missingStages = REDACTION_STAGES.filter((name) => stages[name] === undefined);
 const strayOnSuspect = REDACTION_STAGES.filter(
@@ -239,6 +244,11 @@ if (typeof redaction.marker !== "string" || redaction.marker.length === 0) {
 }
 if (emptyRedactionWords.length > 0) {
     throw new Error(`가릴 낱말이 비어 있으면 규칙이 아무것도 가리지 못한다 — ${emptyRedactionWords.join(", ")}`);
+}
+if (missingTrailingBody.length > 0) {
+    throw new Error(
+        `값 쪽 낱말은 뒤에 이어질 몸통의 조건을 함께 적어야 한다 — ${missingTrailingBody.join(", ")} 가 없다`,
+    );
 }
 if (missingStages.length > 0) {
     throw new Error(
