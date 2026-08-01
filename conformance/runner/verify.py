@@ -43,6 +43,26 @@ SHARED = [
 ]
 WIRE = ["envelope.json", "headers.json", "topics.json", "job.kinds.json"]
 TOPIC_FIELDS = ["name", "key", "payload", "delivery"]
+STREAM_KEYS = [
+    "meaning",
+    "method",
+    "path",
+    "contentType",
+    "event",
+    "frame",
+    "frameFields",
+    "replay",
+    "reconnect",
+    "draftReset",
+    "resendIntervalMs",
+    "headers",
+]
+STREAM_NESTED = {
+    "replay": ["mode", "lastEventId", "reason"],
+    "reconnect": ["initialBackoffMs", "maxBackoffMs", "resetOn", "stopOn"],
+    "headers": ["Cache-Control", "Connection", "X-Accel-Buffering"],
+}
+STREAM_PLACES = len(STREAM_KEYS) + sum(len(keys) for keys in STREAM_NESTED.values())
 STANDALONE = [
     "workflow/queues.yaml",
     "http/agent-api.openapi.yaml",
@@ -83,6 +103,14 @@ def main() -> None:
     grouped: dict[str, list[str]] = {"enforced": [], "recorded": [], "unclassified": []}
     for surface in surfaces:
         grouped[enforcement_level(surface)].append(surface)
+
+    stream = read_case("chat.query").get("stream", {})
+    missing_stream = [f"stream.{key}" for key in STREAM_KEYS if key not in stream] + [
+        f"stream.{group}.{key}"
+        for group, keys in STREAM_NESTED.items()
+        for key in keys
+        if key not in stream.get(group, {})
+    ]
 
     topics = read_json("wire/topics.json")
     incomplete_topics = [
@@ -126,6 +154,8 @@ def main() -> None:
     if incomplete_topics:
         fields = " · ".join(TOPIC_FIELDS)
         raise SystemExit(f"토픽 선언에 {fields} 가 다 있어야 한다 — {', '.join(incomplete_topics)}")
+    if missing_stream:
+        raise SystemExit(f"실행 스트림 절에 있어야 할 자리가 없다 — {', '.join(missing_stream)}")
 
     declared_routes = read_agent_api_routes()
     recorded_unserved = [
@@ -160,6 +190,7 @@ def main() -> None:
         f"접수가 받는 잡 종류 {len(intake_kinds)}개를 세 자리가 같게 적는다 — {', '.join(intake_kinds)}"
     )
     print(f"서비스를 넘는 토픽 {len(topics)}개를 선언한다 — {names}")
+    print(f"실행 스트림 절의 자리 {STREAM_PLACES}개를 대조한다")
 
 
 if __name__ == "__main__":

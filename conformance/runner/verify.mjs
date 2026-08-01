@@ -38,6 +38,26 @@ const SHARED = [
 ];
 const WIRE = ["envelope.json", "headers.json", "topics.json", "job.kinds.json"];
 const TOPIC_FIELDS = ["name", "key", "payload", "delivery"];
+const STREAM_KEYS = [
+    "meaning",
+    "method",
+    "path",
+    "contentType",
+    "event",
+    "frame",
+    "frameFields",
+    "replay",
+    "reconnect",
+    "draftReset",
+    "resendIntervalMs",
+    "headers",
+];
+const STREAM_NESTED = {
+    replay: ["mode", "lastEventId", "reason"],
+    reconnect: ["initialBackoffMs", "maxBackoffMs", "resetOn", "stopOn"],
+    headers: ["Cache-Control", "Connection", "X-Accel-Buffering"],
+};
+const STREAM_PLACES = STREAM_KEYS.length + Object.values(STREAM_NESTED).flat().length;
 
 const version = readVersion();
 const cases = listCases();
@@ -82,6 +102,14 @@ const kindMismatch = [
     ["wire/job.kinds.json", ledgerKinds],
 ].filter(([, values]) => [...values].sort().join() !== [...intakeKinds].sort().join());
 
+const stream = readCase("chat.query").stream ?? {};
+const missingStream = [
+    ...STREAM_KEYS.filter((key) => stream[key] === undefined).map((key) => `stream.${key}`),
+    ...Object.entries(STREAM_NESTED).flatMap(([group, keys]) =>
+        keys.filter((key) => stream[group]?.[key] === undefined).map((key) => `stream.${group}.${key}`),
+    ),
+];
+
 const topics = readJson("wire/topics.json");
 const incompleteTopics = Object.entries(topics)
     .filter(([, topic]) => TOPIC_FIELDS.some((field) => topic[field] === undefined))
@@ -105,6 +133,9 @@ if (incompleteTopics.length > 0) {
     throw new Error(
         `토픽 선언에 ${TOPIC_FIELDS.join(" · ")} 가 다 있어야 한다 — ${incompleteTopics.join(", ")}`,
     );
+}
+if (missingStream.length > 0) {
+    throw new Error(`실행 스트림 절에 있어야 할 자리가 없다 — ${missingStream.join(", ")}`);
 }
 
 const declaredRoutes = readAgentApiRoutes();
@@ -136,3 +167,4 @@ console.log(
     `서비스를 넘는 토픽 ${Object.keys(topics).length}개를 선언한다 — ` +
         `${Object.values(topics).map((topic) => topic.name).join(", ")}`,
 );
+console.log(`실행 스트림 절의 자리 ${STREAM_PLACES}개를 대조한다`);
