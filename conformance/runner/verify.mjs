@@ -40,6 +40,7 @@ const SHARED = [
     "languages.json",
     "error.subtypes.json",
     "execution.vocabulary.json",
+    "redaction.json",
 ];
 const WIRE = ["envelope.json", "headers.json", "topics.json", "job.kinds.json"];
 const TOPIC_FIELDS = ["name", "key", "payload", "delivery"];
