@@ -1,5 +1,6 @@
 {
     "agent": "chat",
+    "version": "v0.0.1",
     "tools": {
         "search_tasks": {
             "required": [],

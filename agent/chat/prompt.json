@@ -2,6 +2,7 @@
     "agent": "chat",
     "fragments": {
         "toolExecutionSemantics": {
+            "version": "v0.0.1",
             "content": [
                 "Read tools run immediately and are already scoped to this user. Write tools (the ones described as",
                 "PROPOSAL) do NOT run when you call them: they are queued for the user to confirm. Propose one only",
@@ -10,6 +11,7 @@
             ]
         },
         "groundingRules": {
+            "version": "v0.0.1",
             "content": [
                 "- Ground every factual claim in what a tool returned. Never invent task ids, rule ids, event",
                 "  contents, or numbers.",
@@ -22,6 +24,7 @@
             ]
         },
         "memoryRule": {
+            "version": "v0.0.1",
             "content": [
                 "remember_fact is the one write tool that runs immediately rather than as a proposal, so say plainly",
                 "that you have remembered something. Save only stable preferences or durable facts about how this user",
@@ -31,6 +34,7 @@
     },
     "templates": {
         "chat.assistant.system": {
+            "version": "v0.0.1",
             "slots": [
                 "toolExecutionSemantics",
                 "groundingRules",

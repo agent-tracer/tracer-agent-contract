@@ -2,6 +2,7 @@
     "agent": "recipe-scan",
     "fragments": {
         "recipeDefinition": {
+            "version": "v0.0.1",
             "content": [
                 "A recipe preserves one distinct user request, the successful work flow it establishes, and the",
                 "friction encountered along the way. One task often holds several unrelated requests, so a task can",
@@ -13,6 +14,7 @@
             ]
         },
         "evidenceSourcing": {
+            "version": "v0.0.1",
             "content": [
                 "You do NOT read the ledger yourself. Specialists already read the evidence in their own isolated",
                 "contexts, and each reported a verdict plus verbatim excerpts; their evidence ledgers were merged into",
@@ -22,6 +24,7 @@
             ]
         },
         "citationDiscipline": {
+            "version": "v0.0.1",
             "content": [
                 "Every ID you cite in your final output (taskIds, turnIds, eventIds, rule IDs, revises_recipe_id) is",
                 "checked against the merged specialist ledger. A candidate citing an unbacked ID is rejected; you get",
@@ -32,6 +35,7 @@
             ]
         },
         "turnSplitting": {
+            "version": "v0.0.1",
             "content": [
                 "A turnId marks one user request and everything the agent did to serve it. Split the task by turnId",
                 "when its turns pursue unrelated goals, and write one recipe per goal. Merge adjacent turns only when",
@@ -39,12 +43,14 @@
             ]
         },
         "candidateBudget": {
+            "version": "v0.0.1",
             "content": [
                 "Return zero recipes if the evidence is too thin, otherwise one candidate per distinct reusable",
                 "workflow, up to ${recipeCandidateLimit}."
             ]
         },
         "redispatchProtocol": {
+            "version": "v0.0.1",
             "content": [
                 "When the specialist reports leave a specific, answerable gap that blocks a candidate, you may ask for",
                 "one more round of investigation instead of finalizing. Return a redispatch request — a list of up to",
@@ -56,6 +62,7 @@
             ]
         },
         "outputFields": {
+            "version": "v0.0.1",
             "content": [
                 "Each recipe must include:",
                 "  - title              : short imperative (4-9 words, e.g. \"Add TypeORM migration with rollback\").",
@@ -100,6 +107,7 @@
             ]
         },
         "qualityRules": {
+            "version": "v0.0.1",
             "content": [
                 "  - Quality over quantity. Empty output is acceptable if no meaningful pattern emerges.",
                 "  - Return at most ${recipeCandidateLimit} candidates, and never two candidates for the same turns.",
@@ -116,6 +124,7 @@
             ]
         },
         "repairDirective": {
+            "version": "v0.0.1",
             "content": [
                 "Change only what is necessary to satisfy these errors, using only identifiers the specialists",
                 "surfaced. If a correction, pitfall, rule, or revision target cannot be grounded in the merged ledger,",
@@ -124,6 +133,7 @@
             ]
         },
         "specialistCatalog": {
+            "version": "v0.0.1",
             "content": [
                 "Three specialists can be dispatched, each reading in its own isolated context:",
                 "",
@@ -134,6 +144,7 @@
             ]
         },
         "dispatchWeighting": {
+            "version": "v0.0.1",
             "content": [
                 "Assign only the specialists this anchor actually needs, give each a concrete question, and give each a",
                 "weight from 1 to ${maxProbeWeight} reflecting how much of the investigation its question deserves. Put",
@@ -143,6 +154,7 @@
             ]
         },
         "emptyPlan": {
+            "version": "v0.0.1",
             "content": [
                 "Only the specialists read the ledger, so an empty probes list means there is nothing here to",
                 "investigate and the run ends with no recipes. Return it only when you mean exactly that; dispatch at",
@@ -150,6 +162,7 @@
             ]
         },
         "specialistCharter": {
+            "version": "v0.0.1",
             "content": [
                 "You investigate the one question the coordinator gave you, using only the tools you hold, and report",
                 "back. You do not write recipes; the coordinator does that from your report and the other",
@@ -157,6 +170,7 @@
             ]
         },
         "specialistReporting": {
+            "version": "v0.0.1",
             "content": [
                 "Report a verdict that answers your question directly, and attach the excerpts the coordinator needs",
                 "to write from — quote the evidence rather than summarising it away, because the coordinator cannot",
@@ -167,6 +181,7 @@
     },
     "templates": {
         "recipe-scan.investigator.system": {
+            "version": "v0.0.1",
             "slots": [
                 "recipeDefinition",
                 "evidenceSourcing",
@@ -179,11 +194,13 @@
             ]
         },
         "recipe-scan.investigator.repair": {
+            "version": "v0.0.1",
             "slots": [
                 "repairDirective"
             ]
         },
         "recipe-scan.survey.system": {
+            "version": "v0.0.1",
             "slots": [
                 "specialistCatalog",
                 "dispatchWeighting",
@@ -191,6 +208,7 @@
             ]
         },
         "recipe-scan.probe.system": {
+            "version": "v0.0.1",
             "slots": [
                 "specialistCharter",
                 "specialistReporting"

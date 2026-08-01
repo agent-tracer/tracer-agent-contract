@@ -1,5 +1,6 @@
 {
     "agent": "recipe-scan",
+    "version": "v0.0.1",
     "schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "recipe.scan.candidate.list",

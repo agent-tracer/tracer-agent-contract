@@ -1,5 +1,6 @@
 {
     "agent": "rule-generation",
+    "version": "v0.0.1",
     "maxTurns": 15,
     "limits": {
         "maxBudgetUsd": 2,

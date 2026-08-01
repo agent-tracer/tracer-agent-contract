@@ -2,6 +2,7 @@
     "agent": "task-cleanup",
     "fragments": {
         "reviewGuarantee": {
+            "version": "v0.0.1",
             "content": [
                 "You do not execute anything: the user reviews every suggestion and approves or dismisses it.",
                 "Archiving is reversible (there is an unarchive), but a wrong suggestion still wastes the user's",
@@ -9,6 +10,7 @@
             ]
         },
         "reviewerSourcing": {
+            "version": "v0.0.1",
             "content": [
                 "You do NOT open tasks yourself. Reviewers already read each assigned candidate's events in their own",
                 "isolated contexts and reported a verdict (archivable or keep), a reason, and the event IDs that back",
@@ -17,6 +19,7 @@
             ]
         },
         "evidenceDiscipline": {
+            "version": "v0.0.1",
             "content": [
                 "  - Propose a candidate only when a reviewer reported it archivable. A reviewer that found",
                 "    substantive work (real user requests, file edits, commands, a conclusion) means keep the task, no",
@@ -28,6 +31,7 @@
             ]
         },
         "suggestionRules": {
+            "version": "v0.0.1",
             "content": [
                 "  - One suggestion per task id, and only task ids a reviewer reported on. Never invent an id.",
                 "  - Quality over quantity. Returning an empty list is a correct answer when every reviewed candidate",
@@ -39,6 +43,7 @@
             ]
         },
         "redispatchProtocol": {
+            "version": "v0.0.1",
             "content": [
                 "When a reviewer report is missing or too thin to judge a candidate you believe matters, you may ask",
                 "for one more round of review instead of deciding. Return a redispatch request — a list of",
@@ -50,12 +55,14 @@
             ]
         },
         "repairDirective": {
+            "version": "v0.0.1",
             "content": [
                 "Preserve the task and event IDs the reviewers cited. Remove any suggestion that cannot be grounded in",
                 "a reviewer report. Then return the complete repaired suggestion list."
             ]
         },
         "candidateFields": {
+            "version": "v0.0.1",
             "content": [
                 "You see the qualified candidates and nothing else. The server has already excluded hidden tasks,",
                 "tasks with an active child, tasks created by the server's own agents, and anything touched recently.",
@@ -69,6 +76,7 @@
             ]
         },
         "triagePolicy": {
+            "version": "v0.0.1",
             "content": [
                 "A title or a signal is a hint, not a verdict: a task titled \"test\" or \"정리해줘\" can still hold real",
                 "work, and only a reviewer that reads its events can tell. A candidate is proposed for archival only",
@@ -78,6 +86,7 @@
             ]
         },
         "inspectWeighting": {
+            "version": "v0.0.1",
             "content": [
                 "Give each assignment a weight from 1 to ${maxInspectWeight} reflecting how much scrutiny it deserves:",
                 "a long-running one deserves more, and a hasEvents=false shell just 1, since its reviewer only has to",
@@ -86,6 +95,7 @@
             ]
         },
         "reviewerCharter": {
+            "version": "v0.0.1",
             "content": [
                 "Read the task's events and decide whether it can be archived. Report the event IDs that back your",
                 "judgement — the coordinator cannot see what you read, and a task with events may only be proposed for",
@@ -96,6 +106,7 @@
     },
     "templates": {
         "task-cleanup.investigator.system": {
+            "version": "v0.0.1",
             "slots": [
                 "reviewGuarantee",
                 "reviewerSourcing",
@@ -105,11 +116,13 @@
             ]
         },
         "task-cleanup.investigator.repair": {
+            "version": "v0.0.1",
             "slots": [
                 "repairDirective"
             ]
         },
         "task-cleanup.triage.system": {
+            "version": "v0.0.1",
             "slots": [
                 "candidateFields",
                 "triagePolicy",
@@ -117,6 +130,7 @@
             ]
         },
         "task-cleanup.inspect.system": {
+            "version": "v0.0.1",
             "slots": [
                 "reviewerCharter"
             ]

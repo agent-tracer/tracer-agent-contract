@@ -1,5 +1,6 @@
 {
     "agent": "title-suggestion",
+    "version": "v0.0.1",
     "limits": {
         "recentTurnLimit": 20,
         "maxContextTurns": 21
