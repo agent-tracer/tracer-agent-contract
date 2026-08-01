@@ -15,17 +15,6 @@
 - `ai_job_steps`: 잡 실행 중 발생한 모델 응답과 tool 호출 과정을 순서대로 담는다. 잡 원장은 실행 하나를 나타내는 `ai_jobs` 행에 여러 `ai_job_steps` 행이 달리는 구조다.
 - `agent_run_observations`: 실행 시점의 모델, prompt, 비용, 검증, 호출 기록을 시도 단위로 담는다.
 
-## 평가 도메인
-
-- `evaluation_datasets`: 사용자별 평가 dataset의 이름, 설명, 현재 revision을 담는다.
-- `evaluator_definitions`: evaluator의 종류, 버전, 설정, 구현 hash를 담는다.
-- `experiments`: dataset revision과 evaluator set을 대상으로 수행하는 평가 실험의 상태와 예산을 담는다.
-- `human_reviews`: 두 실험 실행을 사람이 비교한 선호, 보정 출력, 사유를 담는다.
-- `prompt_fragment_definitions`: backend와 agent에 속한 prompt fragment의 식별 정보와 코드 이름을 담는다.
-- `prompt_fragment_versions`: fragment 정의 하나가 갖는 판의 내용과 해시와 placeholder를 담는다.
-- `prompt_fragment_bindings`: fragment가 채우는 템플릿 자리와 코드가 담은 기본 판을 backend마다 담는다.
-- `prompt_fragment_channels`: 채널마다 지금 실행에 쓰이는 fragment 판을 가리킨다.
-
 ## 설정 도메인
 
 - `app_settings`: 에이전트 실행에 쓰는 설정값을 scope 와 key 한 쌍으로 담는다.
@@ -42,16 +31,3 @@
 - `ai_jobs.task_id` → `tasks.id`
 - `ai_job_steps.user_id` → `users.user_id`
 - `agent_run_observations.user_id` → `users.user_id`
-- `agent_run_observations.example_id` → `evaluation_examples.id`
-- `agent_run_observations.variant_id` → `experiment_variants.id`
-- `evaluation_datasets.user_id` → `users.user_id`
-- `experiments.user_id` → `users.user_id`
-- `experiments.evaluator_set_version` → `evaluator_sets.version`
-- `human_reviews.user_id` → `users.user_id`
-- `human_reviews.reviewer_user_id` → `users.user_id`
-- `human_reviews.execution_a_id` → `experiment_executions.id`
-- `human_reviews.execution_b_id` → `experiment_executions.id`
-- `experiment_executions.variant_id` → `experiment_variants.id`
-- `experiment_executions.example_id` → `evaluation_examples.id`
-- `evaluation_scores.execution_id` → `experiment_executions.id`
-- `evaluation_examples.dataset_id` → `evaluation_datasets.id`
