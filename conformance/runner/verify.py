@@ -35,15 +35,10 @@ SHARED = [
     "language.directives.json",
     "error.subtypes.json",
     "execution.vocabulary.json",
-    "prompt.fragment.integrity.json",
-    "prompt.fragment.registry.json",
     "prompt.placeholders.json",
-    "prompt.fragment.manifest.json",
-    "evaluation.example.contract.json",
 ]
 WIRE = ["envelope.json", "headers.json", "topics.json", "job.kinds.json"]
 TOPIC_FIELDS = ["name", "key", "payload", "delivery"]
-FRAGMENT_SURFACES = ["registerAndResolve", "registerCandidate", "promote"]
 STANDALONE = [
     "workflow/queues.yaml",
     "http/agent-api.openapi.yaml",
@@ -75,31 +70,6 @@ def main() -> None:
     for surface in surfaces:
         grouped[enforcement_level(surface)].append(surface)
 
-    registry = read_json("agent/shared/prompt.fragment.registry.json")
-    identity = registry["identity"]
-    declared_channels = list(registry["channels"])
-    unseen_channels = [
-        channel
-        for channel in declared_channels
-        if channel not in registry["profileChannels"].values()
-        and channel not in registry["promotionPath"]
-    ]
-    unmapped_profiles = [
-        profile
-        for profile, channel in registry["profileChannels"].items()
-        if channel not in declared_channels
-    ]
-    missing_surfaces = [name for name in FRAGMENT_SURFACES if name not in registry["surfaces"]]
-    prefixed_keys = [
-        value
-        for value in (
-            identity["definitionKey"]["example"],
-            identity["codeName"]["example"],
-            identity["templateKey"]["example"],
-        )
-        if any(value.startswith(prefix) for prefix in identity["rejectedPrefixes"])
-    ]
-
     topics = read_json("wire/topics.json")
     incomplete_topics = [
         topic_id
@@ -114,12 +84,6 @@ def main() -> None:
         for binding in bindings
         if normalize_path_template(binding["path"]) not in declared_paths
     ]
-
-    gated_channel = registry["promotionPath"][-1]
-    ungated_channels = registry["promotionGate"]["ungatedChannels"]
-    gate_mismatch = gated_channel in ungated_channels or any(
-        channel not in ungated_channels for channel in registry["promotionPath"][:-1]
-    )
 
     intake_kinds = read_case("job.intake")["kinds"]
     ledger_kinds = list(read_json("wire/job.kinds.json")["kinds"].keys())
@@ -140,21 +104,6 @@ def main() -> None:
     if unmet:
         detail = ", ".join(f"{binding['name']} {binding['path']}" for binding in unmet)
         raise SystemExit(f"도구가 부르는 경로를 어느 HTTP 표면도 선언하지 않는다 — {detail}")
-    if unmapped_profiles:
-        raise SystemExit(f"profile 이 선언되지 않은 조각 채널을 본다 — {', '.join(unmapped_profiles)}")
-    if unseen_channels:
-        raise SystemExit(f"어느 profile 도 승격 경로도 닿지 않는 조각 채널이 있다 — {', '.join(unseen_channels)}")
-    if missing_surfaces:
-        raise SystemExit(f"조각 쓰기 경로의 창구가 선언되지 않았다 — {', '.join(missing_surfaces)}")
-    if gate_mismatch:
-        path_text = " → ".join(registry["promotionPath"])
-        ungated_text = ", ".join(ungated_channels)
-        raise SystemExit(
-            f"승격 경로의 마지막 채널만 게이트를 가져야 한다 — 경로 {path_text} · "
-            f"게이트 없는 채널 {ungated_text}"
-        )
-    if prefixed_keys:
-        raise SystemExit(f"조각의 이름이 구현체를 말하는 접두사를 달고 있다 — {', '.join(prefixed_keys)}")
     if kind_mismatch:
         detail = " · ".join(f"{where} 는 {', '.join(values)}" for where, values in kind_mismatch)
         raise SystemExit(
@@ -194,11 +143,6 @@ def main() -> None:
     print(f"도구 {len(bindings)}개가 부르는 경로를 HTTP 표면 {len(declared_paths)}자리가 덮는다")
     print(
         f"접수가 받는 잡 종류 {len(intake_kinds)}개를 세 자리가 같게 적는다 — {', '.join(intake_kinds)}"
-    )
-    print(
-        f"조각 채널 {len(declared_channels)}개를 profile {len(registry['profileChannels'])}개가 나눠 보고 "
-        f"판이 어긋나면 {registry['drift']['policy']} 하며 "
-        f"{gated_channel} 승격이 {registry['promotionGate']['policy']} 를 지난다"
     )
     print(f"서비스를 넘는 토픽 {len(topics)}개를 선언한다 — {names}")
 

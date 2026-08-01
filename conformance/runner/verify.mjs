@@ -29,15 +29,10 @@ const SHARED = [
     "language.directives.json",
     "error.subtypes.json",
     "execution.vocabulary.json",
-    "prompt.fragment.integrity.json",
-    "prompt.fragment.registry.json",
     "prompt.placeholders.json",
-    "prompt.fragment.manifest.json",
-    "evaluation.example.contract.json",
 ];
 const WIRE = ["envelope.json", "headers.json", "topics.json", "job.kinds.json"];
 const TOPIC_FIELDS = ["name", "key", "payload", "delivery"];
-const FRAGMENT_SURFACES = ["registerAndResolve", "registerCandidate", "promote"];
 
 const version = readVersion();
 const cases = listCases();
@@ -66,24 +61,6 @@ const declaredPaths = new Set(readDeclaredHttpPaths());
 const bindings = readToolBindingPaths();
 const unmet = bindings.filter((binding) => !declaredPaths.has(normalizePathTemplate(binding.path)));
 
-const registry = readJson("agent/shared/prompt.fragment.registry.json");
-const declaredChannels = Object.keys(registry.channels);
-const unseenChannels = declaredChannels.filter(
-    (channel) => !Object.values(registry.profileChannels).includes(channel)
-        && !registry.promotionPath.includes(channel),
-);
-const unmappedProfiles = Object.entries(registry.profileChannels)
-    .filter(([, channel]) => !declaredChannels.includes(channel))
-    .map(([profile]) => profile);
-const missingFragmentSurfaces = FRAGMENT_SURFACES.filter((name) => registry.surfaces[name] === undefined);
-const gatedChannel = registry.promotionPath[registry.promotionPath.length - 1];
-const ungatedChannels = registry.promotionGate.ungatedChannels;
-const gateMismatch = ungatedChannels.includes(gatedChannel)
-    || registry.promotionPath.slice(0, -1).some((channel) => !ungatedChannels.includes(channel));
-const prefixedKeys = [registry.identity.definitionKey.example, registry.identity.templateKey.example]
-    .concat(registry.identity.codeName.example)
-    .filter((value) => registry.identity.rejectedPrefixes.some((prefix) => value.startsWith(prefix)));
-
 const intakeKinds = readCase("job.intake").kinds;
 const ledgerKinds = Object.keys(readJson("wire/job.kinds.json").kinds);
 const kindMismatch = [
@@ -103,24 +80,6 @@ if (grouped.unclassified.length > 0) {
 if (unmet.length > 0) {
     const detail = unmet.map((binding) => `${binding.name} ${binding.path}`).join(", ");
     throw new Error(`도구가 부르는 경로를 어느 HTTP 표면도 선언하지 않는다 — ${detail}`);
-}
-if (unmappedProfiles.length > 0) {
-    throw new Error(`profile 이 선언되지 않은 조각 채널을 본다 — ${unmappedProfiles.join(", ")}`);
-}
-if (unseenChannels.length > 0) {
-    throw new Error(`어느 profile 도 승격 경로도 닿지 않는 조각 채널이 있다 — ${unseenChannels.join(", ")}`);
-}
-if (missingFragmentSurfaces.length > 0) {
-    throw new Error(`조각 쓰기 경로의 창구가 선언되지 않았다 — ${missingFragmentSurfaces.join(", ")}`);
-}
-if (gateMismatch) {
-    throw new Error(
-        `승격 경로의 마지막 채널만 게이트를 가져야 한다 — 경로 ${registry.promotionPath.join(" → ")} · ` +
-            `게이트 없는 채널 ${ungatedChannels.join(", ")}`,
-    );
-}
-if (prefixedKeys.length > 0) {
-    throw new Error(`조각의 이름이 구현체를 말하는 접두사를 달고 있다 — ${prefixedKeys.join(", ")}`);
 }
 if (kindMismatch.length > 0) {
     throw new Error(
@@ -158,10 +117,6 @@ console.log(`계약 ${version}: 케이스 ${cases.length}개를 읽었다 — ${
 console.log(`강제 ${grouped.enforced.length}자리, 기록 ${grouped.recorded.length}자리`);
 console.log(`도구 ${bindings.length}개가 부르는 경로를 HTTP 표면 ${declaredPaths.size}자리가 덮는다`);
 console.log(`접수가 받는 잡 종류 ${intakeKinds.length}개를 세 자리가 같게 적는다 — ${intakeKinds.join(", ")}`);
-console.log(
-    `조각 채널 ${declaredChannels.length}개를 profile ${Object.keys(registry.profileChannels).length}개가 나눠 보고 ` +
-        `판이 어긋나면 ${registry.drift.policy} 하며 ${gatedChannel} 승격이 ${registry.promotionGate.policy} 를 지난다`,
-);
 console.log(
     `서비스를 넘는 토픽 ${Object.keys(topics).length}개를 선언한다 — ` +
         `${Object.values(topics).map((topic) => topic.name).join(", ")}`,

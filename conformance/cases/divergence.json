@@ -21,27 +21,6 @@
             "resolution": "궤적 단계 경계는 이미 같다. 남은 것은 워크플로와 액티비티의 수이며 재시도 경계가 그것에 매여 있다"
         },
         {
-            "id": "evaluation.surface",
-            "area": "http",
-            "summary": "평가 표면을 한쪽만 연다",
-            "canonical": "typescript",
-            "typescript": "datasets·evaluators·prompts·prompt-fragments·candidate·experiments·reviews 일곱 갈래를 api/agent/evaluation 아래 연다",
-            "python": "HTTP 평가 표면이 없다. 화면이 그 경로를 부르면 404가 오고 평가 작업창이 비어 보인다",
-            "resolution": "계약이 평가 표면을 선언했으므로 python 이 그것을 따라간다",
-            "unservedPaths": [
-                "/api/agent/evaluation/"
-            ]
-        },
-        {
-            "id": "evaluation.run",
-            "area": "http",
-            "summary": "합성 평가 실행을 한쪽만 수행한다",
-            "canonical": "typescript",
-            "typescript": "evaluationRunWorkflow가 생성 큐에서 실행한다",
-            "python": "POST /v1/evaluation-runs가 봉투를 검증한 뒤 422로 거절한다. 봉투가 본문을 싣지 않아 어느 프롬프트를 고를지 알 이름이 없다",
-            "resolution": "실행 봉투에 에이전트 범위를 실어 두 구현체가 같은 창구로 평가를 실행하게 한다"
-        },
-        {
             "id": "error.subtypes",
             "area": "agent",
             "summary": "실행 실패의 하위 종류를 내는 쪽이 갈린다",
