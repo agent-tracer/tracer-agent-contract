@@ -14,7 +14,7 @@ queues:
     meaning: 대화 실행의 워크플로와 액티비티가 실행되는 큐다
     hostsWorkflows: true
   jobs:
-    meaning: 잡과 평가의 워크플로와 짧은 액티비티가 실행되는 큐다
+    meaning: 잡의 워크플로와 짧은 액티비티가 실행되는 큐다
     hostsWorkflows: true
   generate:
     meaning: 최대 15분인 생성 액티비티가 짧은 액티비티의 슬롯을 점유하지 않도록 분리한 큐다
@@ -57,23 +57,6 @@ workflows:
         queue: chat
         startToCloseSeconds: 60
         maximumAttempts: 5
-
-  evaluationRun:
-    name: evaluationRunWorkflow
-    queue: jobs
-    activities:
-      - name: runEvaluationAgent
-        queue: generate
-
-  evaluationExperiment:
-    name: evaluationExperimentWorkflow
-    queue: jobs
-    id: "evaluation:{experimentId}"
-    activities:
-      - name: runNext
-        queue: generate
-      - name: finalize
-        queue: generate
 
 jobWorkflows:
   meaning: >-
