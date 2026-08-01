@@ -304,8 +304,25 @@
         "contentType": "text/event-stream",
         "event": "snapshot",
         "frameId": "draftSeq와 updatedAt을 콜론으로 이은 값이다",
+        "frame": "snapshot",
+        "replay": {
+            "mode": "none",
+            "lastEventId": "요청이 실어 보내도 무시하고 언제나 그 순간의 정본부터 낸다",
+            "reason": "프레임이 실행 상태와 대기 도구 전부를 실으므로 다시 붙는 것이 곧 따라잡는 것이다"
+        },
+        "reconnect": {
+            "initialBackoffMs": 1000,
+            "maxBackoffMs": 10000,
+            "resetOn": "연결이 열리면 물러선 간격을 처음 값으로 되돌린다",
+            "stopOn": "종결 상태를 실은 프레임을 받으면 다시 붙지 않는다"
+        },
+        "draftReset": "재시도는 답변을 처음부터 다시 쓰므로 draftText가 비고 draftSeq가 0으로 간다. 화면의 글자가 줄어드는 것은 정상이다",
         "resendIntervalMs": 20000,
-        "frame": "snapshot"
+        "headers": {
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
     },
     "valueRules": {
         "meaning": "칸의 존재만 적으면 같은 칸에 다른 뜻의 값이 담겨도 통과한다. 화면이 값을 그대로 렌더하는 자리는 값 자체를 여기에 못 박는다",
