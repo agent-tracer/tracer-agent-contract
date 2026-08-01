@@ -2054,6 +2054,18 @@ components:
         costUsd: { type: number, nullable: true }
         startedAt: { type: string, format: date-time, nullable: true }
         completedAt: { type: string, format: date-time, nullable: true }
+        attemptCount:
+          type: integer
+          minimum: 0
+          description: 이 실행을 몇 번 가져갔는지이며 재시도가 몇 번 있었는지를 이 값이 말한다
+        jobId: { type: string, nullable: true }
+        traceId: { type: string, nullable: true }
+        resolvedPromptHash:
+          type: string
+          nullable: true
+          description: 이 실행이 실제로 쓴 프롬프트의 해시이며 모든 변형이 같은 프롬프트로 돌았음을 이것이 보인다
+        durationMs: { type: integer, nullable: true }
+        failureReason: { type: string, nullable: true }
 
     EvaluationExecutionLease:
       type: object
