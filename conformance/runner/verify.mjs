@@ -19,6 +19,7 @@ import {
     readToolBindingPaths,
     readOpenApiEnum,
     readRedaction,
+    readScopeToken,
     readSettlement,
     readTraceAttributeNames,
     readVersion,
@@ -44,6 +45,7 @@ const SHARED = [
     "error.subtypes.json",
     "execution.vocabulary.json",
     "redaction.json",
+    "scope.token.json",
 ];
 const WIRE = ["envelope.json", "headers.json", "topics.json", "job.kinds.json"];
 const TOPIC_FIELDS = ["name", "key", "payload", "delivery"];
@@ -336,4 +338,14 @@ if (missingSettlement.length > 0) {
     throw new Error(`실행을 접는 조건에 있어야 할 자리가 없다 — ${missingSettlement.join(", ")}`);
 }
 console.log(`추적이 나르는 속성 ${traceAttributes.length}개를 계약이 갖는다`);
+const scopeToken = readScopeToken();
+const SCOPE_TOKEN_PLACES = ["meaning", "prefix", "prefixReason", "shape", "payload", "signature", "secret", "lifetime", "precedence"];
+const missingScopeToken = SCOPE_TOKEN_PLACES.filter((place) => scopeToken[place] === undefined);
+if (missingScopeToken.length > 0) {
+    throw new Error(`실행 자격의 모양에 있어야 할 자리가 없다 — ${missingScopeToken.join(", ")}`);
+}
 console.log(`실행을 접는 조건 ${SETTLEMENT_PLACES.length}개를 계약이 갖는다`);
+console.log(
+    `실행에 매인 자격은 ${scopeToken.prefix} 로 시작해 ${scopeToken.payload.fields.length}개 칸을 ` +
+        `${scopeToken.signature.algorithm} 으로 서명한다`,
+);

@@ -26,6 +26,7 @@ from contract import (
     read_json,
     read_openapi_enum,
     read_redaction,
+    read_scope_token,
     read_settlement,
     read_text,
     read_tool_binding_paths,
@@ -50,6 +51,7 @@ SHARED = [
     "error.subtypes.json",
     "execution.vocabulary.json",
     "redaction.json",
+    "scope.token.json",
 ]
 WIRE = ["envelope.json", "headers.json", "topics.json", "job.kinds.json"]
 TOPIC_FIELDS = ["name", "key", "payload", "delivery"]
@@ -87,6 +89,17 @@ AXIS_DURATION_UNIT = "seconds"
 LABEL_NAME = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 NAME_SUFFIXES = ["countersTotalSuffix", "unitSuffix"]
 REDACTION_PLACES = ["marker", "matching", "keys", "values", "onSuspect", "stages"]
+SCOPE_TOKEN_PLACES = (
+    "meaning",
+    "prefix",
+    "prefixReason",
+    "shape",
+    "payload",
+    "signature",
+    "secret",
+    "lifetime",
+    "precedence",
+)
 SETTLEMENT_PLACES = ("meaning", "fromQueued", "fromRunning", "appliesTo", "reason", "note")
 REDACTION_STAGES = ["trace", "query", "output"]
 VALUE_BODY_PLACES = ["minLength", "charset", "skipSpaceBetween"]
@@ -348,7 +361,16 @@ def main() -> None:
             f"실행을 접는 조건에 있어야 할 자리가 없다 — {', '.join(missing_settlement)}"
         )
     print(f"추적이 나르는 속성 {len(trace_attributes)}개를 계약이 갖는다")
+    scope_token = read_scope_token()
+    missing_scope = [place for place in SCOPE_TOKEN_PLACES if place not in scope_token]
+    if missing_scope:
+        raise SystemExit(f"실행 자격의 모양에 있어야 할 자리가 없다 — {', '.join(missing_scope)}")
     print(f"실행을 접는 조건 {len(SETTLEMENT_PLACES)}개를 계약이 갖는다")
+    print(
+        f"실행에 매인 자격은 {scope_token['prefix']} 로 시작해 "
+        f"{len(scope_token['payload']['fields'])}개 칸을 "
+        f"{scope_token['signature']['algorithm']} 으로 서명한다"
+    )
 
 
 if __name__ == "__main__":

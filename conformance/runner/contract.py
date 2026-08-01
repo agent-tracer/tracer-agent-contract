@@ -98,6 +98,11 @@ def read_redaction() -> Any:
     return read_json("agent/shared/redaction.json")
 
 
+def read_scope_token() -> Any:
+    """실행에 매인 자격의 모양을 읽는다."""
+    return read_json("agent/shared/scope.token.json")
+
+
 def read_settlement() -> Any:
     """실행을 종결로 접는 조건을 읽는다."""
     return read_json("agent/shared/execution.vocabulary.json").get("settlement", {})

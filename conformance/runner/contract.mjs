@@ -95,6 +95,11 @@ export function readRedaction() {
     return readJson("agent/shared/redaction.json");
 }
 
+/** 실행에 매인 자격의 모양을 읽는다. */
+export function readScopeToken() {
+    return readJson("agent/shared/scope.token.json");
+}
+
 /** 실행을 종결로 접는 조건을 읽는다. */
 export function readSettlement() {
     return readJson("agent/shared/execution.vocabulary.json").settlement ?? {};

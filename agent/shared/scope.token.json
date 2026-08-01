@@ -1,0 +1,32 @@
+{
+    "meaning": "실행 하나가 자기 사용자 범위 안에서만 창구를 부르도록 실행에 매인 자격이며, 저장소 없이 서명만으로 검증하고 발급 시점에 수명을 못박는다. 두 축이 같은 글자를 만들어야 한 축이 발급한 자격을 다른 축의 창구가 받는다.",
+    "prefix": "ms1",
+    "prefixReason": "인증 베어러와 섞이지 않도록 이 자격만의 접두사를 둔다. 창구는 접두사만 보고 이 값이 실행 자격임을 알며, 모양이 맞으면 검증에 실패해도 자기신고 헤더로 되돌리지 않는다.",
+    "shape": "점으로 이은 세 마디이며 prefix 와 payload 와 signature 순서다",
+    "payload": {
+        "meaning": "base64url 로 실은 JSON 하나이며 창구가 이 값에서 범위와 수명을 읽는다.",
+        "encoding": "base64url",
+        "fields": ["userId", "executionId", "issuedAt", "expiresAt"],
+        "timeUnit": "밀리초 정수"
+    },
+    "signature": {
+        "meaning": "payload 마디의 글자를 그대로 서명하며 창구가 같은 비밀로 다시 계산해 견준다.",
+        "algorithm": "HMAC-SHA256",
+        "input": "payload 마디의 base64url 문자열",
+        "encoding": "base64url",
+        "compare": "길이를 먼저 보고 같을 때만 시간이 값에 의존하지 않는 비교를 쓴다"
+    },
+    "secret": {
+        "meaning": "서명 비밀은 배포가 주며 구현이 기본값을 두지 않는다.",
+        "variable": "MONITOR_AUTH_TOKEN_SECRET",
+        "trim": true,
+        "absent": "비었거나 공백뿐이면 발급하지 않고 검증도 하지 않는다. 자격 없는 호출은 자기신고 헤더만으로 식별된다"
+    },
+    "lifetime": {
+        "meaning": "자격은 그 시도의 마감을 넘겨 살아남지 않는다.",
+        "ttlFrom": "그 기능의 deadlineMs",
+        "marginMs": 60000,
+        "marginReason": "마감 직전에 시작한 도구 호출이 응답을 받기 전에 자격을 잃지 않도록 마감보다 조금 더 살린다"
+    },
+    "precedence": "서명과 수명이 모두 맞을 때만 실행 범위를 내주며 그 값이 자기신고 헤더를 우선한다"
+}
