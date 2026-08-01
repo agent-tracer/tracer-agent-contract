@@ -66,9 +66,6 @@ CREATE TABLE IF NOT EXISTS "agent_run_observations" (
     "attempt_id" text NOT NULL,
     "user_id" text NOT NULL,
     "job_id" text,
-    "experiment_id" text,
-    "example_id" text,
-    "variant_id" text,
     "agent_name" text NOT NULL,
     "backend" text NOT NULL,
     "model_requested" text NOT NULL,
@@ -76,7 +73,6 @@ CREATE TABLE IF NOT EXISTS "agent_run_observations" (
     "prompt_version" text NOT NULL,
     "prompt_content_hash" text NOT NULL,
     "tool_contract_version" text NOT NULL,
-    "evaluator_set_version" text,
     "status" text NOT NULL,
     "duration_ms" integer NOT NULL,
     "usage" jsonb NOT NULL,
@@ -94,5 +90,3 @@ CREATE INDEX IF NOT EXISTS "agent_run_observations_user_created"
     ON "agent_run_observations" ("user_id", "created_at");
 CREATE INDEX IF NOT EXISTS "agent_run_observations_job"
     ON "agent_run_observations" ("job_id");
-CREATE INDEX IF NOT EXISTS "agent_run_observations_experiment"
-    ON "agent_run_observations" ("experiment_id", "variant_id", "example_id");
