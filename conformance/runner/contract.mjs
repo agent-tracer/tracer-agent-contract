@@ -7,6 +7,9 @@ const CASES = join(ROOT, "conformance", "cases");
 const SUFFIX = ".json";
 const HTTP_SURFACES = ["agent-api.openapi.yaml", "tracer-dependency.openapi.yaml"];
 const AGENT_FILES = ["agent.json", "prompt.json", "tool.json", "output.json", "cases.json"];
+const AXIS_SURFACE_ROOTS = ["agent", "conformance/cases", "db", "http", "wire", "workflow"];
+const AXIS_SURFACE_SUFFIXES = [".json", ".yaml", ".md", ".sql"];
+const JOB_AXIS_COLUMN_PATTERN = /ALTER TABLE "ai_jobs" ADD COLUMN[^;]*"backend"[^;]*;/;
 
 /** 계약 뿌리의 절대 경로이며 스위트를 붙인 구현체는 이 아래만 읽는다. */
 export function contractRoot() {
@@ -18,9 +21,48 @@ export function readVersion() {
     return readFileSync(join(ROOT, "VERSION"), "utf8").trim();
 }
 
+/** 계약 뿌리를 기준으로 한 상대 경로의 파일 하나를 글자 그대로 읽는다. */
+export function readText(relative) {
+    return readFileSync(join(ROOT, relative), "utf8");
+}
+
 /** 계약 뿌리를 기준으로 한 상대 경로의 JSON 파일 하나를 읽는다. */
 export function readJson(relative) {
-    return JSON.parse(readFileSync(join(ROOT, relative), "utf8"));
+    return JSON.parse(readText(relative));
+}
+
+/** 축의 이름을 담을 수 있는 계약 파일을 뿌리 기준 상대 경로로 사전순으로 낸다. */
+export function listAxisSurfaces() {
+    const found = AXIS_SURFACE_ROOTS.flatMap((root) => walk(root));
+    return found.filter((path) => AXIS_SURFACE_SUFFIXES.some((suffix) => path.endsWith(suffix))).sort();
+}
+
+function walk(relative) {
+    return readdirSync(join(ROOT, relative), { withFileTypes: true }).flatMap((entry) =>
+        entry.isDirectory() ? walk(`${relative}/${entry.name}`) : [`${relative}/${entry.name}`],
+    );
+}
+
+/** 잡 원장에 축의 칸을 더하는 선언을 낸다. */
+export function readJobLedgerAxisColumn() {
+    for (const name of listMigrations()) {
+        const declared = JOB_AXIS_COLUMN_PATTERN.exec(readText(`db/migrations/${name}`));
+        if (declared !== null) return declared[0];
+    }
+    return null;
+}
+
+/** migration 파일의 이름을 번호 순서로 낸다. */
+export function listMigrations() {
+    return readdirSync(join(ROOT, "db", "migrations")).filter((name) => name.endsWith(".sql")).sort();
+}
+
+/** 워커가 여는 SDK 지표 창구의 포트와 시간 단위를 낸다. */
+export function readWorkerSdkMetrics() {
+    const declared = readText("workflow/metrics.yaml");
+    const port = /^ {2}port: (\d+)$/m.exec(declared);
+    const unit = /^ {2}durationUnit: (\S+)$/m.exec(declared);
+    return { port: port === null ? null : Number(port[1]), durationUnit: unit === null ? null : unit[1] };
 }
 
 /** 적합성 케이스의 이름을 사전순으로 낸다. */

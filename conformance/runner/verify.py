@@ -9,6 +9,7 @@ import urllib.request
 from contract import (
     enforcement_level,
     list_agent_files,
+    list_axis_surfaces,
     list_cases,
     normalize_path_template,
     read_agent_api_routes,
@@ -19,10 +20,13 @@ from contract import (
     read_agent_tools,
     read_case,
     read_declared_http_paths,
+    read_job_ledger_axis_column,
     read_json,
     read_openapi_enum,
+    read_text,
     read_tool_binding_paths,
     read_version,
+    read_worker_sdk_metrics,
     route_key,
 )
 
@@ -65,9 +69,13 @@ STREAM_NESTED = {
 STREAM_PLACES = len(STREAM_KEYS) + sum(len(keys) for keys in STREAM_NESTED.values())
 STANDALONE = [
     "workflow/queues.yaml",
+    "workflow/metrics.yaml",
     "http/agent-api.openapi.yaml",
     "http/tracer-dependency.openapi.yaml",
 ]
+AXIS_VALUES = ["ts", "python"]
+NON_AXIS_WORDS = ["claude-sdk", "typescript"]
+AXIS_DURATION_UNIT = "seconds"
 
 
 def main() -> None:
@@ -111,6 +119,17 @@ def main() -> None:
         for key in keys
         if key not in stream.get(group, {})
     ]
+
+    axis = read_openapi_enum("AgentAxis")
+    axis_surfaces = list_axis_surfaces()
+    stray_axis_names = [
+        f"{surface} 의 {word}"
+        for surface in axis_surfaces
+        for word in NON_AXIS_WORDS
+        if word in read_text(surface).lower()
+    ]
+    axis_column = read_job_ledger_axis_column()
+    worker_metrics = read_worker_sdk_metrics()
 
     topics = read_json("wire/topics.json")
     incomplete_topics = [
@@ -156,6 +175,23 @@ def main() -> None:
         raise SystemExit(f"토픽 선언에 {fields} 가 다 있어야 한다 — {', '.join(incomplete_topics)}")
     if missing_stream:
         raise SystemExit(f"실행 스트림 절에 있어야 할 자리가 없다 — {', '.join(missing_stream)}")
+    if axis != AXIS_VALUES:
+        raise SystemExit(
+            f"축의 이름은 {', '.join(AXIS_VALUES)} 둘이다 — AgentAxis 는 {', '.join(axis)} 다"
+        )
+    if stray_axis_names:
+        raise SystemExit(f"축의 이름이 될 수 없는 낱말이 계약에 있다 — {', '.join(stray_axis_names)}")
+    if axis_column is None:
+        raise SystemExit("migration 이 잡 원장에 축의 칸을 더하지 않는다 — ai_jobs 에 backend 가 없다")
+    if "NOT NULL" not in axis_column:
+        raise SystemExit(f"잡 원장의 축은 비어 있을 수 없다 — {axis_column}")
+    if worker_metrics["port"] is None or worker_metrics["durationUnit"] != AXIS_DURATION_UNIT:
+        port = worker_metrics["port"] or "없음"
+        unit = worker_metrics["durationUnit"] or "없음"
+        raise SystemExit(
+            f"워커 지표 창구는 포트와 {AXIS_DURATION_UNIT} 단위를 함께 적어야 한다 — "
+            f"포트 {port}, 단위 {unit}"
+        )
 
     declared_routes = read_agent_api_routes()
     recorded_unserved = [
@@ -191,6 +227,13 @@ def main() -> None:
     )
     print(f"서비스를 넘는 토픽 {len(topics)}개를 선언한다 — {names}")
     print(f"실행 스트림 절의 자리 {STREAM_PLACES}개를 대조한다")
+    print(f"축의 이름 {len(axis)}개를 계약이 한 벌로 갖는다 — {', '.join(axis)}")
+    print(f"축의 이름을 담을 수 있는 자리 {len(axis_surfaces)}개가 그 둘만 쓴다")
+    print(f"잡 원장이 축의 칸을 갖는다 — {axis_column}")
+    print(
+        f"워커 SDK 지표 창구는 포트 {worker_metrics['port']} 를 열고 "
+        f"{worker_metrics['durationUnit']} 단위로 낸다"
+    )
 
 
 if __name__ == "__main__":

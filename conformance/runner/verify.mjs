@@ -1,6 +1,7 @@
 import {
     enforcementLevel,
     listAgentFiles,
+    listAxisSurfaces,
     listCases,
     normalizePathTemplate,
     readAgentApiRoutes,
@@ -11,10 +12,13 @@ import {
     readAgentTools,
     readCase,
     readDeclaredHttpPaths,
+    readJobLedgerAxisColumn,
     readJson,
+    readText,
     readToolBindingPaths,
     readOpenApiEnum,
     readVersion,
+    readWorkerSdkMetrics,
     routeKey,
 } from "./contract.mjs";
 
@@ -58,6 +62,9 @@ const STREAM_NESTED = {
     headers: ["Cache-Control", "Connection", "X-Accel-Buffering"],
 };
 const STREAM_PLACES = STREAM_KEYS.length + Object.values(STREAM_NESTED).flat().length;
+const AXIS_VALUES = ["ts", "python"];
+const NON_AXIS_WORDS = ["claude-sdk", "typescript"];
+const AXIS_DURATION_UNIT = "seconds";
 
 const version = readVersion();
 const cases = listCases();
@@ -86,7 +93,12 @@ for (const agent of AGENTS) {
 }
 for (const file of SHARED) surfaces.push(`agent/shared/${file}`);
 for (const file of WIRE) surfaces.push(`wire/${file}`);
-surfaces.push("workflow/queues.yaml", "http/agent-api.openapi.yaml", "http/tracer-dependency.openapi.yaml");
+surfaces.push(
+    "workflow/queues.yaml",
+    "workflow/metrics.yaml",
+    "http/agent-api.openapi.yaml",
+    "http/tracer-dependency.openapi.yaml",
+);
 
 const grouped = { enforced: [], recorded: [], unclassified: [] };
 for (const surface of surfaces) grouped[enforcementLevel(surface)].push(surface);
@@ -109,6 +121,15 @@ const missingStream = [
         keys.filter((key) => stream[group]?.[key] === undefined).map((key) => `stream.${group}.${key}`),
     ),
 ];
+
+const axis = readOpenApiEnum("AgentAxis");
+const axisSurfaces = listAxisSurfaces();
+const strayAxisNames = axisSurfaces.flatMap((surface) => {
+    const declared = readText(surface).toLowerCase();
+    return NON_AXIS_WORDS.filter((word) => declared.includes(word)).map((word) => `${surface} 의 ${word}`);
+});
+const axisColumn = readJobLedgerAxisColumn();
+const workerMetrics = readWorkerSdkMetrics();
 
 const topics = readJson("wire/topics.json");
 const incompleteTopics = Object.entries(topics)
@@ -136,6 +157,24 @@ if (incompleteTopics.length > 0) {
 }
 if (missingStream.length > 0) {
     throw new Error(`실행 스트림 절에 있어야 할 자리가 없다 — ${missingStream.join(", ")}`);
+}
+if (axis.join() !== AXIS_VALUES.join()) {
+    throw new Error(`축의 이름은 ${AXIS_VALUES.join(", ")} 둘이다 — AgentAxis 는 ${axis.join(", ")} 다`);
+}
+if (strayAxisNames.length > 0) {
+    throw new Error(`축의 이름이 될 수 없는 낱말이 계약에 있다 — ${strayAxisNames.join(", ")}`);
+}
+if (axisColumn === null) {
+    throw new Error("migration 이 잡 원장에 축의 칸을 더하지 않는다 — ai_jobs 에 backend 가 없다");
+}
+if (!axisColumn.includes("NOT NULL")) {
+    throw new Error(`잡 원장의 축은 비어 있을 수 없다 — ${axisColumn}`);
+}
+if (workerMetrics.port === null || workerMetrics.durationUnit !== AXIS_DURATION_UNIT) {
+    throw new Error(
+        `워커 지표 창구는 포트와 ${AXIS_DURATION_UNIT} 단위를 함께 적어야 한다 — ` +
+            `포트 ${workerMetrics.port ?? "없음"}, 단위 ${workerMetrics.durationUnit ?? "없음"}`,
+    );
 }
 
 const declaredRoutes = readAgentApiRoutes();
@@ -168,3 +207,9 @@ console.log(
         `${Object.values(topics).map((topic) => topic.name).join(", ")}`,
 );
 console.log(`실행 스트림 절의 자리 ${STREAM_PLACES}개를 대조한다`);
+console.log(`축의 이름 ${axis.length}개를 계약이 한 벌로 갖는다 — ${axis.join(", ")}`);
+console.log(`축의 이름을 담을 수 있는 자리 ${axisSurfaces.length}개가 그 둘만 쓴다`);
+console.log(`잡 원장이 축의 칸을 갖는다 — ${axisColumn}`);
+console.log(
+    `워커 SDK 지표 창구는 포트 ${workerMetrics.port} 를 열고 ${workerMetrics.durationUnit} 단위로 낸다`,
+);

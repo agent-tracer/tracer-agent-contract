@@ -12,6 +12,9 @@ CASES = ROOT / "conformance" / "cases"
 SUFFIX = ".json"
 HTTP_SURFACES = ["agent-api.openapi.yaml", "tracer-dependency.openapi.yaml"]
 AGENT_FILES = ["agent.json", "prompt.json", "tool.json", "output.json", "cases.json"]
+AXIS_SURFACE_ROOTS = ["agent", "conformance/cases", "db", "http", "wire", "workflow"]
+AXIS_SURFACE_SUFFIXES = (".json", ".yaml", ".md", ".sql")
+JOB_AXIS_COLUMN_PATTERN = r'ALTER TABLE "ai_jobs" ADD COLUMN[^;]*"backend"[^;]*;'
 
 
 def contract_root() -> Path:
@@ -24,9 +27,49 @@ def read_version() -> str:
     return (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
 
+def read_text(relative: str) -> str:
+    """계약 뿌리를 기준으로 한 상대 경로의 파일 하나를 글자 그대로 읽는다."""
+    return (ROOT / relative).read_text(encoding="utf-8")
+
+
 def read_json(relative: str) -> Any:
     """계약 뿌리를 기준으로 한 상대 경로의 JSON 파일 하나를 읽는다."""
-    return json.loads((ROOT / relative).read_text(encoding="utf-8"))
+    return json.loads(read_text(relative))
+
+
+def list_axis_surfaces() -> list[str]:
+    """축의 이름을 담을 수 있는 계약 파일을 뿌리 기준 상대 경로로 사전순으로 낸다."""
+    return sorted(
+        str(path.relative_to(ROOT))
+        for root in AXIS_SURFACE_ROOTS
+        for path in (ROOT / root).rglob("*")
+        if path.is_file() and path.name.endswith(AXIS_SURFACE_SUFFIXES)
+    )
+
+
+def list_migrations() -> list[str]:
+    """migration 파일의 이름을 번호 순서로 낸다."""
+    return sorted(path.name for path in (ROOT / "db" / "migrations").glob("*.sql"))
+
+
+def read_job_ledger_axis_column() -> str | None:
+    """잡 원장에 축의 칸을 더하는 선언을 낸다."""
+    for name in list_migrations():
+        declared = re.search(JOB_AXIS_COLUMN_PATTERN, read_text(f"db/migrations/{name}"))
+        if declared is not None:
+            return declared.group(0)
+    return None
+
+
+def read_worker_sdk_metrics() -> dict[str, Any]:
+    """워커가 여는 SDK 지표 창구의 포트와 시간 단위를 낸다."""
+    declared = read_text("workflow/metrics.yaml")
+    port = re.search(r"^ {2}port: (\d+)$", declared, re.MULTILINE)
+    unit = re.search(r"^ {2}durationUnit: (\S+)$", declared, re.MULTILINE)
+    return {
+        "port": None if port is None else int(port.group(1)),
+        "durationUnit": None if unit is None else unit.group(1),
+    }
 
 
 def list_cases() -> list[str]:
