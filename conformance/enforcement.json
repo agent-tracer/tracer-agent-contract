@@ -33,6 +33,7 @@
         "queryShapes": "조회 응답의 칸은 열거하며 object라 적지 않는다. chat.query.json이 대화 조회의 칸을, job.intake.json의 response 절이 잡 접수와 조회의 칸을 소유하고 두 구현체가 그 목록을 읽어 자기 응답과 대조한다.",
         "valueRules": "칸의 존재만 적으면 두 구현체가 같은 칸에 다른 뜻의 값을 담고도 통과한다. chat.query.json의 valueRules와 job.intake.json의 response.usage가 값의 규칙을 소유한다.",
         "tracerOutputs": "tracer.outputs.json은 추적 API의 산출물 생성 창구를 대조한다. 그 창구는 에이전트를 위한 것이 아니므로 요청의 칸과 창구가 정하는 값을 함께 적어 대시보드가 같은 본문으로 부를 수 있게 한다.",
-        "redaction": "agent/shared/redaction.json은 가릴 낱말과 비교 절차와 표시를 계약이 갖게 한다. 두 구현체가 각자 정규식을 세우면 같은 payload에서 다른 것이 걸리므로 이 자리는 강제다."
+        "redaction": "agent/shared/redaction.json은 가릴 낱말과 비교 절차와 표시를 계약이 갖게 한다. 두 구현체가 각자 정규식을 세우면 같은 payload에서 다른 것이 걸리므로 이 자리는 강제다.",
+        "traceAttributes": "workflow/trace.attributes.yaml은 추적으로 나가는 속성의 이름과 구조를 갖는다. 지표 창구에 실리는 라벨 이름은 workflow/metrics.yaml이 소유하며 두 자리가 같은 이름을 두 번 정하지 않는다."
     }
 }

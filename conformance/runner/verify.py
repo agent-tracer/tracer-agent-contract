@@ -73,6 +73,7 @@ STREAM_PLACES = len(STREAM_KEYS) + sum(len(keys) for keys in STREAM_NESTED.value
 STANDALONE = [
     "workflow/queues.yaml",
     "workflow/metrics.yaml",
+    "workflow/trace.attributes.yaml",
     "http/agent-api.openapi.yaml",
     "http/tracer-dependency.openapi.yaml",
 ]

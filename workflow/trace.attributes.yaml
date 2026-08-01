@@ -1,0 +1,117 @@
+meaning: >-
+  실행이 관측으로 나갈 때 싣는 속성의 정본이다. 두 축이 같은 이름을 같은 자리에 실어야 하나의
+  질의가 두 축의 실행을 함께 세고 하나의 화면이 둘을 나란히 놓는다.
+
+ownership:
+  meaning: >-
+    같은 축이 추적과 지표라는 두 경로로 나가고 경로마다 이름의 규칙이 다르므로 소유를 나눈다.
+  traceAttributes: 이 파일이 추적으로 나가는 속성의 이름과 구조를 소유한다
+  metricLabelNames: workflow/metrics.yaml 의 labels 가 지표 창구에 실리는 라벨 이름을 소유한다
+  axisValues: http/agent-api.openapi.yaml 의 AgentAxis 가 축의 값 목록을 소유한다
+
+carriers:
+  span:
+    meaning: OTLP 로 내보내는 스팬이 싣는 자리다
+  runMetadata:
+    meaning: 바깥 추적 창구가 실행 하나에 붙이는 metadata 자리다
+
+redaction:
+  meaning: >-
+    이 속성들은 바깥으로 나가기 전에 agent/shared/redaction.json 의 trace 자리를 지난다.
+  stage: trace
+
+attributes:
+  agent_tracer.agent.name:
+    type: string
+    required: true
+    carriers: [runMetadata]
+    meaning: 실행을 태운 에이전트의 이름이다
+    source: agent/{agentId}/agent.json 의 id
+  agent_tracer.backend:
+    type: string
+    required: true
+    carriers: [span, runMetadata]
+    meaning: 실행을 태운 축이다
+    source: http/agent-api.openapi.yaml 의 AgentAxis
+  agent_tracer.model.requested:
+    type: string
+    required: true
+    carriers: [runMetadata]
+    meaning: 실행이 부르려고 적은 모델의 이름이며 응답이 답한 모델과 다를 수 있다
+  agent_tracer.prompt.version:
+    type: string
+    required: true
+    carriers: [span, runMetadata]
+    meaning: 실행이 세운 프롬프트의 판이다
+    source: agent/{agentId}/prompt.json 의 templates 가 함께 서 있는 하나의 version
+    note: >-
+      한 에이전트의 template 들이 서로 다른 판을 적으면 실을 값이 정해지지 않으므로
+      실행이 그 자리에서 선다.
+  agent_tracer.tool.contract.version:
+    type: string
+    required: false
+    carriers: [span, runMetadata]
+    meaning: 실행이 모델에게 준 도구 목록의 판이다
+    source: agent/{agentId}/tool.json 의 version
+  agent_tracer.job.id:
+    type: string
+    required: false
+    carriers: [span, runMetadata]
+    meaning: 실행을 낳은 잡의 식별자이며 대화 실행에는 없다
+  agent_tracer.job.kind:
+    type: string
+    required: false
+    carriers: [span]
+    meaning: 잡의 종류다
+    source: wire/job.kinds.json 의 kinds
+  agent_tracer.execution.id:
+    type: string
+    required: false
+    carriers: [span, runMetadata]
+    meaning: 실행 원장의 실행 하나를 가리킨다
+  agent_tracer.attempt.id:
+    type: string
+    required: false
+    carriers: [span, runMetadata]
+    meaning: 한 실행의 시도 하나를 가리키며 재시도마다 달라진다
+  agent_tracer.model_call.id:
+    type: string
+    required: false
+    carriers: [span]
+    meaning: 한 시도 안의 모델 호출 하나를 가리킨다
+  agent_tracer.tool.parameters.fingerprint:
+    type: string
+    required: false
+    carriers: [span]
+    meaning: 도구 인자를 드러내지 않고 같은 호출인지만 견주는 지문이다
+    note: >-
+      인자를 키 순서로 정렬해 직렬화한 뒤 sha256 을 앞 16자만 남긴다. 인자 자체는
+      어느 자리에도 싣지 않는다.
+  agent_tracer.usage.billable_base_input_tokens:
+    type: integer
+    required: false
+    carriers: [span]
+    meaning: 과금의 기준이 되는 입력 토큰이며 cache 토큰을 포함하지 않는다
+    note: >-
+      gen_ai.usage.input_tokens 는 cache 를 포함한 총량이므로 과금을 읽는 자리가
+      그 값을 쓰면 두 축 모두 실제보다 큰 값을 센다.
+
+semconv:
+  meaning: >-
+    OTel GenAI semantic conventions 가 이름을 소유하는 속성이며 두 축이 같은 이름으로 싣는다.
+    이름을 계약이 다시 정하지 않고 어느 것을 싣는지만 적는다.
+  names:
+    - gen_ai.operation.name
+    - gen_ai.provider.name
+    - gen_ai.conversation.id
+    - gen_ai.agent.name
+    - gen_ai.request.model
+    - gen_ai.response.model
+    - gen_ai.usage.input_tokens
+    - gen_ai.usage.output_tokens
+    - gen_ai.usage.cache_read.input_tokens
+    - gen_ai.usage.cache_creation.input_tokens
+    - gen_ai.token.type
+    - gen_ai.tool.name
+    - gen_ai.tool.type
+    - error.type

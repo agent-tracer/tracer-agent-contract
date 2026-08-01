@@ -101,6 +101,7 @@ for (const file of WIRE) surfaces.push(`wire/${file}`);
 surfaces.push(
     "workflow/queues.yaml",
     "workflow/metrics.yaml",
+    "workflow/trace.attributes.yaml",
     "http/agent-api.openapi.yaml",
     "http/tracer-dependency.openapi.yaml",
 );
