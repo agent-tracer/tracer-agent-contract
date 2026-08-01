@@ -68,6 +68,7 @@ const NON_AXIS_WORDS = ["claude-sdk", "typescript"];
 const AXIS_DURATION_UNIT = "seconds";
 // 지표 창구는 수집기를 지나지 않으므로 Prometheus 의 고전 라벨 이름 규칙을 그대로 받는다.
 const LABEL_NAME = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+const NAME_SUFFIXES = ["countersTotalSuffix", "unitSuffix"];
 
 const version = readVersion();
 const cases = listCases();
@@ -180,6 +181,11 @@ if (workerMetrics.port === null || workerMetrics.durationUnit !== AXIS_DURATION_
             `포트 ${workerMetrics.port ?? "없음"}, 단위 ${workerMetrics.durationUnit ?? "없음"}`,
     );
 }
+if (NAME_SUFFIXES.some((name) => workerMetrics[name] === null)) {
+    throw new Error(
+        `지표의 이름을 빚는 값은 기본에 기대지 않고 계약이 적는다 — ${NAME_SUFFIXES.join(" · ")}`,
+    );
+}
 if (axisLabel.attributeKey === null || axisLabel.labelName === null) {
     throw new Error("축의 라벨은 계측이 쓰는 속성 이름과 창구가 싣는 라벨 이름을 함께 적어야 한다");
 }
@@ -233,4 +239,8 @@ console.log(
 );
 console.log(
     `축의 라벨은 계측에서 ${axisLabel.attributeKey} 이고 창구에서 ${axisLabel.labelName} 이다`,
+);
+console.log(
+    `지표의 이름을 빚는 값 ${NAME_SUFFIXES.length}개를 계약이 적는다 — ` +
+        NAME_SUFFIXES.map((name) => `${name} ${workerMetrics[name]}`).join(", "),
 );

@@ -80,6 +80,7 @@ NON_AXIS_WORDS = ["claude-sdk", "typescript"]
 AXIS_DURATION_UNIT = "seconds"
 # 지표 창구는 수집기를 지나지 않으므로 Prometheus 의 고전 라벨 이름 규칙을 그대로 받는다.
 LABEL_NAME = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+NAME_SUFFIXES = ["countersTotalSuffix", "unitSuffix"]
 
 
 def main() -> None:
@@ -197,6 +198,10 @@ def main() -> None:
             f"워커 지표 창구는 포트와 {AXIS_DURATION_UNIT} 단위를 함께 적어야 한다 — "
             f"포트 {port}, 단위 {unit}"
         )
+    if any(worker_metrics[name] is None for name in NAME_SUFFIXES):
+        raise SystemExit(
+            f"지표의 이름을 빚는 값은 기본에 기대지 않고 계약이 적는다 — {' · '.join(NAME_SUFFIXES)}"
+        )
     attribute_key = axis_label["attributeKey"]
     label_name = axis_label["labelName"]
     if attribute_key is None or label_name is None:
@@ -253,6 +258,8 @@ def main() -> None:
         f"{worker_metrics['durationUnit']} 단위로 낸다"
     )
     print(f"축의 라벨은 계측에서 {attribute_key} 이고 창구에서 {label_name} 이다")
+    shaped = ", ".join(f"{name} {str(worker_metrics[name]).lower()}" for name in NAME_SUFFIXES)
+    print(f"지표의 이름을 빚는 값 {len(NAME_SUFFIXES)}개를 계약이 적는다 — {shaped}")
 
 
 if __name__ == "__main__":

@@ -62,7 +62,21 @@ export function readWorkerSdkMetrics() {
     const declared = readText("workflow/metrics.yaml");
     const port = /^ {2}port: (\d+)$/m.exec(declared);
     const unit = /^ {2}durationUnit: (\S+)$/m.exec(declared);
-    return { port: port === null ? null : Number(port[1]), durationUnit: unit === null ? null : unit[1] };
+    return {
+        port: port === null ? null : Number(port[1]),
+        durationUnit: unit === null ? null : unit[1],
+        ...readNameSuffixes(declared),
+    };
+}
+
+/** 지표의 이름을 빚는 접미사 둘을 낸다. 선언하지 않았으면 null 이다. */
+function readNameSuffixes(declared) {
+    return Object.fromEntries(
+        ["countersTotalSuffix", "unitSuffix"].map((name) => {
+            const found = new RegExp(`^ {2}${name}: (true|false)$`, "m").exec(declared);
+            return [name, found === null ? null : found[1] === "true"];
+        }),
+    );
 }
 
 /** 축을 싣는 두 이름을 낸다. 계측이 쓰는 속성 이름과 지표 창구가 싣는 라벨 이름이다. */

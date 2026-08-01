@@ -69,7 +69,17 @@ def read_worker_sdk_metrics() -> dict[str, Any]:
     return {
         "port": None if port is None else int(port.group(1)),
         "durationUnit": None if unit is None else unit.group(1),
+        **_read_name_suffixes(declared),
     }
+
+
+def _read_name_suffixes(declared: str) -> dict[str, bool | None]:
+    """지표의 이름을 빚는 접미사 둘을 낸다. 선언하지 않았으면 None 이다."""
+    found = {}
+    for name in ("countersTotalSuffix", "unitSuffix"):
+        match = re.search(rf"^ {{2}}{name}: (true|false)$", declared, re.MULTILINE)
+        found[name] = None if match is None else match.group(1) == "true"
+    return found
 
 
 def read_axis_label_names() -> dict[str, str | None]:

@@ -8,10 +8,16 @@ workerSdkMetrics:
   port: 9466
   path: /metrics
   durationUnit: seconds
+  countersTotalSuffix: false
+  unitSuffix: false
   scope: 워크플로나 액티비티를 등록하는 프로세스마다 하나를 열며 HTTP 표면만 여는 프로세스는 열지 않는다
   note: >-
     SDK 의 기본 단위는 밀리초이므로 초를 명시하지 않으면 schedule-to-start 를 읽는 패널과
     경보가 구현체마다 다른 값을 본다.
+  nameNote: >-
+    두 접미사가 지표의 이름을 빚으므로 값이 갈리면 패널의 질의가 한쪽 축을 찾지 못한다.
+    두 SDK 의 기본값이 지금 같지만 그 기본에 기대면 어느 한쪽이 기본을 바꾸는 날
+    조용히 갈리므로 두 구현체가 이 값을 명시로 넘긴다.
 
 labels:
   meaning: >-
