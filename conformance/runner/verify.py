@@ -88,6 +88,7 @@ NAME_SUFFIXES = ["countersTotalSuffix", "unitSuffix"]
 REDACTION_PLACES = ["marker", "matching", "keys", "values", "onSuspect", "stages"]
 REDACTION_STAGES = ["trace", "query", "output"]
 VALUE_BODY_PLACES = ["minLength", "charset", "skipSpaceBetween"]
+SUSPECT_SPAN_PLACES = ["byKey", "byValue", "spanBounds"]
 ON_SUSPECT_ACTIONS = ["redact", "discard"]
 # 실행에 실험의 자리가 없으므로 이 이름은 어느 속성으로도 나가지 않는다.
 RETIRED_ATTRIBUTES = [
@@ -158,6 +159,9 @@ def main() -> None:
         "values": redaction.get("values", {}).get("words", []),
     }
     empty_redaction_words = [name for name, words in redaction_words.items() if not words]
+    # 걸린 자리가 어디까지인지 정하지 않으면 한 축은 본문을 통째로 바꾸고 다른 축은 구간만 바꾼다.
+    suspect_span = redaction.get("onSuspect", {}).get("suspectSpan", {})
+    missing_suspect_span = [place for place in SUSPECT_SPAN_PLACES if place not in suspect_span]
     # 값 쪽 낱말은 사람이 쓴 본문에도 나오므로 몸통을 요구하는 자리가 없으면 답이 통째로 가려진다.
     trailing_body = redaction.get("values", {}).get("requiresTrailingBody", {})
     missing_trailing_body = [place for place in VALUE_BODY_PLACES if place not in trailing_body]
@@ -257,6 +261,11 @@ def main() -> None:
     if empty_redaction_words:
         raise SystemExit(
             f"가릴 낱말이 비어 있으면 규칙이 아무것도 가리지 못한다 — {', '.join(empty_redaction_words)}"
+        )
+    if missing_suspect_span:
+        raise SystemExit(
+            "걸린 자리가 어디까지인지 정해야 두 축이 같게 가린다 — "
+            f"{', '.join(missing_suspect_span)} 가 없다"
         )
     if missing_trailing_body:
         raise SystemExit(
