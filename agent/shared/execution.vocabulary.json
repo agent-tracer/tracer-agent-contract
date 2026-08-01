@@ -20,9 +20,6 @@
         "validation.completed"
     ],
     "identifiers": [
-        "experimentId",
-        "exampleId",
-        "variantId",
         "executionId",
         "attemptId",
         "modelCallId",
