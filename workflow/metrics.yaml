@@ -1,0 +1,20 @@
+meaning: >-
+  워커가 여는 Temporal SDK 지표 창구의 정본이다. 두 구현체가 같은 포트를 열고 같은 단위로
+  내야 하나의 패널과 하나의 임계값이 두 축을 함께 읽는다.
+
+workerSdkMetrics:
+  exporter: prometheus
+  bindAddress: 0.0.0.0
+  port: 9466
+  path: /metrics
+  durationUnit: seconds
+  scope: 워크플로나 액티비티를 등록하는 프로세스마다 하나를 열며 HTTP 표면만 여는 프로세스는 열지 않는다
+  note: >-
+    SDK 의 기본 단위는 밀리초이므로 초를 명시하지 않으면 schedule-to-start 를 읽는 패널과
+    경보가 구현체마다 다른 값을 본다.
+
+labels:
+  meaning: 지표에 실리는 축의 라벨이며 값의 목록은 OpenAPI 의 AgentAxis 가 소유한다
+  axis:
+    key: agent_tracer.backend
+    meaning: 그 지표를 낸 실행을 태운 축이다
