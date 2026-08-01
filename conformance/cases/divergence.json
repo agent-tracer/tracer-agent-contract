@@ -19,15 +19,6 @@
             "typescript": "잡 종류마다 워크플로 하나를 두고 준비·생성·종결 액티비티로 나누며 생성만 generate 큐로 보낸다",
             "python": "셋을 agentJobWorkflow 하나가 받고 준비와 종결을 실행 액티비티 안에서 처리하며 그 하나를 generate 큐로 보낸다",
             "resolution": "궤적 단계 경계는 이미 같다. 남은 것은 워크플로와 액티비티의 수이며 재시도 경계가 그것에 매여 있다"
-        },
-        {
-            "id": "error.subtypes",
-            "area": "agent",
-            "summary": "실행 실패의 하위 종류를 내는 쪽이 갈린다",
-            "canonical": "typescript",
-            "typescript": "output_schema_invalid·cancelled·process_error를 낸다",
-            "python": "max_tokens·connection_error·api_error를 낸다",
-            "resolution": "agent/shared/error.subtypes.json의 emittedBy가 모두 두 구현체를 담을 때까지 좁힌다"
         }
     ],
     "canonical": "typescript가 정본이다. 항목의 canonical이 python이면 SDK나 LangGraph가 강제해 정본이 따라가야 하는 자리다.",

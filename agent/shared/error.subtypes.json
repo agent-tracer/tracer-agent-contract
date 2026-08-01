@@ -1,88 +1,76 @@
 {
-    "emitted": {
-        "deadline_exceeded": {
-            "retryable": false,
+    "meaning": "실행 실패는 상위 분류 셋으로 나뉘고 재시도와 착지 판정은 상위 분류에만 걸린다. 하위 종류의 어휘는 모델을 부르는 실행 기계가 정하므로 어느 축이 어느 하위를 내는지는 기록이다.",
+    "classes": {
+        "transient": {
+            "retryable": true,
             "landsEmpty": false,
-            "emittedBy": [
-                "typescript",
-                "python"
+            "subtypes": [
+                "process_error",
+                "connection_error",
+                "api_error"
             ]
         },
-        "budget_exceeded": {
+        "exhausted": {
             "retryable": false,
             "landsEmpty": true,
-            "emittedBy": [
-                "typescript",
-                "python"
+            "subtypes": [
+                "max_tokens",
+                "budget_exceeded",
+                "max_turns_exceeded",
+                "deadline_exceeded"
             ]
         },
-        "max_turns_exceeded": {
-            "retryable": false,
-            "landsEmpty": true,
-            "emittedBy": [
-                "typescript",
-                "python"
-            ]
-        },
-        "max_tokens": {
+        "rejected": {
             "retryable": false,
             "landsEmpty": false,
-            "emittedBy": [
-                "python"
-            ]
-        },
-        "output_schema_invalid": {
-            "retryable": false,
-            "landsEmpty": false,
-            "emittedBy": [
-                "typescript"
-            ]
-        },
-        "invalid_request_error": {
-            "retryable": false,
-            "landsEmpty": false,
-            "emittedBy": [
-                "typescript",
-                "python"
-            ]
-        },
-        "agent_execution_error": {
-            "retryable": false,
-            "landsEmpty": false,
-            "emittedBy": [
-                "typescript",
-                "python"
-            ]
-        },
-        "cancelled": {
-            "retryable": false,
-            "landsEmpty": false,
-            "emittedBy": [
-                "typescript",
-                "python"
-            ]
-        },
-        "process_error": {
-            "retryable": true,
-            "landsEmpty": false,
-            "emittedBy": [
-                "typescript"
-            ]
-        },
-        "connection_error": {
-            "retryable": true,
-            "landsEmpty": false,
-            "emittedBy": [
-                "python"
-            ]
-        },
-        "api_error": {
-            "retryable": true,
-            "landsEmpty": false,
-            "emittedBy": [
-                "python"
+            "subtypes": [
+                "output_schema_invalid",
+                "invalid_request_error",
+                "agent_execution_error",
+                "cancelled"
             ]
         }
+    },
+    "emittedBy": {
+        "process_error": [
+            "typescript"
+        ],
+        "connection_error": [
+            "python"
+        ],
+        "api_error": [
+            "python"
+        ],
+        "max_tokens": [
+            "python"
+        ],
+        "budget_exceeded": [
+            "typescript",
+            "python"
+        ],
+        "max_turns_exceeded": [
+            "typescript",
+            "python"
+        ],
+        "deadline_exceeded": [
+            "typescript",
+            "python"
+        ],
+        "output_schema_invalid": [
+            "typescript"
+        ],
+        "invalid_request_error": [
+            "typescript",
+            "python"
+        ],
+        "agent_execution_error": [
+            "typescript",
+            "python"
+        ],
+        "cancelled": [
+            "typescript",
+            "python"
+        ]
     },
     "provider": {
         "authentication_error": {
