@@ -26,6 +26,7 @@ from contract import (
     read_json,
     read_openapi_enum,
     read_redaction,
+    read_settlement,
     read_text,
     read_tool_binding_paths,
     read_trace_attribute_names,
@@ -86,6 +87,7 @@ AXIS_DURATION_UNIT = "seconds"
 LABEL_NAME = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 NAME_SUFFIXES = ["countersTotalSuffix", "unitSuffix"]
 REDACTION_PLACES = ["marker", "matching", "keys", "values", "onSuspect", "stages"]
+SETTLEMENT_PLACES = ("meaning", "fromQueued", "fromRunning", "appliesTo", "reason", "note")
 REDACTION_STAGES = ["trace", "query", "output"]
 VALUE_BODY_PLACES = ["minLength", "charset", "skipSpaceBetween"]
 SUSPECT_SPAN_PLACES = ["byKey", "byValue", "spanBounds"]
@@ -339,7 +341,14 @@ def main() -> None:
     )
     chosen = ", ".join(f"{name} {stages[name]['onSuspect']}" for name in REDACTION_STAGES)
     print(f"가리는 자리 {len(REDACTION_STAGES)}개가 걸린 것을 어떻게 할지 적는다 — {chosen}")
+    settlement = read_settlement()
+    missing_settlement = [place for place in SETTLEMENT_PLACES if place not in settlement]
+    if missing_settlement:
+        raise SystemExit(
+            f"실행을 접는 조건에 있어야 할 자리가 없다 — {', '.join(missing_settlement)}"
+        )
     print(f"추적이 나르는 속성 {len(trace_attributes)}개를 계약이 갖는다")
+    print(f"실행을 접는 조건 {len(SETTLEMENT_PLACES)}개를 계약이 갖는다")
 
 
 if __name__ == "__main__":

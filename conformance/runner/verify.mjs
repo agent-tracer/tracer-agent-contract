@@ -19,6 +19,7 @@ import {
     readToolBindingPaths,
     readOpenApiEnum,
     readRedaction,
+    readSettlement,
     readTraceAttributeNames,
     readVersion,
     readWorkerSdkMetrics,
@@ -328,4 +329,11 @@ console.log(
     `가리는 자리 ${REDACTION_STAGES.length}개가 걸린 것을 어떻게 할지 적는다 — ` +
         REDACTION_STAGES.map((name) => `${name} ${stages[name].onSuspect}`).join(", "),
 );
+const settlement = readSettlement();
+const SETTLEMENT_PLACES = ["meaning", "fromQueued", "fromRunning", "appliesTo", "reason", "note"];
+const missingSettlement = SETTLEMENT_PLACES.filter((place) => settlement[place] === undefined);
+if (missingSettlement.length > 0) {
+    throw new Error(`실행을 접는 조건에 있어야 할 자리가 없다 — ${missingSettlement.join(", ")}`);
+}
 console.log(`추적이 나르는 속성 ${traceAttributes.length}개를 계약이 갖는다`);
+console.log(`실행을 접는 조건 ${SETTLEMENT_PLACES.length}개를 계약이 갖는다`);

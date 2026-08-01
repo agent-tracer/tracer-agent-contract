@@ -98,6 +98,11 @@ def read_redaction() -> Any:
     return read_json("agent/shared/redaction.json")
 
 
+def read_settlement() -> Any:
+    """실행을 종결로 접는 조건을 읽는다."""
+    return read_json("agent/shared/execution.vocabulary.json").get("settlement", {})
+
+
 def read_trace_attribute_names() -> list[str]:
     """추적이 나르는 속성의 이름을 선언한 순서로 낸다."""
     found: list[str] = []

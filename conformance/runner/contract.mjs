@@ -95,6 +95,11 @@ export function readRedaction() {
     return readJson("agent/shared/redaction.json");
 }
 
+/** 실행을 종결로 접는 조건을 읽는다. */
+export function readSettlement() {
+    return readJson("agent/shared/execution.vocabulary.json").settlement ?? {};
+}
+
 /** 추적이 나르는 속성의 이름을 선언한 순서로 낸다. */
 export function readTraceAttributeNames() {
     const found = [];
