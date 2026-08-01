@@ -1,12 +1,11 @@
-ALTER TABLE "experiment_executions"
-    ADD COLUMN IF NOT EXISTS "attempt_count" integer NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS "lease_owner" text,
-    ADD COLUMN IF NOT EXISTS "lease_expires_at" TIMESTAMP WITH TIME ZONE,
-    ADD COLUMN IF NOT EXISTS "job_id" text,
-    ADD COLUMN IF NOT EXISTS "trace_id" text,
-    ADD COLUMN IF NOT EXISTS "resolved_prompt_hash" text,
-    ADD COLUMN IF NOT EXISTS "duration_ms" integer,
-    ADD COLUMN IF NOT EXISTS "failure_reason" text;
+ALTER TABLE "experiment_executions" ADD COLUMN IF NOT EXISTS "attempt_count" integer NOT NULL DEFAULT 0;
+ALTER TABLE "experiment_executions" ADD COLUMN IF NOT EXISTS "lease_owner" text;
+ALTER TABLE "experiment_executions" ADD COLUMN IF NOT EXISTS "lease_expires_at" TIMESTAMP WITH TIME ZONE;
+ALTER TABLE "experiment_executions" ADD COLUMN IF NOT EXISTS "job_id" text;
+ALTER TABLE "experiment_executions" ADD COLUMN IF NOT EXISTS "trace_id" text;
+ALTER TABLE "experiment_executions" ADD COLUMN IF NOT EXISTS "resolved_prompt_hash" text;
+ALTER TABLE "experiment_executions" ADD COLUMN IF NOT EXISTS "duration_ms" integer;
+ALTER TABLE "experiment_executions" ADD COLUMN IF NOT EXISTS "failure_reason" text;
 
 -- 다음 실행을 고르는 조회와 만료된 lease 를 되찾는 조회가 이 두 색인을 탄다.
 CREATE INDEX IF NOT EXISTS "experiment_executions_experiment_status"
