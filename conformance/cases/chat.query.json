@@ -303,8 +303,8 @@
         "path": "/api/agent/chat/threads/{threadId}/executions/{executionId}/events",
         "contentType": "text/event-stream",
         "event": "snapshot",
-        "frameId": "draftSeq와 updatedAt을 콜론으로 이은 값이다",
         "frame": "snapshot",
+        "frameFields": "id 줄을 싣지 않는다. 프레임은 event와 data 두 줄이다",
         "replay": {
             "mode": "none",
             "lastEventId": "요청이 실어 보내도 무시하고 언제나 그 순간의 정본부터 낸다",
