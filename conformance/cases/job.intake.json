@@ -207,11 +207,13 @@
     ],
     "response": {
         "meaning": "접수와 조회와 취소가 모두 원장 행 하나를 같은 칸으로 낸다. 봉투를 벗긴 data를 대조하며 jobFields라 적은 자리는 그 칸 목록을, jobFields[]는 그 배열을, jobFields?는 그 모양이거나 비어 있음을 요구한다.",
+        "axis": "backend는 이 잡을 받은 접수구의 축이며 접수 본문은 그것을 싣지 않는다. 값의 목록은 OpenAPI의 AgentAxis가 소유하고 두 구현체가 그것을 읽는다",
         "jobFields": [
             "id",
             "userId",
             "kind",
             "executor",
+            "backend",
             "status",
             "attempts",
             "taskId",

@@ -326,6 +326,10 @@
     },
     "valueRules": {
         "meaning": "칸의 존재만 적으면 같은 칸에 다른 뜻의 값이 담겨도 통과한다. 화면이 값을 그대로 렌더하는 자리는 값 자체를 여기에 못 박는다",
+        "threadBackend": {
+            "meaning": "스레드의 backend는 그 스레드의 턴을 맡은 축이며 값의 목록은 OpenAPI의 AgentAxis가 소유한다",
+            "empty": "축이 아직 정해지지 않았으면 비어 있다"
+        },
         "stepContent": {
             "meaning": "궤적 한 줄의 content는 사람이 읽는 평문이다",
             "assistant": "모델이 낸 텍스트 자체다. 내용 블록 배열을 JSON으로 직렬화한 문자열이 아니다",

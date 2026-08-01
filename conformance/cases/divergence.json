@@ -6,8 +6,8 @@
             "id": "job.enqueue.credential",
             "area": "job",
             "summary": "접수 시점의 자격 검사가 다르다",
-            "canonical": "typescript",
-            "typescript": "사용자 설정에 모델 키가 없으면 접수를 거절하고, 로컬 CLI 자격으로 도는 경로는 이 검사를 건너뛴다",
+            "canonical": "ts",
+            "ts": "사용자 설정에 모델 키가 없으면 접수를 거절하고, 로컬 CLI 자격으로 도는 경로는 이 검사를 건너뛴다",
             "python": "접수가 실행 봉투를 먼저 받고 받지 못하면 502 job.envelope-unavailable로 거절한다",
             "resolution": "봉투 발급 시점을 한쪽으로 모은 뒤 거절 코드를 하나로 정한다"
         },
@@ -15,8 +15,8 @@
             "id": "job.workflow.shape",
             "area": "workflow",
             "summary": "잡 워크플로와 액티비티의 수가 다르다",
-            "canonical": "typescript",
-            "typescript": "잡 종류마다 워크플로 하나를 두고 준비·생성·종결 액티비티로 나누며 생성만 generate 큐로 보낸다",
+            "canonical": "ts",
+            "ts": "잡 종류마다 워크플로 하나를 두고 준비·생성·종결 액티비티로 나누며 생성만 generate 큐로 보낸다",
             "python": "셋을 agentJobWorkflow 하나가 받고 준비와 종결을 실행 액티비티 안에서 처리하며 그 하나를 generate 큐로 보낸다",
             "resolution": "궤적 단계 경계는 이미 같다. 남은 것은 워크플로와 액티비티의 수이며 재시도 경계가 그것에 매여 있다"
         },
@@ -25,11 +25,11 @@
             "area": "agent",
             "summary": "실행 회수 케이스를 한 축만 돌린다",
             "canonical": "python",
-            "typescript": "판정이 TypeORM 의 SQL 이고 두 배포 단위에 나뉘어 있다. SQL 을 실행할 자리가 없어 케이스를 돌리지 않는다",
+            "ts": "판정이 TypeORM 의 SQL 이고 두 배포 단위에 나뉘어 있다. SQL 을 실행할 자리가 없어 케이스를 돌리지 않는다",
             "python": "sqlite 대역 원장이 같은 SQL 을 실행해 여덟 창구의 케이스 마흔둘을 전부 돌린다",
-            "resolution": "TypeScript 가 SQL 을 실행할 자리를 갖거나, 판정을 SQL 밖으로 꺼내 두 축이 같은 코드로 판정한다"
+            "resolution": "ts 축이 SQL 을 실행할 자리를 갖거나, 판정을 SQL 밖으로 꺼내 두 축이 같은 코드로 판정한다"
         }
     ],
-    "canonical": "typescript가 정본이다. 항목의 canonical이 python이면 SDK나 LangGraph가 강제해 정본이 따라가야 하는 자리다.",
+    "canonical": "ts가 정본이다. 항목의 canonical이 python이면 SDK나 LangGraph가 강제해 정본이 따라가야 하는 자리다.",
     "unservedPaths": "갈라진 구현체가 아직 열지 않은 경로의 접두사이며 도는 서버의 표면을 대조하는 검사가 이 자리만 비켜 준다. 항목을 지울 때 그 비켜 줌도 함께 사라진다."
 }

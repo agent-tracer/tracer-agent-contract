@@ -1381,14 +1381,25 @@ components:
       enum: [temporal, local]
       description: 잡 하나를 실제로 태운 주체이며 워크플로가 도는 것과 플러그인이 궤적을 넘기는 것을 가른다
 
+    AgentAxis:
+      type: string
+      enum: [ts, python]
+      description: >-
+        실행 하나를 태운 구현체를 가리키는 축이며 배포가 선언하고 사람이 화면에서 고르는 이름이
+        그대로 값이다. 워크플로와 로컬 실행기를 가르는 JobExecutor 와 다른 구분이므로 축의
+        값에는 local 이 없다.
+
     Job:
       type: object
-      description: 잡 원장 행 하나이며 접수와 조회와 취소가 모두 이 모양을 낸다
+      description: >-
+        잡 원장 행 하나이며 접수와 조회와 취소가 모두 이 모양을 낸다. backend 는 접수 본문이
+        싣는 값이 아니라 그 요청을 받은 접수구가 정하는 값이다.
       required:
         - id
         - userId
         - kind
         - executor
+        - backend
         - status
         - attempts
         - taskId
@@ -1407,6 +1418,8 @@ components:
           $ref: "#/components/schemas/JobLedgerKind"
         executor:
           $ref: "#/components/schemas/JobExecutor"
+        backend:
+          $ref: "#/components/schemas/AgentAxis"
         status:
           $ref: "#/components/schemas/JobStatus"
         attempts:
@@ -1581,8 +1594,10 @@ components:
           type: [string, "null"]
           description: 창을 넘긴 이력을 접어 둔 요약이며 접을 것이 없으면 비어 있다
         backend:
-          type: [string, "null"]
-          description: 이 스레드의 턴을 맡은 구현체로 상류가 고른 값이며 고르지 않았으면 비어 있다
+          oneOf:
+            - $ref: "#/components/schemas/AgentAxis"
+            - type: "null"
+          description: 이 스레드의 턴을 맡은 축이며 아직 정해지지 않았으면 비어 있다
         createdAt:
           $ref: "#/components/schemas/Timestamp"
         updatedAt:
