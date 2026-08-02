@@ -33,3 +33,32 @@ labels:
     labelNameScope: >-
       워커가 여는 지표 창구에 직접 싣는 이름이다. 이 창구는 수집기를 지나지 않고
       Prometheus 가 그대로 긁으므로 점이 든 이름은 본문 전체의 파싱을 실패시킨다.
+
+executionMetrics:
+  meaning: >-
+    실행 하나가 예산을 어디에 썼고 무엇에 걸렸는지를 드러내는 지표다. 궤적은 무슨 일이
+    있었는지를 실행 하나 단위로 남기고, 이 넷은 그것을 축과 에이전트 단위로 모아 프롬프트를
+    고쳤을 때 비용이 어디로 갔는지를 사후에 읽게 한다.
+  instruments:
+    - name: agent.probe.budget.exhaustion_ratio
+      kind: histogram
+      unit: ratio
+      labels: [agent, probe]
+      records: 전문가 하나가 배분받은 몫 가운데 실제로 쓴 비율이며 1 에 가까울수록 그 축의 몫이 모자랐다는 뜻이다
+    - name: agent.redispatch.rounds
+      kind: histogram
+      unit: rounds
+      labels: [agent]
+      records: 조율자가 종합 대신 전문가를 다시 부른 라운드 수이며 0 이 대부분이어야 정상이다
+    - name: agent.validation.failure
+      kind: counter
+      unit: executions
+      labels: [agent, repaired]
+      records: 결정론 검증이 산출을 거절한 실행이며 repaired 가 그 뒤 수리가 살렸는지를 가른다
+    - name: agent.model.landed
+      kind: counter
+      unit: executions
+      labels: [agent]
+      records: 예산이 다해 도구를 거두고 결론만 받은 실행이며 잦아지면 그 에이전트의 예산이 작다는 뜻이다
+  note: >-
+    라벨의 축 이름은 이 파일의 labels 절이 이미 소유하므로 여기에는 그 밖의 라벨만 적는다.

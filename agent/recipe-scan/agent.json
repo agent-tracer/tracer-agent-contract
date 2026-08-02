@@ -1,5 +1,30 @@
 {
-    "id": "recipe-scan",
-    "jobKind": "recipe.scan",
-    "route": "/agents/recipe-scan"
+  "id": "recipe-scan",
+  "jobKind": "recipe.scan",
+  "route": "/agents/recipe-scan",
+  "anchor": {
+    "meaning": "스캔이 근거를 캘 수 있는 태스크의 자격이다. 자격이 없는 앵커에 전문가를 파견하면 값만 쓰고 후보가 나오지 않으므로 접수가 먼저 거절한다.",
+    "requires": {
+      "origin": {
+        "excludes": [
+          "server-sdk"
+        ],
+        "reason": "에이전트가 스스로 만든 태스크는 사용자의 작업이 아니라 이 서비스의 활동이다."
+      },
+      "root": {
+        "value": true,
+        "reason": "부모가 있는 태스크는 그 부모의 조각이며 스캔은 작업 하나를 통째로 본다."
+      },
+      "status": {
+        "oneOf": [
+          "completed"
+        ],
+        "reason": "아직 도는 태스크는 이벤트가 더 붙으므로 지금 캔 근거가 그 작업을 대표하지 못한다."
+      }
+    },
+    "rejection": {
+      "subtype": "invalid_request_error",
+      "reason": "anchor.ineligible"
+    }
+  }
 }
