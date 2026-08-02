@@ -12,6 +12,7 @@ import {
     readAgentTools,
     readCase,
     readIdentifierRules,
+    readRunObservationRules,
     readDeclaredHttpPaths,
     readAxisLabelNames,
     readChatLedgerAxisIndex,
@@ -80,6 +81,7 @@ const THREAD_SIGNAL_ARGS = ["executionId"];
 const THREAD_ACTIVITIES = ["getNextChatExecution"];
 const TOOL_SURFACES = ["read", "agentRead", "memory", "confirm"];
 const PROVIDER_REQUEST_RULES = ["unit", "source", "absent", "notSession", "manyCalls"];
+const TTFT_RULES = ["unit", "source", "absent", "notDuration", "noEstimate"];
 const NON_AXIS_WORDS = ["claude-sdk", "typescript"];
 const AXIS_DURATION_UNIT = "seconds";
 // 지표 창구는 수집기를 지나지 않으므로 Prometheus 의 고전 라벨 이름 규칙을 그대로 받는다.
@@ -381,6 +383,7 @@ console.log(
 );
 const settlement = readSettlement();
 const identifierRules = readIdentifierRules();
+const runObservationRules = readRunObservationRules();
 const SETTLEMENT_PLACES = ["meaning", "fromQueued", "fromRunning", "appliesTo", "reason", "note"];
 const missingSettlement = SETTLEMENT_PLACES.filter((place) => settlement[place] === undefined);
 if (missingSettlement.length > 0) {
@@ -393,6 +396,11 @@ if (missingProviderRequest.length > 0) {
         `공급자 요청 식별자의 값 규칙에 있어야 할 자리가 없다 — ${missingProviderRequest.join(", ")}`,
     );
 }
+const ttft = runObservationRules.ttftMs ?? {};
+const missingTtft = TTFT_RULES.filter((rule) => ttft[rule] === undefined);
+if (missingTtft.length > 0) {
+    throw new Error(`첫 토큰까지의 시간에 관한 규칙에 있어야 할 자리가 없다 — ${missingTtft.join(", ")}`);
+}
 console.log(`추적이 나르는 속성 ${traceAttributes.length}개를 계약이 갖는다`);
 const scopeToken = readScopeToken();
 const SCOPE_TOKEN_PLACES = ["meaning", "prefix", "prefixReason", "shape", "payload", "signature", "secret", "lifetime", "precedence"];
@@ -402,6 +410,7 @@ if (missingScopeToken.length > 0) {
 }
 console.log(`실행을 접는 조건 ${SETTLEMENT_PLACES.length}개를 계약이 갖는다`);
 console.log(`공급자 요청 식별자의 값 규칙 ${PROVIDER_REQUEST_RULES.length}개를 계약이 갖는다`);
+console.log(`첫 토큰까지의 시간에 관한 규칙 ${TTFT_RULES.length}개를 계약이 갖는다`);
 console.log(
     `실행에 매인 자격은 ${scopeToken.prefix} 로 시작해 ${scopeToken.payload.fields.length}개 칸을 ` +
         `${scopeToken.signature.algorithm} 으로 서명한다`,

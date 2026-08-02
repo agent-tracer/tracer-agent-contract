@@ -30,6 +30,7 @@ from contract import (
     read_redaction,
     read_scope_token,
     read_identifier_rules,
+    read_run_observation_rules,
     read_settlement,
     read_text,
     read_tool_binding_paths,
@@ -93,6 +94,7 @@ THREAD_SIGNAL_ARGS = ["executionId"]
 THREAD_ACTIVITIES = ["getNextChatExecution"]
 TOOL_SURFACES = ["read", "agentRead", "memory", "confirm"]
 PROVIDER_REQUEST_RULES = ["unit", "source", "absent", "notSession", "manyCalls"]
+TTFT_RULES = ["unit", "source", "absent", "notDuration", "noEstimate"]
 NON_AXIS_WORDS = ["claude-sdk", "typescript"]
 AXIS_DURATION_UNIT = "seconds"
 # 지표 창구는 수집기를 지나지 않으므로 Prometheus 의 고전 라벨 이름 규칙을 그대로 받는다.
@@ -422,6 +424,12 @@ def main() -> None:
             "공급자 요청 식별자의 값 규칙에 있어야 할 자리가 없다 — "
             f"{', '.join(missing_provider_request)}"
         )
+    ttft = read_run_observation_rules().get("ttftMs", {})
+    missing_ttft = [rule for rule in TTFT_RULES if rule not in ttft]
+    if missing_ttft:
+        raise SystemExit(
+            f"첫 토큰까지의 시간에 관한 규칙에 있어야 할 자리가 없다 — {', '.join(missing_ttft)}"
+        )
     print(f"추적이 나르는 속성 {len(trace_attributes)}개를 계약이 갖는다")
     scope_token = read_scope_token()
     missing_scope = [place for place in SCOPE_TOKEN_PLACES if place not in scope_token]
@@ -429,6 +437,7 @@ def main() -> None:
         raise SystemExit(f"실행 자격의 모양에 있어야 할 자리가 없다 — {', '.join(missing_scope)}")
     print(f"실행을 접는 조건 {len(SETTLEMENT_PLACES)}개를 계약이 갖는다")
     print(f"공급자 요청 식별자의 값 규칙 {len(PROVIDER_REQUEST_RULES)}개를 계약이 갖는다")
+    print(f"첫 토큰까지의 시간에 관한 규칙 {len(TTFT_RULES)}개를 계약이 갖는다")
     print(
         f"실행에 매인 자격은 {scope_token['prefix']} 로 시작해 "
         f"{len(scope_token['payload']['fields'])}개 칸을 "

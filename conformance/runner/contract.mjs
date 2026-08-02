@@ -131,6 +131,11 @@ export function readIdentifierRules() {
     return readJson("agent/shared/execution.vocabulary.json").identifierRules ?? {};
 }
 
+/** 실행 관측 값마다의 규칙을 읽는다. */
+export function readRunObservationRules() {
+    return readJson("agent/shared/execution.vocabulary.json").runObservationRules ?? {};
+}
+
 /** 추적이 나르는 속성의 이름을 선언한 순서로 낸다. */
 export function readTraceAttributeNames() {
     const found = [];

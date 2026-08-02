@@ -3,33 +3,6 @@
     "meaning": "Python 구현이 아직 정본을 따라가지 못한 자리의 목록이다. 양쪽 다 옳을 수 있는 차이가 아니라 좁혀야 할 대상이며, 계약이 목표 상태를 적으면 두 구현체가 동시에 실패해 무엇이 문제인지 보이지 않으므로 갈라진 곳은 갈라진 대로 여기 적는다. 이 목록이 다음 단계의 백로그다.",
     "items": [
         {
-            "id": "job.enqueue.credential",
-            "area": "job",
-            "summary": "접수 시점의 자격 검사가 다르다",
-            "canonical": "ts",
-            "ts": "사용자 설정에 모델 키가 없으면 접수를 거절하고, 로컬 CLI 자격으로 도는 경로는 이 검사를 건너뛴다",
-            "python": "접수가 실행 봉투를 먼저 받고 받지 못하면 502 job.envelope-unavailable로 거절한다",
-            "resolution": "봉투 발급 시점을 한쪽으로 모은 뒤 거절 코드를 하나로 정한다"
-        },
-        {
-            "id": "job.workflow.shape",
-            "area": "workflow",
-            "summary": "잡 워크플로와 액티비티의 수가 다르다",
-            "canonical": "ts",
-            "ts": "잡 종류마다 워크플로 하나를 두고 준비·생성·종결 액티비티로 나누며 생성만 generate 큐로 보낸다",
-            "python": "셋을 agentJobWorkflow 하나가 받고 준비와 종결을 실행 액티비티 안에서 처리하며 그 하나를 generate 큐로 보낸다",
-            "resolution": "궤적 단계 경계는 이미 같다. 남은 것은 워크플로와 액티비티의 수이며 재시도 경계가 그것에 매여 있다"
-        },
-        {
-            "id": "chat.execution.cases",
-            "area": "agent",
-            "summary": "실행 회수 케이스를 한 축만 돌린다",
-            "canonical": "python",
-            "ts": "판정이 TypeORM 의 QueryBuilder 이고 두 배포 단위에 나뉘어 있다. sqlite 구동기가 없어 케이스를 돌릴 자리가 없다",
-            "python": "sqlite 대역 원장이 같은 SQL 을 실행해 여덟 창구의 케이스 마흔둘을 전부 돌린다",
-            "resolution": "접는 조건은 execution.vocabulary.json 의 settlement 가 이미 갖는다. 남은 것은 그 조건을 누가 판정하는가이며, ts 가 sqlite 구동기를 더해 같은 SQL 을 돌리거나 두 축이 판정을 순수 규칙으로 꺼내 케이스를 그 규칙에 물린다. 규칙을 따로 두면 SQL 과 어긋날 수 있으므로 어느 쪽을 고르든 한 벌만 남긴다"
-        },
-        {
             "id": "agent.context.editing",
             "area": "agent",
             "summary": "실행 도중 쌓인 오래된 도구 결과를 비우는 주체가 한 축에만 있다",
@@ -46,6 +19,42 @@
             "ts": "에이전트 SDK 의 질의 옵션에 대체 모델을 그대로 넘긴다. SDK 안에서 재시도와 대체가 몇 단계로 나뉘는지, 어떤 오류에서 넘어가는지는 구현체 밖의 동작이라 조회할 수 없다",
             "python": "ModelRetryMiddleware 가 과부하와 속도 제한과 연결 오류만 같은 모델로 재시도하고, 소진된 뒤에만 바깥의 FallbackModelMiddleware 가 대체 모델로 한 번 넘어간다. 예산 초과와 출력 절단과 취소는 둘 다 건드리지 않고 그대로 재전파된다",
             "resolution": "SDK 축이 재시도와 대체의 2단 절차와 그 판정 오류 목록을 관측 가능하게 노출하거나, 계약이 재시도 대상 오류의 어휘와 재시도 횟수를 정해 두 축이 같은 절차를 갖도록 좁힌다"
+        },
+        {
+            "id": "agent.run.ttft",
+            "area": "agent",
+            "summary": "첫 토큰까지의 시간을 한 축만 관측 원장에 적는다",
+            "canonical": "ts",
+            "ts": "에이전트 SDK 의 결과 메시지가 실행마다 ttft_ms 를 내므로 그 값을 그대로 관측에 적는다",
+            "python": "실행 체인이 초안 콜백을 받는 chat 에서만 스트리밍이 켜지고 잡은 한 번에 받아 오므로 아직 재지 않는다",
+            "resolution": "python 이 스트리밍이 켜진 실행에서 첫 조각의 시각으로 재고 그 밖의 실행은 계약이 정한 대로 비운다"
+        },
+        {
+            "id": "chat.execution.cases",
+            "area": "agent",
+            "summary": "실행 회수 케이스를 한 축만 돌린다",
+            "canonical": "python",
+            "ts": "판정이 TypeORM 의 QueryBuilder 이고 두 배포 단위에 나뉘어 있다. sqlite 구동기가 없어 케이스를 돌릴 자리가 없다",
+            "python": "sqlite 대역 원장이 같은 SQL 을 실행해 여덟 창구의 케이스 마흔둘을 전부 돌린다",
+            "resolution": "접는 조건은 execution.vocabulary.json 의 settlement 가 이미 갖는다. 남은 것은 그 조건을 누가 판정하는가이며, ts 가 sqlite 구동기를 더해 같은 SQL 을 돌리거나 두 축이 판정을 순수 규칙으로 꺼내 케이스를 그 규칙에 물린다. 규칙을 따로 두면 SQL 과 어긋날 수 있으므로 어느 쪽을 고르든 한 벌만 남긴다"
+        },
+        {
+            "id": "job.enqueue.credential",
+            "area": "job",
+            "summary": "접수 시점의 자격 검사가 다르다",
+            "canonical": "ts",
+            "ts": "사용자 설정에 모델 키가 없으면 접수를 거절하고, 로컬 CLI 자격으로 도는 경로는 이 검사를 건너뛴다",
+            "python": "접수가 실행 봉투를 먼저 받고 받지 못하면 502 job.envelope-unavailable로 거절한다",
+            "resolution": "봉투 발급 시점을 한쪽으로 모은 뒤 거절 코드를 하나로 정한다"
+        },
+        {
+            "id": "job.workflow.shape",
+            "area": "workflow",
+            "summary": "잡 워크플로와 액티비티의 수가 다르다",
+            "canonical": "ts",
+            "ts": "잡 종류마다 워크플로 하나를 두고 준비·생성·종결 액티비티로 나누며 생성만 generate 큐로 보낸다",
+            "python": "셋을 agentJobWorkflow 하나가 받고 준비와 종결을 실행 액티비티 안에서 처리하며 그 하나를 generate 큐로 보낸다",
+            "resolution": "궤적 단계 경계는 이미 같다. 남은 것은 워크플로와 액티비티의 수이며 재시도 경계가 그것에 매여 있다"
         },
         {
             "id": "recipe.scan.anchor",

@@ -137,6 +137,11 @@ def read_identifier_rules() -> Any:
     return read_json("agent/shared/execution.vocabulary.json").get("identifierRules", {})
 
 
+def read_run_observation_rules() -> Any:
+    """실행 관측 값마다의 규칙을 읽는다."""
+    return read_json("agent/shared/execution.vocabulary.json").get("runObservationRules", {})
+
+
 def read_trace_attribute_names() -> list[str]:
     """추적이 나르는 속성의 이름을 선언한 순서로 낸다."""
     found: list[str] = []
