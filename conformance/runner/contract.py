@@ -15,6 +15,7 @@ AGENT_FILES = ["agent.json", "prompt.json", "tool.json", "output.json", "cases.j
 AXIS_SURFACE_ROOTS = ["agent", "conformance/cases", "db", "http", "wire", "workflow"]
 AXIS_SURFACE_SUFFIXES = (".json", ".yaml", ".md", ".sql")
 JOB_AXIS_COLUMN_PATTERN = r'ALTER TABLE "ai_jobs" ADD COLUMN[^;]*"backend"[^;]*;'
+CHAT_AXIS_INDEX_PATTERN = r'CREATE INDEX[^;]*"chat_executions"[^;]*"requested_backend"[^;]*;'
 
 
 def contract_root() -> Path:
@@ -59,6 +60,29 @@ def read_job_ledger_axis_column() -> str | None:
         if declared is not None:
             return declared.group(0)
     return None
+
+
+def read_chat_ledger_axis_index() -> str | None:
+    """대화 실행 원장이 축으로 대기 줄을 가르는 색인 선언을 낸다."""
+    for name in list_migrations():
+        declared = re.search(CHAT_AXIS_INDEX_PATTERN, read_text(f"db/migrations/{name}"), re.DOTALL)
+        if declared is not None:
+            return declared.group(0)
+    return None
+
+
+def read_chat_thread_queue() -> dict[str, Any]:
+    """스레드 워크플로가 받는 신호의 인자와 부르는 액티비티의 이름을 낸다."""
+    declared = read_text("workflow/queues.yaml")
+    found = re.search(r"^ {2}chatThread:\n(?: {4}.*\n| *\n)*", declared, re.MULTILINE)
+    clause = "" if found is None else found.group(0)
+    block = re.search(r"^ {4}activities:\n(?: {6}.*\n| *\n)*", clause, re.MULTILINE)
+    activities = "" if block is None else block.group(0)
+    args = re.search(r"^ {8}args: \[(.*)\]$", clause, re.MULTILINE)
+    return {
+        "signalArgs": None if args is None else args.group(1).split(", "),
+        "activities": re.findall(r"^ {6}- name: (\S+)$", activities, re.MULTILINE),
+    }
 
 
 def read_worker_sdk_metrics() -> dict[str, Any]:

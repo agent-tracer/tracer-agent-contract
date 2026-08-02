@@ -10,6 +10,7 @@ const AGENT_FILES = ["agent.json", "prompt.json", "tool.json", "output.json", "c
 const AXIS_SURFACE_ROOTS = ["agent", "conformance/cases", "db", "http", "wire", "workflow"];
 const AXIS_SURFACE_SUFFIXES = [".json", ".yaml", ".md", ".sql"];
 const JOB_AXIS_COLUMN_PATTERN = /ALTER TABLE "ai_jobs" ADD COLUMN[^;]*"backend"[^;]*;/;
+const CHAT_AXIS_INDEX_PATTERN = /CREATE INDEX[^;]*"chat_executions"[^;]*"requested_backend"[^;]*;/s;
 
 /** 계약 뿌리의 절대 경로이며 스위트를 붙인 구현체는 이 아래만 읽는다. */
 export function contractRoot() {
@@ -50,6 +51,26 @@ export function readJobLedgerAxisColumn() {
         if (declared !== null) return declared[0];
     }
     return null;
+}
+
+/** 대화 실행 원장이 축으로 대기 줄을 가르는 색인 선언을 낸다. */
+export function readChatLedgerAxisIndex() {
+    for (const name of listMigrations()) {
+        const declared = CHAT_AXIS_INDEX_PATTERN.exec(readText(`db/migrations/${name}`));
+        if (declared !== null) return declared[0];
+    }
+    return null;
+}
+
+/** 스레드 워크플로가 받는 신호의 인자와 부르는 액티비티의 이름을 낸다. */
+export function readChatThreadQueue() {
+    const declared = readText("workflow/queues.yaml");
+    const clause = /^ {2}chatThread:\n(?: {4}.*\n| *\n)*/m.exec(declared)?.[0] ?? "";
+    const activities = /^ {4}activities:\n(?: {6}.*\n| *\n)*/m.exec(clause)?.[0] ?? "";
+    return {
+        signalArgs: /^ {8}args: \[(.*)\]$/m.exec(clause)?.[1].split(", ") ?? null,
+        activities: [...activities.matchAll(/^ {6}- name: (\S+)$/gm)].map((found) => found[1]),
+    };
 }
 
 /** migration 파일의 이름을 번호 순서로 낸다. */

@@ -22,6 +22,8 @@ from contract import (
     read_case,
     read_declared_http_paths,
     read_axis_label_names,
+    read_chat_ledger_axis_index,
+    read_chat_thread_queue,
     read_job_ledger_axis_column,
     read_json,
     read_openapi_enum,
@@ -85,6 +87,8 @@ STANDALONE = [
     "http/tracer-dependency.openapi.yaml",
 ]
 AXIS_VALUES = ["ts", "python"]
+THREAD_SIGNAL_ARGS = ["executionId"]
+THREAD_ACTIVITIES = ["getNextChatExecution"]
 NON_AXIS_WORDS = ["claude-sdk", "typescript"]
 AXIS_DURATION_UNIT = "seconds"
 # 지표 창구는 수집기를 지나지 않으므로 Prometheus 의 고전 라벨 이름 규칙을 그대로 받는다.
@@ -166,6 +170,8 @@ def main() -> None:
         if word in read_text(surface).lower()
     ]
     axis_column = read_job_ledger_axis_column()
+    chat_axis_index = read_chat_ledger_axis_index()
+    thread_queue = read_chat_thread_queue()
     worker_metrics = read_worker_sdk_metrics()
     axis_label = read_axis_label_names()
 
@@ -247,6 +253,22 @@ def main() -> None:
         raise SystemExit("migration 이 잡 원장에 축의 칸을 더하지 않는다 — ai_jobs 에 backend 가 없다")
     if "NOT NULL" not in axis_column:
         raise SystemExit(f"잡 원장의 축은 비어 있을 수 없다 — {axis_column}")
+    if chat_axis_index is None:
+        raise SystemExit(
+            "migration 이 대화 실행 원장의 대기 줄을 축으로 가르지 않는다 — requested_backend 색인이 없다"
+        )
+    if (thread_queue["signalArgs"] or []) != THREAD_SIGNAL_ARGS:
+        declared = ", ".join(thread_queue["signalArgs"] or ["없음"])
+        raise SystemExit(
+            "스레드 시그널은 대기 줄이 움직였다는 포인터 하나만 나른다 — "
+            f"{', '.join(THREAD_SIGNAL_ARGS)} 여야 하는데 {declared} 다"
+        )
+    if thread_queue["activities"] != THREAD_ACTIVITIES:
+        declared = ", ".join(thread_queue["activities"]) or "없음"
+        raise SystemExit(
+            "대기 줄의 주인이 원장이므로 스레드 워크플로가 그것을 읽는 창구를 계약이 적어야 한다 — "
+            f"{', '.join(THREAD_ACTIVITIES)} 여야 하는데 {declared} 다"
+        )
     if worker_metrics["port"] is None or worker_metrics["durationUnit"] != AXIS_DURATION_UNIT:
         port = worker_metrics["port"] or "없음"
         unit = worker_metrics["durationUnit"] or "없음"
@@ -343,6 +365,11 @@ def main() -> None:
     print(f"축의 이름 {len(axis)}개를 계약이 한 벌로 갖는다 — {', '.join(axis)}")
     print(f"축의 이름을 담을 수 있는 자리 {len(axis_surfaces)}개가 그 둘만 쓴다")
     print(f"잡 원장이 축의 칸을 갖는다 — {axis_column}")
+    print(
+        "대화 실행의 대기 줄은 원장이 갖고 축으로 갈린다 — "
+        f"시그널 {', '.join(thread_queue['signalArgs'])} · "
+        f"액티비티 {', '.join(thread_queue['activities'])}"
+    )
     print(
         f"워커 SDK 지표 창구는 포트 {worker_metrics['port']} 를 열고 "
         f"{worker_metrics['durationUnit']} 단위로 낸다"

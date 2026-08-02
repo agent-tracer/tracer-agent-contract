@@ -13,6 +13,8 @@ import {
     readCase,
     readDeclaredHttpPaths,
     readAxisLabelNames,
+    readChatLedgerAxisIndex,
+    readChatThreadQueue,
     readJobLedgerAxisColumn,
     readJson,
     readText,
@@ -72,6 +74,8 @@ const STREAM_NESTED = {
 };
 const STREAM_PLACES = STREAM_KEYS.length + Object.values(STREAM_NESTED).flat().length;
 const AXIS_VALUES = ["ts", "python"];
+const THREAD_SIGNAL_ARGS = ["executionId"];
+const THREAD_ACTIVITIES = ["getNextChatExecution"];
 const NON_AXIS_WORDS = ["claude-sdk", "typescript"];
 const AXIS_DURATION_UNIT = "seconds";
 // 지표 창구는 수집기를 지나지 않으므로 Prometheus 의 고전 라벨 이름 규칙을 그대로 받는다.
@@ -153,6 +157,8 @@ const strayAxisNames = axisSurfaces.flatMap((surface) => {
     return NON_AXIS_WORDS.filter((word) => declared.includes(word)).map((word) => `${surface} 의 ${word}`);
 });
 const axisColumn = readJobLedgerAxisColumn();
+const chatAxisIndex = readChatLedgerAxisIndex();
+const threadQueue = readChatThreadQueue();
 const workerMetrics = readWorkerSdkMetrics();
 const axisLabel = readAxisLabelNames();
 
@@ -220,6 +226,21 @@ if (axisColumn === null) {
 }
 if (!axisColumn.includes("NOT NULL")) {
     throw new Error(`잡 원장의 축은 비어 있을 수 없다 — ${axisColumn}`);
+}
+if (chatAxisIndex === null) {
+    throw new Error("migration 이 대화 실행 원장의 대기 줄을 축으로 가르지 않는다 — requested_backend 색인이 없다");
+}
+if ((threadQueue.signalArgs ?? []).join() !== THREAD_SIGNAL_ARGS.join()) {
+    throw new Error(
+        `스레드 시그널은 대기 줄이 움직였다는 포인터 하나만 나른다 — ` +
+            `${THREAD_SIGNAL_ARGS.join(", ")} 여야 하는데 ${(threadQueue.signalArgs ?? ["없음"]).join(", ")} 다`,
+    );
+}
+if (threadQueue.activities.join() !== THREAD_ACTIVITIES.join()) {
+    throw new Error(
+        `대기 줄의 주인이 원장이므로 스레드 워크플로가 그것을 읽는 창구를 계약이 적어야 한다 — ` +
+            `${THREAD_ACTIVITIES.join(", ")} 여야 하는데 ${threadQueue.activities.join(", ") || "없음"} 다`,
+    );
 }
 if (workerMetrics.port === null || workerMetrics.durationUnit !== AXIS_DURATION_UNIT) {
     throw new Error(
@@ -315,6 +336,7 @@ console.log(`실행 스트림 절의 자리 ${STREAM_PLACES}개를 대조한다`
 console.log(`축의 이름 ${axis.length}개를 계약이 한 벌로 갖는다 — ${axis.join(", ")}`);
 console.log(`축의 이름을 담을 수 있는 자리 ${axisSurfaces.length}개가 그 둘만 쓴다`);
 console.log(`잡 원장이 축의 칸을 갖는다 — ${axisColumn}`);
+console.log(`대화 실행의 대기 줄은 원장이 갖고 축으로 갈린다 — 시그널 ${threadQueue.signalArgs.join(", ")} · 액티비티 ${threadQueue.activities.join(", ")}`);
 console.log(
     `워커 SDK 지표 창구는 포트 ${workerMetrics.port} 를 열고 ${workerMetrics.durationUnit} 단위로 낸다`,
 );
