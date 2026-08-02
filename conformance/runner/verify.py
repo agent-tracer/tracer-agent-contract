@@ -51,6 +51,7 @@ SHARED = [
     "error.subtypes.json",
     "execution.vocabulary.json",
     "execution.budget.json",
+    "model.envelope.json",
     "redaction.json",
     "scope.token.json",
 ]
