@@ -11,6 +11,7 @@ import {
     readAgentPrompt,
     readAgentTools,
     readCase,
+    readIdentifierRules,
     readDeclaredHttpPaths,
     readAxisLabelNames,
     readChatLedgerAxisIndex,
@@ -78,6 +79,7 @@ const AXIS_VALUES = ["ts", "python"];
 const THREAD_SIGNAL_ARGS = ["executionId"];
 const THREAD_ACTIVITIES = ["getNextChatExecution"];
 const TOOL_SURFACES = ["read", "agentRead", "memory", "confirm"];
+const PROVIDER_REQUEST_RULES = ["unit", "source", "absent", "notSession", "manyCalls"];
 const NON_AXIS_WORDS = ["claude-sdk", "typescript"];
 const AXIS_DURATION_UNIT = "seconds";
 // 지표 창구는 수집기를 지나지 않으므로 Prometheus 의 고전 라벨 이름 규칙을 그대로 받는다.
@@ -378,10 +380,18 @@ console.log(
         REDACTION_STAGES.map((name) => `${name} ${stages[name].onSuspect}`).join(", "),
 );
 const settlement = readSettlement();
+const identifierRules = readIdentifierRules();
 const SETTLEMENT_PLACES = ["meaning", "fromQueued", "fromRunning", "appliesTo", "reason", "note"];
 const missingSettlement = SETTLEMENT_PLACES.filter((place) => settlement[place] === undefined);
 if (missingSettlement.length > 0) {
     throw new Error(`실행을 접는 조건에 있어야 할 자리가 없다 — ${missingSettlement.join(", ")}`);
+}
+const providerRequest = identifierRules.providerRequestId ?? {};
+const missingProviderRequest = PROVIDER_REQUEST_RULES.filter((rule) => providerRequest[rule] === undefined);
+if (missingProviderRequest.length > 0) {
+    throw new Error(
+        `공급자 요청 식별자의 값 규칙에 있어야 할 자리가 없다 — ${missingProviderRequest.join(", ")}`,
+    );
 }
 console.log(`추적이 나르는 속성 ${traceAttributes.length}개를 계약이 갖는다`);
 const scopeToken = readScopeToken();
@@ -391,6 +401,7 @@ if (missingScopeToken.length > 0) {
     throw new Error(`실행 자격의 모양에 있어야 할 자리가 없다 — ${missingScopeToken.join(", ")}`);
 }
 console.log(`실행을 접는 조건 ${SETTLEMENT_PLACES.length}개를 계약이 갖는다`);
+console.log(`공급자 요청 식별자의 값 규칙 ${PROVIDER_REQUEST_RULES.length}개를 계약이 갖는다`);
 console.log(
     `실행에 매인 자격은 ${scopeToken.prefix} 로 시작해 ${scopeToken.payload.fields.length}개 칸을 ` +
         `${scopeToken.signature.algorithm} 으로 서명한다`,

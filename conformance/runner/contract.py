@@ -132,6 +132,11 @@ def read_settlement() -> Any:
     return read_json("agent/shared/execution.vocabulary.json").get("settlement", {})
 
 
+def read_identifier_rules() -> Any:
+    """식별자마다의 값 규칙을 읽는다."""
+    return read_json("agent/shared/execution.vocabulary.json").get("identifierRules", {})
+
+
 def read_trace_attribute_names() -> list[str]:
     """추적이 나르는 속성의 이름을 선언한 순서로 낸다."""
     found: list[str] = []
