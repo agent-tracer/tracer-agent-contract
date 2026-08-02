@@ -271,8 +271,8 @@
             "args": {}
         },
         "remember_fact": {
-            "mutation": false,
-            "description": "Remember a durable fact about this user that should persist across ALL of their chat threads — a stated preference or a stable detail about how they work, not a one-off detail of the current task. Pass a short slug key (for example \"preferred_language\") and the content; remembering the same key again overwrites it. This runs immediately and is NOT a proposal: it is saved at once and the user sees it happen, so you may say plainly that you have remembered it.",
+            "mutation": true,
+            "description": "Remember a durable fact about this user that should persist across ALL of their chat threads — a stated preference or a stable detail about how they work, not a one-off detail of the current task. Pass a short slug key (for example \"preferred_language\") and the content; remembering the same key again overwrites it. This outlives the current thread, so it is proposed and saved only after the user approves it; say that you have proposed remembering it, not that you have remembered it.",
             "args": {
                 "key": {
                     "type": "string",
@@ -1640,7 +1640,7 @@
             "remember_fact": {
                 "method": "PUT",
                 "path": "/api/agent/chat/memories/{key}",
-                "gate": "none",
+                "gate": "confirm",
                 "pathArgs": [
                     "key"
                 ],
