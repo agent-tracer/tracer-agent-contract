@@ -330,6 +330,12 @@
             "meaning": "스레드의 backend는 그 스레드의 턴을 맡은 축이며 값의 목록은 OpenAPI의 AgentAxis가 소유한다",
             "empty": "축이 아직 정해지지 않았으면 비어 있다"
         },
+        "executionRequestedBackend": {
+            "meaning": "실행의 requestedBackend는 그 실행을 접수한 축이며 값의 목록은 OpenAPI의 AgentAxis가 소유한다",
+            "source": "접수 프로세스가 자기 축 상수를 그대로 기록한다. 상류가 실어 보낸 값을 옮겨 적지 않는다",
+            "required": "status가 queued이거나 running인 행은 이 칸이 비어 있지 않다",
+            "empty": "축을 갖지 않는 채로 종결된 행만 비어 있으며 어느 축의 조회도 그 행을 가져가지 않는다"
+        },
         "stepContent": {
             "meaning": "궤적 한 줄의 content는 사람이 읽는 평문이다",
             "assistant": "모델이 낸 텍스트 자체다. 내용 블록 배열을 JSON으로 직렬화한 문자열이 아니다",

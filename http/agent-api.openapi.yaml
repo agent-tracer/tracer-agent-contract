@@ -2025,8 +2025,10 @@ components:
         status:
           $ref: "#/components/schemas/ChatExecutionStatus"
         requestedBackend:
-          type: [string, "null"]
-          description: 이 실행을 맡을 구현체로 게이트웨이가 고른 값이며 상류가 고르지 않았으면 비어 있다
+          oneOf:
+            - $ref: "#/components/schemas/AgentAxis"
+            - type: "null"
+          description: 이 실행을 접수한 축이며 접수가 자기 축을 기록하므로 대기와 실행 중인 행은 비어 있지 않다
         draftText:
           type: string
           description: 지금까지 만든 누적 답변이며 아직 한 조각도 없으면 빈 문자열이다
