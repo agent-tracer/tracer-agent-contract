@@ -126,5 +126,20 @@
                 "meaning": "접수가 실행 봉투를 받지 못했다. 자격이 없는 것도 이 거절에 접힌다"
             }
         }
+    },
+    "lease": {
+        "meaning": "리스를 쥔 실행기만 잡을 종결하거나 반납할 수 있으며 회수당한 실행기의 요청은 이 거절로 돌아온다.",
+        "subtypes": {
+            "job.lease-held": {
+                "httpStatus": 409,
+                "message": "Job lease is held by another runner",
+                "retryable": false,
+                "emittedBy": [
+                    "ts",
+                    "python"
+                ],
+                "meaning": "다른 실행기가 살아 있는 리스를 쥐고 있다. 만료를 기다리거나 그 실행기가 반납해야 가져간다"
+            }
+        }
     }
 }
