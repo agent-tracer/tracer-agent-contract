@@ -25,9 +25,9 @@
             "area": "agent",
             "summary": "실행 회수 케이스를 한 축만 돌린다",
             "canonical": "python",
-            "ts": "판정이 TypeORM 의 SQL 이고 두 배포 단위에 나뉘어 있다. SQL 을 실행할 자리가 없어 케이스를 돌리지 않는다",
+            "ts": "판정이 TypeORM 의 QueryBuilder 이고 두 배포 단위에 나뉘어 있다. sqlite 구동기가 없어 케이스를 돌릴 자리가 없다",
             "python": "sqlite 대역 원장이 같은 SQL 을 실행해 여덟 창구의 케이스 마흔둘을 전부 돌린다",
-            "resolution": "ts 축이 SQL 을 실행할 자리를 갖거나, 판정을 SQL 밖으로 꺼내 두 축이 같은 코드로 판정한다"
+            "resolution": "접는 조건은 execution.vocabulary.json 의 settlement 가 이미 갖는다. 남은 것은 그 조건을 누가 판정하는가이며, ts 가 sqlite 구동기를 더해 같은 SQL 을 돌리거나 두 축이 판정을 순수 규칙으로 꺼내 케이스를 그 규칙에 물린다. 규칙을 따로 두면 SQL 과 어긋날 수 있으므로 어느 쪽을 고르든 한 벌만 남긴다"
         }
     ],
     "canonical": "ts가 정본이다. 항목의 canonical이 python이면 SDK나 LangGraph가 강제해 정본이 따라가야 하는 자리다.",
