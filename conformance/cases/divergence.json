@@ -1,80 +1,116 @@
 {
-    "name": "divergence",
-    "meaning": "Python 구현이 아직 정본을 따라가지 못한 자리의 목록이다. 양쪽 다 옳을 수 있는 차이가 아니라 좁혀야 할 대상이며, 계약이 목표 상태를 적으면 두 구현체가 동시에 실패해 무엇이 문제인지 보이지 않으므로 갈라진 곳은 갈라진 대로 여기 적는다. 이 목록이 다음 단계의 백로그다.",
-    "items": [
-        {
-            "id": "agent.context.editing",
-            "area": "agent",
-            "summary": "실행 도중 쌓인 오래된 도구 결과를 비우는 주체가 한 축에만 있다",
-            "canonical": "python",
-            "ts": "에이전트 SDK 의 자동 압축에 맡기며 그 판단 시점과 임계값이 구현체 밖에 있어 조회할 수 없다",
-            "python": "ContextEditingMiddleware 가 chat 과 recipe-scan 의 표준 실행 체인 안에서 오래된 도구 결과를 비운다. 시스템 프롬프트와 도구 선언과 메시지 꼬리에 놓이는 프롬프트 캐시 경계와는 겹치지 않는다",
-            "resolution": "SDK 축이 압축 임계값과 결과를 관측 가능한 형태로 노출하거나, python 이 SDK 의 자동 압축과 같은 판단 기준을 따르도록 trigger 와 keep 을 계약이 갖는 뒤에만 좁힐 수 있다"
-        },
-        {
-            "id": "agent.model.retry",
-            "area": "agent",
-            "summary": "일시 오류에서 대체 모델로 넘어가는 절차가 한 축에만 2단으로 있다",
-            "canonical": "python",
-            "ts": "에이전트 SDK 의 질의 옵션에 대체 모델을 그대로 넘긴다. SDK 안에서 재시도와 대체가 몇 단계로 나뉘는지, 어떤 오류에서 넘어가는지는 구현체 밖의 동작이라 조회할 수 없다",
-            "python": "ModelRetryMiddleware 가 과부하와 속도 제한과 연결 오류만 같은 모델로 재시도하고, 소진된 뒤에만 바깥의 FallbackModelMiddleware 가 대체 모델로 한 번 넘어간다. 예산 초과와 출력 절단과 취소는 둘 다 건드리지 않고 그대로 재전파된다",
-            "resolution": "SDK 축이 재시도와 대체의 2단 절차와 그 판정 오류 목록을 관측 가능하게 노출하거나, 계약이 재시도 대상 오류의 어휘와 재시도 횟수를 정해 두 축이 같은 절차를 갖도록 좁힌다"
-        },
-        {
-            "id": "agent.run.ttft",
-            "area": "agent",
-            "summary": "첫 토큰까지의 시간을 한 축만 관측 원장에 적는다",
-            "canonical": "ts",
-            "ts": "에이전트 SDK 의 결과 메시지가 실행마다 ttft_ms 를 내므로 그 값을 그대로 관측에 적는다",
-            "python": "실행 체인이 초안 콜백을 받는 chat 에서만 스트리밍이 켜지고 잡은 한 번에 받아 오므로 아직 재지 않는다",
-            "resolution": "python 이 스트리밍이 켜진 실행에서 첫 조각의 시각으로 재고 그 밖의 실행은 계약이 정한 대로 비운다"
-        },
-        {
-            "id": "agent.task.budget",
-            "area": "agent",
-            "summary": "모델이 남은 작업량을 보고 답의 밀도를 정하는 장치를 한 축만 쥘 수 있다",
-            "canonical": "ts",
-            "ts": "에이전트 SDK가 taskBudget을 alpha로 열어 두었고 이 구현체는 아직 켜지 않는다",
-            "python": "실행 체인에 대응물이 없어 켤 자리가 없다",
-            "resolution": "한쪽만 켜면 같은 스레드에서 축이 바뀔 때마다 답의 밀도가 달라지므로 지금은 어느 축도 켜지 않는다. python 체인에 같은 뜻의 장치가 서거나 계약이 남은 작업량의 어휘를 갖는 뒤에 두 축이 함께 켠다."
-        },
-        {
-            "id": "chat.execution.cases",
-            "area": "agent",
-            "summary": "실행 회수 케이스를 한 축만 돌린다",
-            "canonical": "python",
-            "ts": "판정이 TypeORM 의 QueryBuilder 이고 두 배포 단위에 나뉘어 있다. sqlite 구동기가 없어 케이스를 돌릴 자리가 없다",
-            "python": "sqlite 대역 원장이 같은 SQL 을 실행해 여덟 창구의 케이스 마흔둘을 전부 돌린다",
-            "resolution": "접는 조건은 execution.vocabulary.json 의 settlement 가 이미 갖는다. 남은 것은 그 조건을 누가 판정하는가이며, ts 가 sqlite 구동기를 더해 같은 SQL 을 돌리거나 두 축이 판정을 순수 규칙으로 꺼내 케이스를 그 규칙에 물린다. 규칙을 따로 두면 SQL 과 어긋날 수 있으므로 어느 쪽을 고르든 한 벌만 남긴다"
-        },
-        {
-            "id": "job.enqueue.credential",
-            "area": "job",
-            "summary": "접수 시점의 자격 검사가 다르다",
-            "canonical": "ts",
-            "ts": "사용자 설정에 모델 키가 없으면 접수를 거절하고, 로컬 CLI 자격으로 도는 경로는 이 검사를 건너뛴다",
-            "python": "접수가 실행 봉투를 먼저 받고 받지 못하면 502 job.envelope-unavailable로 거절한다",
-            "resolution": "봉투 발급 시점을 한쪽으로 모은 뒤 거절 코드를 하나로 정한다"
-        },
-        {
-            "id": "job.workflow.shape",
-            "area": "workflow",
-            "summary": "잡 워크플로와 액티비티의 수가 다르다",
-            "canonical": "ts",
-            "ts": "잡 종류마다 워크플로 하나를 두고 준비·생성·종결 액티비티로 나누며 생성만 generate 큐로 보낸다",
-            "python": "셋을 agentJobWorkflow 하나가 받고 준비와 종결을 실행 액티비티 안에서 처리하며 그 하나를 generate 큐로 보낸다",
-            "resolution": "궤적 단계 경계는 이미 같다. 남은 것은 워크플로와 액티비티의 수이며 재시도 경계가 그것에 매여 있다. 종착지는 노드마다 액티비티 하나이고 두 단계로 수렴한다. 1단은 python이 준비와 생성과 종결의 세 액티비티까지 이동한다. 2단은 두 축이 노드 단위로 이동하며, python은 ExecutionBudget의 이중 기장을 해소한 뒤에야 그 단계에 들어간다."
-        },
-        {
-            "id": "recipe.scan.anchor",
-            "area": "agent",
-            "summary": "스캔 앵커의 자격을 한 축만 판정한다",
-            "canonical": "ts",
-            "ts": "추적이 준 앵커에서 뿌리 사용자 태스크이면서 완료된 것만 스캔한다. SDK 가 만든 태스크와 부모가 있는 태스크와 아직 도는 태스크를 접수 뒤에 거절한다",
-            "python": "그 판정이 없어 어떤 태스크든 받아 전문가를 파견하고 예산을 쓴다",
-            "resolution": "앵커 자격의 조건을 계약이 갖고 두 축이 같은 조건으로 같은 거절을 낸다. 조건은 지금 ts 의 어댑터에만 있어 계약이 강제하지 못한다"
-        }
-    ],
-    "canonical": "ts가 정본이다. 항목의 canonical이 python이면 SDK나 LangGraph가 강제해 정본이 따라가야 하는 자리다.",
-    "unservedPaths": "갈라진 구현체가 아직 열지 않은 경로의 접두사이며 도는 서버의 표면을 대조하는 검사가 이 자리만 비켜 준다. 항목을 지울 때 그 비켜 줌도 함께 사라진다."
+  "name": "divergence",
+  "meaning": "Python 구현이 아직 정본을 따라가지 못한 자리의 목록이다. 양쪽 다 옳을 수 있는 차이가 아니라 좁혀야 할 대상이며, 계약이 목표 상태를 적으면 두 구현체가 동시에 실패해 무엇이 문제인지 보이지 않으므로 갈라진 곳은 갈라진 대로 여기 적는다. 이 목록이 다음 단계의 백로그다.",
+  "items": [
+    {
+      "id": "agent.context.editing",
+      "area": "agent",
+      "summary": "실행 도중 쌓인 오래된 도구 결과를 비우는 주체가 한 축에만 있다",
+      "canonical": "python",
+      "ts": "에이전트 SDK 의 자동 압축에 맡기며 그 판단 시점과 임계값이 구현체 밖에 있어 조회할 수 없다",
+      "python": "ContextEditingMiddleware 가 chat 과 recipe-scan 의 표준 실행 체인 안에서 오래된 도구 결과를 비운다. 시스템 프롬프트와 도구 선언과 메시지 꼬리에 놓이는 프롬프트 캐시 경계와는 겹치지 않는다",
+      "resolution": "SDK 축이 압축 임계값과 결과를 관측 가능한 형태로 노출하거나, python 이 SDK 의 자동 압축과 같은 판단 기준을 따르도록 trigger 와 keep 을 계약이 갖는 뒤에만 좁힐 수 있다"
+    },
+    {
+      "id": "agent.model.pricing",
+      "area": "agent",
+      "summary": "단가를 모르는 모델을 만났을 때의 결말이 다르다",
+      "canonical": "python",
+      "ts": "그 호출의 비용을 0 으로 세고 경고만 남기므로 착지 판정이 오지 않아 예산 상한이 그 실행에서 무의미해진다",
+      "python": "예산을 집행할 수 없다고 보고 실행을 끊는다",
+      "resolution": "값을 셀 수 없는 실행을 계속할지 끊을지를 계약이 적고 두 축이 같은 결말을 낸다"
+    },
+    {
+      "id": "agent.model.retry",
+      "area": "agent",
+      "summary": "일시 오류에서 대체 모델로 넘어가는 절차가 한 축에만 2단으로 있다",
+      "canonical": "python",
+      "ts": "에이전트 SDK 의 질의 옵션에 대체 모델을 그대로 넘긴다. SDK 안에서 재시도와 대체가 몇 단계로 나뉘는지, 어떤 오류에서 넘어가는지는 구현체 밖의 동작이라 조회할 수 없다",
+      "python": "ModelRetryMiddleware 가 과부하와 속도 제한과 연결 오류만 같은 모델로 재시도하고, 소진된 뒤에만 바깥의 FallbackModelMiddleware 가 대체 모델로 한 번 넘어간다. 예산 초과와 출력 절단과 취소는 둘 다 건드리지 않고 그대로 재전파된다",
+      "resolution": "SDK 축이 재시도와 대체의 2단 절차와 그 판정 오류 목록을 관측 가능하게 노출하거나, 계약이 재시도 대상 오류의 어휘와 재시도 횟수를 정해 두 축이 같은 절차를 갖도록 좁힌다"
+    },
+    {
+      "id": "agent.run.ttft",
+      "area": "agent",
+      "summary": "첫 토큰까지의 시간을 한 축만 관측 원장에 적는다",
+      "canonical": "ts",
+      "ts": "에이전트 SDK 의 결과 메시지가 실행마다 ttft_ms 를 내므로 그 값을 그대로 관측에 적는다",
+      "python": "실행 체인이 초안 콜백을 받는 chat 에서만 스트리밍이 켜지고 잡은 한 번에 받아 오므로 아직 재지 않는다",
+      "resolution": "python 이 스트리밍이 켜진 실행에서 첫 조각의 시각으로 재고 그 밖의 실행은 계약이 정한 대로 비운다"
+    },
+    {
+      "id": "agent.task.budget",
+      "area": "agent",
+      "summary": "모델이 남은 작업량을 보고 답의 밀도를 정하는 장치를 한 축만 쥘 수 있다",
+      "canonical": "ts",
+      "ts": "에이전트 SDK가 taskBudget을 alpha로 열어 두었고 이 구현체는 아직 켜지 않는다",
+      "python": "실행 체인에 대응물이 없어 켤 자리가 없다",
+      "resolution": "한쪽만 켜면 같은 스레드에서 축이 바뀔 때마다 답의 밀도가 달라지므로 지금은 어느 축도 켜지 않는다. python 체인에 같은 뜻의 장치가 서거나 계약이 남은 작업량의 어휘를 갖는 뒤에 두 축이 함께 켠다."
+    },
+    {
+      "id": "chat.execution.cases",
+      "area": "agent",
+      "summary": "실행 회수 케이스를 한 축만 돌린다",
+      "canonical": "python",
+      "ts": "판정이 TypeORM 의 QueryBuilder 이고 두 배포 단위에 나뉘어 있다. sqlite 구동기가 없어 케이스를 돌릴 자리가 없다",
+      "python": "sqlite 대역 원장이 같은 SQL 을 실행해 여덟 창구의 케이스 마흔둘을 전부 돌린다",
+      "resolution": "접는 조건은 execution.vocabulary.json 의 settlement 가 이미 갖는다. 남은 것은 그 조건을 누가 판정하는가이며, ts 가 sqlite 구동기를 더해 같은 SQL 을 돌리거나 두 축이 판정을 순수 규칙으로 꺼내 케이스를 그 규칙에 물린다. 규칙을 따로 두면 SQL 과 어긋날 수 있으므로 어느 쪽을 고르든 한 벌만 남긴다"
+    },
+    {
+      "id": "job.enqueue.credential",
+      "area": "job",
+      "summary": "접수 시점의 자격 검사가 다르다",
+      "canonical": "ts",
+      "ts": "사용자 설정에 모델 키가 없으면 접수를 거절하고, 로컬 CLI 자격으로 도는 경로는 이 검사를 건너뛴다",
+      "python": "접수가 실행 봉투를 먼저 받고 받지 못하면 502 job.envelope-unavailable로 거절한다",
+      "resolution": "봉투 발급 시점을 한쪽으로 모은 뒤 거절 코드를 하나로 정한다"
+    },
+    {
+      "id": "job.workflow.shape",
+      "area": "workflow",
+      "summary": "잡 워크플로와 액티비티의 수가 다르다",
+      "canonical": "ts",
+      "ts": "잡 종류마다 워크플로 하나를 두고 준비·생성·종결 액티비티로 나누며 생성만 generate 큐로 보낸다",
+      "python": "셋을 agentJobWorkflow 하나가 받고 준비와 종결을 실행 액티비티 안에서 처리하며 그 하나를 generate 큐로 보낸다",
+      "resolution": "궤적 단계 경계는 이미 같다. 남은 것은 워크플로와 액티비티의 수이며 재시도 경계가 그것에 매여 있다. 종착지는 노드마다 액티비티 하나이고 두 단계로 수렴한다. 1단은 python이 준비와 생성과 종결의 세 액티비티까지 이동한다. 2단은 두 축이 노드 단위로 이동하며, python은 ExecutionBudget의 이중 기장을 해소한 뒤에야 그 단계에 들어간다."
+    },
+    {
+      "id": "recipe.probe.wallclock",
+      "area": "agent",
+      "summary": "전문가 하나가 실행 데드라인을 다 쓰는 것을 막는 상한이 두 축에서 다른 자리에 있다",
+      "canonical": "python",
+      "ts": "단계마다 실행 데드라인의 비율을 상한으로 두고 전문가는 받은 달러 몫에 비례한 상한을 갖는다. 그 비율은 이 구현체의 코드가 갖는다",
+      "python": "그래프의 TimeoutPolicy 와 노드의 벽시계 상한이 같은 일을 하며 그 비율도 이 구현체의 코드가 갖는다",
+      "resolution": "두 축이 같은 수를 각자 적고 있으므로 비율을 계약이 갖고 두 축이 읽어 쓴다"
+    },
+    {
+      "id": "recipe.prompt.parity",
+      "area": "agent",
+      "summary": "같은 계약 판을 쓰면서 조사 프롬프트에 실어 보내는 값이 다르다",
+      "canonical": "ts",
+      "ts": "조율자와 전문가의 사용자 프롬프트에 그 호출이 쓸 수 있는 턴 수를 실어 보내며, 전문가 시스템 프롬프트의 마지막 문장은 소진의 대상을 turns 라고 적는다",
+      "python": "두 프롬프트 어디에도 턴 수를 싣지 않으며, 전문가 시스템 프롬프트의 마지막 문장은 소진의 대상을 budget 이라고 적는다",
+      "resolution": "모델이 읽는 글자는 계약이 갖는다. 프롬프트가 실어 보내는 값의 자리와 소진의 어휘를 계약이 적고, 두 축이 같은 입력에 같은 글자를 내는지 적합성 케이스가 대조한다"
+    },
+    {
+      "id": "recipe.repair.prompt",
+      "area": "agent",
+      "summary": "수리 호출이 직전 산출을 모델에게 되돌려 주는 방식이 다르다",
+      "canonical": "ts",
+      "ts": "직전 출력을 JSON 으로 프롬프트 본문에 실어 대화 이력에 기대지 않는다",
+      "python": "그 호출까지의 대화 이력을 그대로 이어 붙이므로 맥락 정리가 도구 결과를 비운 뒤에는 직전 산출이 이력에 남아 있지 않을 수 있다",
+      "resolution": "수리가 무엇을 보고 고치는지를 계약이 적고 두 축이 같은 자리에서 같은 것을 싣는다"
+    },
+    {
+      "id": "recipe.scan.anchor",
+      "area": "agent",
+      "summary": "스캔 앵커의 자격을 한 축만 판정한다",
+      "canonical": "ts",
+      "ts": "추적이 준 앵커에서 뿌리 사용자 태스크이면서 완료된 것만 스캔한다. SDK 가 만든 태스크와 부모가 있는 태스크와 아직 도는 태스크를 접수 뒤에 거절한다",
+      "python": "그 판정이 없어 어떤 태스크든 받아 전문가를 파견하고 예산을 쓴다",
+      "resolution": "앵커 자격의 조건을 계약이 갖고 두 축이 같은 조건으로 같은 거절을 낸다. 조건은 지금 ts 의 어댑터에만 있어 계약이 강제하지 못한다"
+    }
+  ],
+  "canonical": "ts가 정본이다. 항목의 canonical이 python이면 SDK나 LangGraph가 강제해 정본이 따라가야 하는 자리다.",
+  "unservedPaths": "갈라진 구현체가 아직 열지 않은 경로의 접두사이며 도는 서버의 표면을 대조하는 검사가 이 자리만 비켜 준다. 항목을 지울 때 그 비켜 줌도 함께 사라진다."
 }
