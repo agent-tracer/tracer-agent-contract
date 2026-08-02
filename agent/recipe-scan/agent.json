@@ -25,6 +25,22 @@
     "rejection": {
       "subtype": "invalid_request_error",
       "reason": "anchor.ineligible"
+    },
+    "decidedAt": {
+      "value": "intake",
+      "reason": "접수가 거절하면 잡 행도 워커 실행도 서지 않는다. 워커가 판정하면 같은 요청이 202 로 접수된 뒤 실패로 끝나 브라우저가 두 축에서 다른 것을 본다."
+    },
+    "byTrigger": {
+      "meaning": "스캔을 부른 표면마다 자격이 다르며 요청이 표면을 말하지 않으면 dashboard 로 본다.",
+      "dashboard": [
+        "origin",
+        "root",
+        "status"
+      ],
+      "session": [
+        "origin",
+        "root"
+      ]
     }
   }
 }
