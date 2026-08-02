@@ -28,6 +28,51 @@
             "ts": "판정이 TypeORM 의 QueryBuilder 이고 두 배포 단위에 나뉘어 있다. sqlite 구동기가 없어 케이스를 돌릴 자리가 없다",
             "python": "sqlite 대역 원장이 같은 SQL 을 실행해 여덟 창구의 케이스 마흔둘을 전부 돌린다",
             "resolution": "접는 조건은 execution.vocabulary.json 의 settlement 가 이미 갖는다. 남은 것은 그 조건을 누가 판정하는가이며, ts 가 sqlite 구동기를 더해 같은 SQL 을 돌리거나 두 축이 판정을 순수 규칙으로 꺼내 케이스를 그 규칙에 물린다. 규칙을 따로 두면 SQL 과 어긋날 수 있으므로 어느 쪽을 고르든 한 벌만 남긴다"
+        },
+        {
+            "id": "recipe.budget.reservation",
+            "area": "agent",
+            "summary": "전문가에게 팬아웃하기 전에 떼어 두는 몫이 한 축에만 있다",
+            "canonical": "ts",
+            "ts": "수리 2턴과 잔량의 20 퍼센트, 계획 1턴과 그 뒤 잔량의 10 퍼센트, 종합 바닥 3턴을 이 순서로 떼어낸 뒤 남은 것만 전문가에게 나눈다",
+            "python": "max_cost_usd 에서 이미 쓴 비용을 뺀 잔량 전액을 전문가에게 나눈다. 전문가가 예산을 소진하면 종합과 수리가 자기 몫 없이 빈 결과를 낸다",
+            "resolution": "agent/shared/execution.budget.json 의 reservations 가 몫과 떼는 순서를 갖는다. python 이 팬아웃 전에 같은 순서로 예약하면 지운다"
+        },
+        {
+            "id": "recipe.turn.ledger",
+            "area": "agent",
+            "summary": "maxTurns 가 세는 범위가 다르다",
+            "canonical": "ts",
+            "ts": "실행 하나가 갖는 총량이며 리스와 정산으로 잔여 턴을 관리한다. 공급자가 사용량을 보고하지 않으면 떼어 준 몫 전부를 쓴 것으로 본다",
+            "python": "달러만 세고 턴이라는 개념이 없다. 노드마다 봉투의 maxTurns 를 그대로 받아 전문가 셋과 종합과 수리에 각각 같은 상한이 선다",
+            "resolution": "agent/shared/execution.budget.json 의 turnLedger 가 총량과 소진 규칙을 갖는다. python 의 ExecutionBudget 이 턴 원장을 갖고 노드가 리스의 턴을 받으면 지운다"
+        },
+        {
+            "id": "recipe.survey.failure",
+            "area": "agent",
+            "summary": "조율자가 무너졌을 때의 결과 모양이 다르다",
+            "canonical": "ts",
+            "ts": "계획 호출이 실패하면 빈 계획으로 강등하고 그 실행은 빈 결과로 성공한다",
+            "python": "예외가 그대로 올라가 잡이 실패한다. 조율자가 대체 모델도 받지 않는다",
+            "resolution": "agent/shared/execution.budget.json 의 orchestratorFailure 가 강등 모양을 갖는다. python 이 빈 결과와 node.failed 하나로 끝내면 지운다"
+        },
+        {
+            "id": "recipe.output.exclusivity",
+            "area": "agent",
+            "summary": "후보와 추가 파견을 함께 실은 산출의 처리가 다르다",
+            "canonical": "python",
+            "ts": "스키마에 배타 규칙이 없고 후보가 있으면 추가 파견을 조용히 버린다",
+            "python": "검증이 그 산출을 거절하고 구조화 출력을 다시 묻는다",
+            "resolution": "agent/recipe-scan/output.json 이 배타를 적는다. ts 의 zod 가 refinement 로 거절하고 그 거절이 구조화 출력 재시도로 이어지면 지운다"
+        },
+        {
+            "id": "agent.node.events",
+            "area": "agent",
+            "summary": "오케스트레이션 단계의 궤적 이벤트를 한 축만 낸다",
+            "canonical": "python",
+            "ts": "성공한 단계만 사후에 집계한다. 무너진 단계의 소요와 사유가 궤적에 남지 않는다",
+            "python": "모든 노드가 node.started 와 node.completed 와 node.failed 를 남긴다",
+            "resolution": "execution.vocabulary.json 의 orchestrationEventKinds 가 셋을 이미 갖는다. ts 가 다섯 단계에 같은 래퍼를 두면 지운다"
         }
     ],
     "canonical": "ts가 정본이다. 항목의 canonical이 python이면 SDK나 LangGraph가 강제해 정본이 따라가야 하는 자리다.",
