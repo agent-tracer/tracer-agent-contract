@@ -254,6 +254,16 @@ export function readToolBindingPaths() {
         .map(([name, binding]) => ({ name, method: binding.method, path: binding.path }));
 }
 
+/** 도구가 열리는 표면마다 도구 이름을 사전순으로 모아 낸다. */
+export function readToolSurfaces() {
+    const { tools } = readAgentTools("chat");
+    const grouped = {};
+    for (const name of Object.keys(tools).sort()) {
+        (grouped[tools[name].surface] ??= []).push(name);
+    }
+    return grouped;
+}
+
 /** 계약의 어느 자리가 강제이고 어느 자리가 기록인지를 읽는다. */
 export function readEnforcement() {
     return readJson(join("conformance", "enforcement.json"));

@@ -32,6 +32,7 @@ from contract import (
     read_settlement,
     read_text,
     read_tool_binding_paths,
+    read_tool_surfaces,
     read_trace_attribute_names,
     read_version,
     read_worker_sdk_metrics,
@@ -89,6 +90,7 @@ STANDALONE = [
 AXIS_VALUES = ["ts", "python"]
 THREAD_SIGNAL_ARGS = ["executionId"]
 THREAD_ACTIVITIES = ["getNextChatExecution"]
+TOOL_SURFACES = ["read", "agentRead", "memory", "confirm"]
 NON_AXIS_WORDS = ["claude-sdk", "typescript"]
 AXIS_DURATION_UNIT = "seconds"
 # 지표 창구는 수집기를 지나지 않으므로 Prometheus 의 고전 라벨 이름 규칙을 그대로 받는다.
@@ -172,6 +174,8 @@ def main() -> None:
     axis_column = read_job_ledger_axis_column()
     chat_axis_index = read_chat_ledger_axis_index()
     thread_queue = read_chat_thread_queue()
+    tool_surfaces = read_tool_surfaces()
+    declared_surfaces = read_case("chat.tools")["tools"]
     worker_metrics = read_worker_sdk_metrics()
     axis_label = read_axis_label_names()
 
@@ -253,6 +257,24 @@ def main() -> None:
         raise SystemExit("migration 이 잡 원장에 축의 칸을 더하지 않는다 — ai_jobs 에 backend 가 없다")
     if "NOT NULL" not in axis_column:
         raise SystemExit(f"잡 원장의 축은 비어 있을 수 없다 — {axis_column}")
+    stray_tool_surfaces = [name for name in tool_surfaces if name not in TOOL_SURFACES]
+    if stray_tool_surfaces:
+        raise SystemExit(
+            f"도구가 열리는 표면은 {', '.join(TOOL_SURFACES)} 넷이다 — "
+            f"{', '.join(stray_tool_surfaces)} 는 그중에 없다"
+        )
+    surface_mismatch = [
+        name
+        for name in TOOL_SURFACES
+        if tool_surfaces.get(name, []) != declared_surfaces.get(name, [])
+    ]
+    if surface_mismatch:
+        detail = " · ".join(
+            f"{name} 은 {', '.join(tool_surfaces.get(name, [])) or '없음'} 인데 "
+            f"케이스는 {', '.join(declared_surfaces.get(name, [])) or '없음'} 다"
+            for name in surface_mismatch
+        )
+        raise SystemExit(f"도구의 표면과 적합성이 적은 목록이 다르다 — {detail}")
     if chat_axis_index is None:
         raise SystemExit(
             "migration 이 대화 실행 원장의 대기 줄을 축으로 가르지 않는다 — requested_backend 색인이 없다"
@@ -364,6 +386,8 @@ def main() -> None:
     print(f"실행 스트림 절의 자리 {STREAM_PLACES}개를 대조한다")
     print(f"축의 이름 {len(axis)}개를 계약이 한 벌로 갖는다 — {', '.join(axis)}")
     print(f"축의 이름을 담을 수 있는 자리 {len(axis_surfaces)}개가 그 둘만 쓴다")
+    surface_counts = " · ".join(f"{name} {len(tool_surfaces[name])}" for name in TOOL_SURFACES)
+    print(f"도구 {len(TOOL_SURFACES)} 표면이 열리는 도구를 나눈다 — {surface_counts}")
     print(f"잡 원장이 축의 칸을 갖는다 — {axis_column}")
     print(
         "대화 실행의 대기 줄은 원장이 갖고 축으로 갈린다 — "

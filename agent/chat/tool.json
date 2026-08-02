@@ -3,7 +3,7 @@
     "version": "v0.0.1",
     "tools": {
         "search_tasks": {
-            "mutation": false,
+            "surface": "read",
             "description": "List the user's tasks newest-first. total tells you how many match the filter before you page, so check it first and narrow instead of paging blindly. Most tasks are subagent runs the user never sees: pass root=\"true\" to get only the top-level tasks they actually work on. Narrow further with status (running/waiting/completed/errored), origin (user/server-sdk), archived, or a parentTaskId to look inside one task's subagents. Page with cursor: pass the response's nextCursor back as cursor until it is null. limit is up to 100 per page, default 30. Every page you pull stays in your context and slows the rest of the turn, so pull the narrowest set that answers the question.",
             "args": {
                 "status": {
@@ -67,7 +67,7 @@
             }
         },
         "get_task": {
-            "mutation": false,
+            "surface": "read",
             "description": "Get one task by taskId: its header (title, status, origin, workspace, parent, timestamps), its runtime sessions, and a resumeTarget when the task can be resumed. Call this after search_tasks to load the details of a single task the user asked about.",
             "args": {
                 "taskId": {
@@ -80,7 +80,7 @@
             }
         },
         "get_timeline": {
-            "mutation": false,
+            "surface": "read",
             "description": "Get a page of a task's timeline (chronological user messages, assistant messages, tool runs and derived activity) newest-first. Pass taskId; page older with cursor until nextCursor is null. limit is up to 500 per page, default 100. Use this to read what actually happened in a task.",
             "args": {
                 "taskId": {
@@ -107,7 +107,7 @@
             }
         },
         "search_events": {
-            "mutation": false,
+            "surface": "read",
             "description": "Full-text search across indexed events (and matching memos), ranked by relevance and recency. Combine q with optional taskId, kind, lane, and a from/to time range. limit is up to 100, default 20. Results are a mix: event hits and memo hits (marked hitType). Use this to find corrections, instructions, or specific moments across many tasks.",
             "args": {
                 "q": {
@@ -157,7 +157,7 @@
             }
         },
         "list_memos": {
-            "mutation": false,
+            "surface": "read",
             "description": "List memos the user wrote. With no arguments it returns every memo; pass taskId to scope to one task, and additionally eventId to get the memos threaded on a single event. Use this to recall notes the user attached to their work.",
             "args": {
                 "taskId": {
@@ -175,7 +175,7 @@
             }
         },
         "list_rules": {
-            "mutation": false,
+            "surface": "read",
             "description": "List the verification rules that govern the user's work. Pass taskId to see the global and task-scoped rules that apply to that task, or all=\"true\" to list every rule the user has. Each rule carries its expectation, review state, and latest verdict status. Use this to explain what rules apply or why one is unmet.",
             "args": {
                 "taskId": {
@@ -195,7 +195,7 @@
             }
         },
         "get_rule_evidence": {
-            "mutation": false,
+            "surface": "read",
             "description": "Get the ledger evidence behind one rule's verdict by ruleId (optionally scoped to a taskId): the anchor event, the current status, and the trigger and expectation events that decided it, each with the text and how it matched. Use this after list_rules to show why a rule is satisfied or unmet.",
             "args": {
                 "ruleId": {
@@ -214,12 +214,12 @@
             }
         },
         "list_tags": {
-            "mutation": false,
+            "surface": "read",
             "description": "List the user's tags with their color, description, and how many tasks each is applied to. Use this to answer questions about how the user organizes their tasks.",
             "args": {}
         },
         "list_recipes": {
-            "mutation": false,
+            "surface": "read",
             "description": "List the user's recipes (reusable workflows distilled from past tasks), optionally filtered by status (candidate/active/dismissed/superseded/retired). Each entry carries the full recipe (intent, steps, pitfalls, touched files) plus application stats. Use this to surface or explain a saved workflow.",
             "args": {
                 "status": {
@@ -237,7 +237,7 @@
             }
         },
         "list_cleanup_suggestions": {
-            "mutation": false,
+            "surface": "read",
             "description": "List task-cleanup suggestions produced for the user, optionally filtered by status (pending/accepted/dismissed). Each names the task it targets, the proposed change, and the rationale. Use this to report what cleanup the system has proposed.",
             "args": {
                 "status": {
@@ -253,7 +253,7 @@
             }
         },
         "get_job": {
-            "mutation": false,
+            "surface": "agentRead",
             "description": "Get one AI job by jobId: its kind, executor, status, attempt count, the task it ran against, and its input/result/usage. Use this to report on the outcome of an agent job the user is asking about.",
             "args": {
                 "jobId": {
@@ -266,12 +266,12 @@
             }
         },
         "recall_facts": {
-            "mutation": false,
+            "surface": "memory",
             "description": "List the durable facts you have remembered about this user, each a short key and its content. Takes no arguments and runs immediately. These same facts are already injected at the top of your context each turn; call this only to re-read them explicitly, for example before deciding whether to remember_fact a new one.",
             "args": {}
         },
         "remember_fact": {
-            "mutation": true,
+            "surface": "confirm",
             "description": "Remember a durable fact about this user that should persist across ALL of their chat threads — a stated preference or a stable detail about how they work, not a one-off detail of the current task. Pass a short slug key (for example \"preferred_language\") and the content; remembering the same key again overwrites it. This outlives the current thread, so it is proposed and saved only after the user approves it; say that you have proposed remembering it, not that you have remembered it.",
             "args": {
                 "key": {
@@ -291,7 +291,7 @@
             }
         },
         "update_task": {
-            "mutation": true,
+            "surface": "confirm",
             "description": "PROPOSAL (requires user confirmation, does not run immediately): change a task's title and/or status by taskId. status is one of running/waiting/completed/errored. Pass at least one of title or status. The change is queued and only applied after the user approves; tell the user you are awaiting their confirmation.",
             "args": {
                 "taskId": {
@@ -321,7 +321,7 @@
             }
         },
         "archive_task": {
-            "mutation": true,
+            "surface": "confirm",
             "description": "PROPOSAL (requires user confirmation): archive a task by taskId so it drops out of the default listing. Queued until the user approves — never claim it is archived yet.",
             "args": {
                 "taskId": {
@@ -334,7 +334,7 @@
             }
         },
         "unarchive_task": {
-            "mutation": true,
+            "surface": "confirm",
             "description": "PROPOSAL (requires user confirmation): restore an archived task by taskId. Queued until the user approves.",
             "args": {
                 "taskId": {
@@ -347,7 +347,7 @@
             }
         },
         "delete_task": {
-            "mutation": true,
+            "surface": "confirm",
             "description": "PROPOSAL (requires user confirmation): hide a task by taskId (and its subagent descendants) from the user's views. Queued until the user approves — never claim it is deleted yet.",
             "args": {
                 "taskId": {
@@ -360,7 +360,7 @@
             }
         },
         "create_memo": {
-            "mutation": true,
+            "surface": "confirm",
             "description": "PROPOSAL (requires user confirmation): write a new memo with body on a task (taskId), optionally threaded on an eventId. Queued until the user approves.",
             "args": {
                 "taskId": {
@@ -386,7 +386,7 @@
             }
         },
         "update_memo": {
-            "mutation": true,
+            "surface": "confirm",
             "description": "PROPOSAL (requires user confirmation): replace the body of an existing memo by memoId. Queued until the user approves.",
             "args": {
                 "memoId": {
@@ -406,7 +406,7 @@
             }
         },
         "delete_memo": {
-            "mutation": true,
+            "surface": "confirm",
             "description": "PROPOSAL (requires user confirmation): delete a memo by memoId. Queued until the user approves.",
             "args": {
                 "memoId": {
@@ -419,7 +419,7 @@
             }
         },
         "create_rule": {
-            "mutation": true,
+            "surface": "confirm",
             "description": "PROPOSAL (requires user confirmation): create a verification rule on a task. Pass taskId, anchorEventId, a name, and expectation as a JSON object of the form {\"kind\":\"command\",\"commandMatches\":[...]} or {\"kind\":\"pattern\",\"pattern\":\"...\",\"tool\":\"...\"} or {\"kind\":\"action\",\"tool\":\"...\"}; severity is info/warn/block. Queued until the user approves.",
             "args": {
                 "taskId": {
@@ -467,7 +467,7 @@
             }
         },
         "update_rule": {
-            "mutation": true,
+            "surface": "confirm",
             "description": "PROPOSAL (requires user confirmation): edit a rule by ruleId — its name, expectation (JSON object as in create_rule), severity (info/warn/block), or rationale. Queued until the user approves.",
             "args": {
                 "ruleId": {
@@ -507,7 +507,7 @@
             }
         },
         "delete_rule": {
-            "mutation": true,
+            "surface": "confirm",
             "description": "PROPOSAL (requires user confirmation): delete a rule by ruleId. Queued until the user approves.",
             "args": {
                 "ruleId": {
@@ -520,7 +520,7 @@
             }
         },
         "approve_rule": {
-            "mutation": true,
+            "surface": "confirm",
             "description": "PROPOSAL (requires user confirmation): approve a proposed rule by ruleId and backfill its verdict over the task. Queued until the user approves.",
             "args": {
                 "ruleId": {
@@ -533,7 +533,7 @@
             }
         },
         "reevaluate_rule": {
-            "mutation": true,
+            "surface": "confirm",
             "description": "PROPOSAL (requires user confirmation): re-run a rule's verdict over its task by ruleId. Queued until the user approves.",
             "args": {
                 "ruleId": {
@@ -546,7 +546,7 @@
             }
         },
         "create_tag": {
-            "mutation": true,
+            "surface": "confirm",
             "description": "PROPOSAL (requires user confirmation): create a tag with name, optional color (#rrggbb lowercase hex), and optional description. Queued until the user approves.",
             "args": {
                 "name": {
@@ -571,7 +571,7 @@
             }
         },
         "update_tag": {
-            "mutation": true,
+            "surface": "confirm",
             "description": "PROPOSAL (requires user confirmation): edit a tag by tagId — its name, color (#rrggbb), or description. Queued until the user approves.",
             "args": {
                 "tagId": {
@@ -602,7 +602,7 @@
             }
         },
         "delete_tag": {
-            "mutation": true,
+            "surface": "confirm",
             "description": "PROPOSAL (requires user confirmation): delete a tag by tagId and detach it from every task. Queued until the user approves.",
             "args": {
                 "tagId": {
@@ -615,7 +615,7 @@
             }
         },
         "set_task_tags": {
-            "mutation": true,
+            "surface": "confirm",
             "description": "PROPOSAL (requires user confirmation): replace the full set of tags on a task. Pass taskId and tagIds as a JSON array of tag ids (an empty array detaches all). Queued until the user approves.",
             "args": {
                 "taskId": {
@@ -639,7 +639,7 @@
             }
         },
         "accept_recipe": {
-            "mutation": true,
+            "surface": "confirm",
             "description": "PROPOSAL (requires user confirmation): accept a recipe by recipeId, activating it. Queued until the user approves.",
             "args": {
                 "recipeId": {
@@ -652,7 +652,7 @@
             }
         },
         "dismiss_recipe": {
-            "mutation": true,
+            "surface": "confirm",
             "description": "PROPOSAL (requires user confirmation): dismiss a recipe by recipeId. Queued until the user approves.",
             "args": {
                 "recipeId": {
@@ -665,7 +665,7 @@
             }
         },
         "retire_recipe": {
-            "mutation": true,
+            "surface": "confirm",
             "description": "PROPOSAL (requires user confirmation): retire an active recipe by recipeId. Queued until the user approves.",
             "args": {
                 "recipeId": {
@@ -678,7 +678,7 @@
             }
         },
         "accept_cleanup": {
-            "mutation": true,
+            "surface": "confirm",
             "description": "PROPOSAL (requires user confirmation): accept a task-cleanup suggestion by suggestionId, applying its proposed change. Queued until the user approves.",
             "args": {
                 "suggestionId": {
@@ -691,7 +691,7 @@
             }
         },
         "dismiss_cleanup": {
-            "mutation": true,
+            "surface": "confirm",
             "description": "PROPOSAL (requires user confirmation): dismiss a task-cleanup suggestion by suggestionId. Queued until the user approves.",
             "args": {
                 "suggestionId": {
@@ -704,7 +704,7 @@
             }
         },
         "enqueue_job": {
-            "mutation": true,
+            "surface": "confirm",
             "description": "PROPOSAL (requires user confirmation, and running it starts a real, metered agent run that costs money): launch an AI job. kind is one of title.suggestion (auto-title a task), recipe.scan (distill a recipe from a task), task.cleanup (suggest cleanup across tasks), or rule.generation (draft verification rules for a task). input is a JSON object with the fields that kind needs: title.suggestion takes {\"taskId\":\"...\"}; recipe.scan takes {\"taskId\":\"...\"} plus optional userPrompt, language, and trigger (dashboard/session); task.cleanup takes {} or {\"filters\":{\"maxSuggestions\":N}}; rule.generation requires {\"taskId\":\"...\",\"anchorEventId\":\"...\"} and may also include focus (recent), maxRules, and intent describing what to verify. Queued until the user approves — never claim the job has started yet.",
             "args": {
                 "kind": {
@@ -1224,7 +1224,6 @@
             "search_tasks": {
                 "method": "GET",
                 "path": "/api/v1/tasks",
-                "gate": "none",
                 "pathArgs": [],
                 "query": {
                     "status": "status",
@@ -1241,7 +1240,6 @@
             "get_task": {
                 "method": "GET",
                 "path": "/api/v1/tasks/{taskId}",
-                "gate": "none",
                 "pathArgs": [
                     "taskId"
                 ],
@@ -1252,7 +1250,6 @@
             "get_timeline": {
                 "method": "GET",
                 "path": "/api/v1/tasks/{taskId}/timeline",
-                "gate": "none",
                 "pathArgs": [
                     "taskId"
                 ],
@@ -1266,7 +1263,6 @@
             "search_events": {
                 "method": "GET",
                 "path": "/api/v1/events/search",
-                "gate": "none",
                 "pathArgs": [],
                 "query": {
                     "q": "q",
@@ -1283,7 +1279,6 @@
             "list_memos": {
                 "method": "GET",
                 "path": "/api/v1/memos",
-                "gate": "none",
                 "pathArgs": [],
                 "query": {
                     "taskId": "taskId",
@@ -1295,7 +1290,6 @@
             "list_rules": {
                 "method": "GET",
                 "path": "/api/v1/rules",
-                "gate": "none",
                 "pathArgs": [],
                 "query": {
                     "taskId": "taskId",
@@ -1307,7 +1301,6 @@
             "get_rule_evidence": {
                 "method": "GET",
                 "path": "/api/v1/rules/{ruleId}/evidence",
-                "gate": "none",
                 "pathArgs": [
                     "ruleId"
                 ],
@@ -1320,7 +1313,6 @@
             "list_tags": {
                 "method": "GET",
                 "path": "/api/v1/tags",
-                "gate": "none",
                 "pathArgs": [],
                 "query": {},
                 "body": {},
@@ -1329,7 +1321,6 @@
             "list_recipes": {
                 "method": "GET",
                 "path": "/api/v1/recipes",
-                "gate": "none",
                 "pathArgs": [],
                 "query": {
                     "status": "status"
@@ -1340,7 +1331,6 @@
             "list_cleanup_suggestions": {
                 "method": "GET",
                 "path": "/api/v1/task-cleanup/suggestions",
-                "gate": "none",
                 "pathArgs": [],
                 "query": {
                     "status": "status"
@@ -1351,7 +1341,6 @@
             "get_job": {
                 "method": "GET",
                 "path": "/api/agent/jobs/{jobId}",
-                "gate": "none",
                 "pathArgs": [
                     "jobId"
                 ],
@@ -1362,7 +1351,6 @@
             "update_task": {
                 "method": "PATCH",
                 "path": "/api/v1/tasks/{taskId}",
-                "gate": "confirm",
                 "pathArgs": [
                     "taskId"
                 ],
@@ -1376,7 +1364,6 @@
             "archive_task": {
                 "method": "POST",
                 "path": "/api/v1/tasks/{taskId}/archive",
-                "gate": "confirm",
                 "pathArgs": [
                     "taskId"
                 ],
@@ -1387,7 +1374,6 @@
             "unarchive_task": {
                 "method": "DELETE",
                 "path": "/api/v1/tasks/{taskId}/archive",
-                "gate": "confirm",
                 "pathArgs": [
                     "taskId"
                 ],
@@ -1398,7 +1384,6 @@
             "delete_task": {
                 "method": "DELETE",
                 "path": "/api/v1/tasks/{taskId}",
-                "gate": "confirm",
                 "pathArgs": [
                     "taskId"
                 ],
@@ -1409,7 +1394,6 @@
             "create_memo": {
                 "method": "POST",
                 "path": "/api/v1/memos",
-                "gate": "confirm",
                 "pathArgs": [],
                 "query": {},
                 "body": {
@@ -1424,7 +1408,6 @@
             "update_memo": {
                 "method": "PATCH",
                 "path": "/api/v1/memos/{memoId}",
-                "gate": "confirm",
                 "pathArgs": [
                     "memoId"
                 ],
@@ -1437,7 +1420,6 @@
             "delete_memo": {
                 "method": "DELETE",
                 "path": "/api/v1/memos/{memoId}",
-                "gate": "confirm",
                 "pathArgs": [
                     "memoId"
                 ],
@@ -1448,7 +1430,6 @@
             "create_rule": {
                 "method": "POST",
                 "path": "/api/v1/rules",
-                "gate": "confirm",
                 "pathArgs": [],
                 "query": {},
                 "body": {
@@ -1464,7 +1445,6 @@
             "update_rule": {
                 "method": "PATCH",
                 "path": "/api/v1/rules/{ruleId}",
-                "gate": "confirm",
                 "pathArgs": [
                     "ruleId"
                 ],
@@ -1480,7 +1460,6 @@
             "delete_rule": {
                 "method": "DELETE",
                 "path": "/api/v1/rules/{ruleId}",
-                "gate": "confirm",
                 "pathArgs": [
                     "ruleId"
                 ],
@@ -1491,7 +1470,6 @@
             "approve_rule": {
                 "method": "POST",
                 "path": "/api/v1/rules/{ruleId}/approve",
-                "gate": "confirm",
                 "pathArgs": [
                     "ruleId"
                 ],
@@ -1502,7 +1480,6 @@
             "reevaluate_rule": {
                 "method": "POST",
                 "path": "/api/v1/rules/{ruleId}/reevaluate",
-                "gate": "confirm",
                 "pathArgs": [
                     "ruleId"
                 ],
@@ -1513,7 +1490,6 @@
             "create_tag": {
                 "method": "POST",
                 "path": "/api/v1/tags",
-                "gate": "confirm",
                 "pathArgs": [],
                 "query": {},
                 "body": {
@@ -1526,7 +1502,6 @@
             "update_tag": {
                 "method": "PATCH",
                 "path": "/api/v1/tags/{tagId}",
-                "gate": "confirm",
                 "pathArgs": [
                     "tagId"
                 ],
@@ -1541,7 +1516,6 @@
             "delete_tag": {
                 "method": "DELETE",
                 "path": "/api/v1/tags/{tagId}",
-                "gate": "confirm",
                 "pathArgs": [
                     "tagId"
                 ],
@@ -1552,7 +1526,6 @@
             "set_task_tags": {
                 "method": "PUT",
                 "path": "/api/v1/task-tags",
-                "gate": "confirm",
                 "pathArgs": [],
                 "query": {},
                 "body": {
@@ -1564,7 +1537,6 @@
             "accept_recipe": {
                 "method": "POST",
                 "path": "/api/v1/recipes/{recipeId}/accept",
-                "gate": "confirm",
                 "pathArgs": [
                     "recipeId"
                 ],
@@ -1575,7 +1547,6 @@
             "dismiss_recipe": {
                 "method": "POST",
                 "path": "/api/v1/recipes/{recipeId}/dismiss",
-                "gate": "confirm",
                 "pathArgs": [
                     "recipeId"
                 ],
@@ -1586,7 +1557,6 @@
             "retire_recipe": {
                 "method": "POST",
                 "path": "/api/v1/recipes/{recipeId}/retire",
-                "gate": "confirm",
                 "pathArgs": [
                     "recipeId"
                 ],
@@ -1597,7 +1567,6 @@
             "accept_cleanup": {
                 "method": "POST",
                 "path": "/api/v1/task-cleanup/suggestions/{suggestionId}/accept",
-                "gate": "confirm",
                 "pathArgs": [
                     "suggestionId"
                 ],
@@ -1608,7 +1577,6 @@
             "dismiss_cleanup": {
                 "method": "POST",
                 "path": "/api/v1/task-cleanup/suggestions/{suggestionId}/dismiss",
-                "gate": "confirm",
                 "pathArgs": [
                     "suggestionId"
                 ],
@@ -1619,7 +1587,6 @@
             "enqueue_job": {
                 "method": "POST",
                 "path": "/api/agent/jobs",
-                "gate": "confirm",
                 "pathArgs": [],
                 "query": {},
                 "body": {
@@ -1631,7 +1598,6 @@
             "recall_facts": {
                 "method": "GET",
                 "path": "/api/agent/chat/memories",
-                "gate": "none",
                 "pathArgs": [],
                 "query": {},
                 "body": {},
@@ -1640,7 +1606,6 @@
             "remember_fact": {
                 "method": "PUT",
                 "path": "/api/agent/chat/memories/{key}",
-                "gate": "confirm",
                 "pathArgs": [
                     "key"
                 ],

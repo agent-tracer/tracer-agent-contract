@@ -1,0 +1,66 @@
+{
+    "name": "chat.tools",
+    "meaning": "모델에게 도구가 어떤 표면으로 열리는지를 계약 한 칸이 정하고 두 구현체가 그 칸에서 네 분류를 파생시킨다. 이름과 인자만 대조하면 같은 도구를 한 축은 확인 없이 부르고 다른 축은 확인 대기 행을 세우고도 통과한다.",
+    "surfaces": {
+        "read": "추적 API 를 읽기만 하며 확인 없이 부른다",
+        "agentRead": "에이전트 원장을 읽기만 하며 확인 없이 부른다. 읽는 대상이 다를 뿐 게이트는 read 와 같다",
+        "memory": "사용자 기억을 읽으며 확인 없이 부른다. 실행 앞머리에서 맥락을 세우는 자리라 되읽기와 나뉜다",
+        "confirm": "부르기 전에 사용자 확인을 받는다. 쓰는 도구가 여기 선다"
+    },
+    "derivation": {
+        "meaning": "구현체는 surface 하나만 읽고 네 분류를 파생시킨다. 경로 접두사와 하드코딩한 이름 목록으로 도구를 가르지 않는다",
+        "gate": "surface 가 confirm 인 도구만 확인 대기 행을 세운다",
+        "path": "도구가 부르는 경로는 표면을 정하지 않는다. 에이전트 원장을 쓰는 도구도 confirm 이다"
+    },
+    "tools": {
+        "read": [
+            "get_rule_evidence",
+            "get_task",
+            "get_timeline",
+            "list_cleanup_suggestions",
+            "list_memos",
+            "list_recipes",
+            "list_rules",
+            "list_tags",
+            "search_events",
+            "search_tasks"
+        ],
+        "agentRead": [
+            "get_job"
+        ],
+        "memory": [
+            "recall_facts"
+        ],
+        "confirm": [
+            "accept_cleanup",
+            "accept_recipe",
+            "approve_rule",
+            "archive_task",
+            "create_memo",
+            "create_rule",
+            "create_tag",
+            "delete_memo",
+            "delete_rule",
+            "delete_tag",
+            "delete_task",
+            "dismiss_cleanup",
+            "dismiss_recipe",
+            "enqueue_job",
+            "reevaluate_rule",
+            "remember_fact",
+            "retire_recipe",
+            "set_task_tags",
+            "unarchive_task",
+            "update_memo",
+            "update_rule",
+            "update_tag",
+            "update_task"
+        ]
+    },
+    "counts": {
+        "read": 10,
+        "agentRead": 1,
+        "memory": 1,
+        "confirm": 23
+    }
+}

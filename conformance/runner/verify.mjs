@@ -19,6 +19,7 @@ import {
     readJson,
     readText,
     readToolBindingPaths,
+    readToolSurfaces,
     readOpenApiEnum,
     readRedaction,
     readScopeToken,
@@ -76,6 +77,7 @@ const STREAM_PLACES = STREAM_KEYS.length + Object.values(STREAM_NESTED).flat().l
 const AXIS_VALUES = ["ts", "python"];
 const THREAD_SIGNAL_ARGS = ["executionId"];
 const THREAD_ACTIVITIES = ["getNextChatExecution"];
+const TOOL_SURFACES = ["read", "agentRead", "memory", "confirm"];
 const NON_AXIS_WORDS = ["claude-sdk", "typescript"];
 const AXIS_DURATION_UNIT = "seconds";
 // 지표 창구는 수집기를 지나지 않으므로 Prometheus 의 고전 라벨 이름 규칙을 그대로 받는다.
@@ -159,6 +161,8 @@ const strayAxisNames = axisSurfaces.flatMap((surface) => {
 const axisColumn = readJobLedgerAxisColumn();
 const chatAxisIndex = readChatLedgerAxisIndex();
 const threadQueue = readChatThreadQueue();
+const toolSurfaces = readToolSurfaces();
+const declaredSurfaces = readCase("chat.tools").tools;
 const workerMetrics = readWorkerSdkMetrics();
 const axisLabel = readAxisLabelNames();
 
@@ -226,6 +230,23 @@ if (axisColumn === null) {
 }
 if (!axisColumn.includes("NOT NULL")) {
     throw new Error(`잡 원장의 축은 비어 있을 수 없다 — ${axisColumn}`);
+}
+const strayToolSurfaces = Object.keys(toolSurfaces).filter((name) => !TOOL_SURFACES.includes(name));
+if (strayToolSurfaces.length > 0) {
+    throw new Error(
+        `도구가 열리는 표면은 ${TOOL_SURFACES.join(", ")} 넷이다 — ${strayToolSurfaces.join(", ")} 는 그중에 없다`,
+    );
+}
+const surfaceMismatch = TOOL_SURFACES.filter(
+    (name) => (toolSurfaces[name] ?? []).join() !== (declaredSurfaces[name] ?? []).join(),
+);
+if (surfaceMismatch.length > 0) {
+    throw new Error(
+        `도구의 표면과 적합성이 적은 목록이 다르다 — ` +
+            surfaceMismatch
+                .map((name) => `${name} 은 ${(toolSurfaces[name] ?? []).join(", ") || "없음"} 인데 케이스는 ${(declaredSurfaces[name] ?? []).join(", ") || "없음"} 다`)
+                .join(" · "),
+    );
 }
 if (chatAxisIndex === null) {
     throw new Error("migration 이 대화 실행 원장의 대기 줄을 축으로 가르지 않는다 — requested_backend 색인이 없다");
@@ -335,6 +356,7 @@ console.log(
 console.log(`실행 스트림 절의 자리 ${STREAM_PLACES}개를 대조한다`);
 console.log(`축의 이름 ${axis.length}개를 계약이 한 벌로 갖는다 — ${axis.join(", ")}`);
 console.log(`축의 이름을 담을 수 있는 자리 ${axisSurfaces.length}개가 그 둘만 쓴다`);
+console.log(`도구 ${TOOL_SURFACES.length} 표면이 열리는 도구를 나눈다 — ${TOOL_SURFACES.map((name) => `${name} ${toolSurfaces[name].length}`).join(" · ")}`);
 console.log(`잡 원장이 축의 칸을 갖는다 — ${axisColumn}`);
 console.log(`대화 실행의 대기 줄은 원장이 갖고 축으로 갈린다 — 시그널 ${threadQueue.signalArgs.join(", ")} · 액티비티 ${threadQueue.activities.join(", ")}`);
 console.log(

@@ -263,6 +263,15 @@ def read_tool_binding_paths() -> list[dict[str, str]]:
     ]
 
 
+def read_tool_surfaces() -> dict[str, list[str]]:
+    """도구가 열리는 표면마다 도구 이름을 사전순으로 모아 낸다."""
+    tools = read_agent_tools("chat")["tools"]
+    grouped: dict[str, list[str]] = {}
+    for name in sorted(tools):
+        grouped.setdefault(tools[name]["surface"], []).append(name)
+    return grouped
+
+
 def read_enforcement() -> Any:
     """계약의 어느 자리가 강제이고 어느 자리가 기록인지를 읽는다."""
     return read_json("conformance/enforcement.json")
