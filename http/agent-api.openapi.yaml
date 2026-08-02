@@ -923,6 +923,158 @@ paths:
         "404":
           $ref: "#/components/responses/JobNotFound"
 
+  /api/agent/jobs/{id}/start:
+    post:
+      operationId: claimRuleJob
+      tags: [job]
+      summary: 실행기가 대기 중인 잡 하나를 자기 리스로 가져간다
+      description: >-
+        로컬 실행기가 가져가는 잡은 워크플로가 아니라 이 창구가 실행 자리를 정한다. 이미 다른
+        실행기가 쥐고 있거나 리스가 아직 살아 있으면 가져가지 못한다.
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+        - $ref: "#/components/parameters/UserHeader"
+        - $ref: "#/components/parameters/LeaseOwnerHeader"
+      responses:
+        "200":
+          description: 리스를 쥐었다
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuleJobLeaseEnvelope"
+        "409":
+          $ref: "#/components/responses/JobLeaseHeld"
+        "404":
+          $ref: "#/components/responses/JobNotFound"
+
+  /api/agent/jobs/{id}/lease:
+    post:
+      operationId: renewRuleJobLease
+      tags: [job]
+      summary: 쥔 리스의 수명을 늘린다
+      description: >-
+        리스가 만료되면 다른 실행기가 같은 잡을 가져간다. 실행이 길어지는 동안 이 창구가 수명을
+        늘리며, 회수당한 실행기는 늘리지 못한다.
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+        - $ref: "#/components/parameters/UserHeader"
+        - $ref: "#/components/parameters/LeaseOwnerHeader"
+      responses:
+        "200":
+          description: 리스의 지금 상태다
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuleJobLeaseEnvelope"
+        "404":
+          $ref: "#/components/responses/JobNotFound"
+
+  /api/agent/jobs/{id}/results:
+    post:
+      operationId: reportRuleJobResult
+      tags: [job]
+      summary: 실행기가 만든 산출물을 잡에 싣고 종결한다
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+        - $ref: "#/components/parameters/UserHeader"
+        - $ref: "#/components/parameters/LeaseOwnerHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RuleJobReportBody"
+      responses:
+        "200":
+          description: 산출물이 실렸다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [job]
+                        properties:
+                          job:
+                            $ref: "#/components/schemas/Job"
+        "409":
+          $ref: "#/components/responses/JobLeaseHeld"
+        "404":
+          $ref: "#/components/responses/JobNotFound"
+
+  /api/agent/jobs/{id}/fail:
+    post:
+      operationId: failRuleJob
+      tags: [job]
+      summary: 실행기가 실패를 보고하고 잡을 종결한다
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+        - $ref: "#/components/parameters/UserHeader"
+        - $ref: "#/components/parameters/LeaseOwnerHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RuleJobFailureBody"
+      responses:
+        "200":
+          description: 실패가 원장에 남았다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [job]
+                        properties:
+                          job:
+                            $ref: "#/components/schemas/Job"
+        "409":
+          $ref: "#/components/responses/JobLeaseHeld"
+        "404":
+          $ref: "#/components/responses/JobNotFound"
+
+  /api/agent/jobs/{id}/release:
+    post:
+      operationId: releaseRuleJob
+      tags: [job]
+      summary: 실행기가 리스를 놓아 잡을 다시 대기로 돌린다
+      description: >-
+        실행기가 끝내지 못하고 물러날 때 부른다. 리스가 만료되기를 기다리지 않고 곧바로 다른
+        실행기가 가져갈 수 있게 한다.
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+        - $ref: "#/components/parameters/UserHeader"
+        - $ref: "#/components/parameters/LeaseOwnerHeader"
+      responses:
+        "200":
+          description: 리스를 놓았다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [job]
+                        properties:
+                          job:
+                            $ref: "#/components/schemas/Job"
+        "404":
+          $ref: "#/components/responses/JobNotFound"
+
   /internal/chat/executions/{executionId}/envelope:
     post:
       operationId: issueChatExecutionEnvelope
@@ -1130,6 +1282,13 @@ components:
       required: true
       schema:
         $ref: "#/components/schemas/SettingKey"
+    LeaseOwnerHeader:
+      name: x-monitor-lease-owner
+      in: header
+      required: true
+      description: 잡 리스를 쥔 실행기의 식별자이며 리스를 회수당한 실행기가 잡을 종결시키지 못하게 한다
+      schema: { type: string, minLength: 1 }
+
     UserHeader:
       name: x-monitor-user
       in: header
@@ -1138,6 +1297,13 @@ components:
       schema: { type: string }
 
   responses:
+    JobLeaseHeld:
+      description: 다른 실행기가 리스를 쥐고 있다
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+
     InvalidRequest:
       description: 본문이 스키마를 만족하지 않는다
       content:
@@ -1388,6 +1554,44 @@ components:
         실행 하나를 태운 구현체를 가리키는 축이며 배포가 선언하고 사람이 화면에서 고르는 이름이
         그대로 값이다. 워크플로와 로컬 실행기를 가르는 JobExecutor 와 다른 구분이므로 축의
         값에는 local 이 없다.
+
+    RuleJobLeaseEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/SuccessEnvelope"
+        - type: object
+          required: [data]
+          properties:
+            data:
+              $ref: "#/components/schemas/RuleJobLease"
+
+    RuleJobLease:
+      type: object
+      description: 리스를 쥔 실행기와 그 수명이며 실행기가 이 값으로 계속 쥐고 있는지 판정한다.
+      required: [held, leaseOwner, leaseExpiresAt]
+      properties:
+        held: { type: boolean, description: 부른 실행기가 지금도 리스를 쥐고 있는지다 }
+        leaseOwner: { type: string, nullable: true }
+        leaseExpiresAt: { type: string, format: date-time, nullable: true }
+
+    RuleJobReportBody:
+      type: object
+      description: 실행기가 만든 규칙과 그 근거이며 잡의 산출물 자리에 그대로 실린다.
+      required: [rules]
+      properties:
+        rules:
+          type: array
+          items: { type: object, additionalProperties: true }
+        skipped:
+          type: array
+          items: { type: string }
+
+    RuleJobFailureBody:
+      type: object
+      description: 실행기가 보고하는 실패이며 원장의 오류 자리에 남는다.
+      required: [message]
+      properties:
+        message: { type: string, minLength: 1 }
+        retryable: { type: boolean, default: false }
 
     Job:
       type: object
