@@ -31,7 +31,15 @@ workflows:
     signals:
       - name: enqueueChatExecution
         args: [executionId]
-        meaning: 접수가 새 실행 식별자를 스레드 워크플로에 밀어 넣는다
+        meaning: >-
+          접수가 새 실행 식별자를 스레드 워크플로에 밀어 넣는다. 인자는 대기 줄이 움직였다는
+          포인터이며 스레드 워크플로는 그 값을 쓰지 않고 원장에서 다음 실행을 다시 조회한다.
+    activities:
+      - name: getNextChatExecution
+        queue: chat
+        startToCloseSeconds: 60
+        maximumAttempts: 5
+        meaning: 이 스레드에서 자기 축이 맡은 다음 대기 실행 하나를 원장에서 조회한다
     idleSeconds: 5
     maxChildren: 100
 
