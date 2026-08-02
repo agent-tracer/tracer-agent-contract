@@ -13,7 +13,7 @@
 | 실행 원장 | `db/migrations/*.sql`, `db/schema.md` |
 | 워크플로 | `workflow/queues.yaml` |
 | 에이전트 규격 | `agent/{chat,recipe-scan,rule-generation,task-cleanup,title-suggestion}/` |
-| 공유 프롬프트·오류·어휘 | `agent/shared/*.json` |
+| 두 구현체가 함께 밟는 절차 | `agent/shared/*.json` |
 | 추적 API 질의 조건 | `tracer/query-conditions.md` |
 | 적합성 케이스 | `conformance/cases/*.json` |
 | 강제 수준 | `conformance/enforcement.json` |
@@ -44,6 +44,9 @@ python conformance/runner/verify.py http://127.0.0.1:8800
 - 에이전트 도구가 부르는 경로를 두 OpenAPI 표면이 덮는가
 - 잡 종류와 토픽의 목록이 자리마다 같은가
 - 전달한 주소의 `/internal/surface`가 계약 경로를 실제로 제공하는가
+- 실행 스트림 절과 가리는 규칙과 실행 자격과 접는 조건이 자리를 빠짐없이 갖는가
+
+두 검사기의 출력은 글자로 같습니다. 한쪽만 보는 자리가 생기면 그 자리는 계약이 강제하지 않는 것과 같으므로, 검사를 더할 때 두 검사기에 같은 검사를 넣습니다.
 
 `conformance/cases/divergence.json`은 실패 케이스가 아니라 현재의 구현 차이를 기록하는 파일입니다. 차이를 더하거나 해소할 때는 정본 구현의 방향과 영향 범위를 함께 갱신합니다. 기록되었다는 사실이 그 차이를 허용한다는 뜻은 아닙니다.
 

@@ -8,10 +8,20 @@
 - `wire/` — 봉투·헤더·토픽·잡 종류
 - `db/` — 실행 원장 migration과 스키마
 - `workflow/` — Temporal 큐 선언
-- `agent/` — 에이전트별 도구·출력·프롬프트 규격과 공유 계약
+- `agent/` — 에이전트별 도구·출력·프롬프트 규격과 `shared/`의 공유 계약
 - `tracer/` — 추적 API 질의 조건
 - `conformance/` — 케이스·강제 수준·Node/Python 검사기
 - `VERSION` — 계약 판
+
+`agent/shared/`는 두 구현체가 같은 절차를 밟아야 하는 규칙을 갖습니다.
+
+- `redaction.json` — 가릴 낱말과 견주는 절차와 표시, 그리고 걸린 자리가 어디까지인지
+- `scope.token.json` — 실행에 매인 자격의 접두사·마디·서명·수명
+- `execution.vocabulary.json` — 실행 어휘와 실행을 종결로 접는 조건
+- `error.subtypes.json` — 실패의 상위 분류와 거절 코드
+- `languages.json` — 답변 언어
+
+이 파일들은 값이 아니라 절차를 적습니다. 두 구현체가 같은 입력에 같은 글자를 내야 하므로, 절차를 언어의 기본 동작에 맡기지 않고 계약이 문장으로 정합니다.
 
 TypeScript 구현이 정본 동작을 제공하고 Python 구현이 같은 계약을 구현합니다. 현재의 차이는 `conformance/cases/divergence.json`에서 확인합니다. 기록되었다는 사실이 그 차이를 허용한다는 뜻은 아닙니다.
 
@@ -42,9 +52,13 @@ TypeScript 구현이 정본 동작을 제공하고 Python 구현이 같은 계�
 ## 검증
 
 ```bash
+node scripts/check-contract-files.mjs
+node --test scripts/*.test.mjs
 node conformance/runner/verify.mjs
 python conformance/runner/verify.py
 ```
+
+두 검사기의 출력은 글자로 같아야 합니다. 한쪽만 검사하는 자리가 생기면 그 자리는 계약이 강제하지 않는 것과 같습니다.
 
 실행 중인 구현체의 HTTP 표면까지 확인할 때는 주소를 전달합니다.
 
