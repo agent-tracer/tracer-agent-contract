@@ -1,0 +1,63 @@
+{
+  "meaning": "조사 프롬프트가 실어 보내는 값의 자리를 두 구현체가 같게 내는지 대조하는 케이스다. 프롬프트 전문이 아니라 반드시 실려야 하는 줄과 실리면 안 되는 것을 적으므로, 조립의 나머지는 구현체가 자유롭게 쓴다. 모델이 읽는 글자가 축마다 다르면 같은 태스크가 축에 따라 다른 답을 내고 그 원인이 보이지 않는다.",
+  "survey": {
+    "meaning": "조율자가 계획을 세울 때 읽는 사용자 프롬프트다.",
+    "cases": [
+      {
+        "name": "앵커와 쓸 수 있는 턴을 함께 싣는다",
+        "input": { "taskId": "task-1", "availableTurns": 9, "userPrompt": null },
+        "mustContain": ["task-1", "Turns available: 9"]
+      },
+      {
+        "name": "사용자 지시가 있으면 그것도 싣는다",
+        "input": { "taskId": "task-1", "availableTurns": 9, "userPrompt": "배포 절차를 보고 싶다" },
+        "mustContain": ["task-1", "Turns available: 9", "배포 절차를 보고 싶다"]
+      }
+    ]
+  },
+  "probe": {
+    "meaning": "전문가가 자기 조사를 시작할 때 읽는 사용자 프롬프트다.",
+    "cases": [
+      {
+        "name": "앵커와 자기 질문과 쓸 수 있는 턴을 싣는다",
+        "input": {
+          "taskId": "task-1",
+          "question": "이 태스크가 무엇을 했나",
+          "turns": 4,
+          "siblings": []
+        },
+        "mustContain": ["task-1", "이 태스크가 무엇을 했나", "Turns available: 4"],
+        "mustNotContain": ["Other specialists are handling"]
+      },
+      {
+        "name": "다른 전문가가 맡은 축과 질문을 함께 싣는다",
+        "input": {
+          "taskId": "task-1",
+          "question": "이 태스크가 무엇을 했나",
+          "turns": 4,
+          "siblings": [
+            { "probe": "rules", "weight": 3, "question": "어떤 규칙이 걸렸나" },
+            { "probe": "repetition", "weight": 2, "question": "다른 태스크에도 있었나" }
+          ]
+        },
+        "mustContain": [
+          "Other specialists are handling these questions in parallel:",
+          "rules",
+          "어떤 규칙이 걸렸나",
+          "repetition",
+          "다른 태스크에도 있었나"
+        ]
+      },
+      {
+        "name": "혼자 도는 전문가에게는 남의 담당을 싣지 않는다",
+        "input": {
+          "taskId": "task-1",
+          "question": "이 태스크가 무엇을 했나",
+          "turns": 4,
+          "siblings": []
+        },
+        "mustNotContain": ["Other specialists are handling", "rules", "repetition"]
+      }
+    ]
+  }
+}
