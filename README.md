@@ -45,6 +45,9 @@ python conformance/runner/verify.py http://127.0.0.1:8800
 - 잡 종류와 토픽의 목록이 자리마다 같은가
 - 전달한 주소의 `/internal/surface`가 계약 경로를 실제로 제공하는가
 - 실행 스트림 절과 가리는 규칙과 실행 자격과 접는 조건이 자리를 빠짐없이 갖는가
+- 도구가 열리는 표면 넷의 이름 목록이 `agent/chat/tool.json`의 `surface`와 같은가
+- 대화 실행의 대기 줄이 원장 하나에 있고 축으로 갈리는가
+- 공급자 요청 식별자와 첫 토큰까지의 시간이 값 규칙을 갖는가
 
 두 검사기의 출력은 글자로 같습니다. 한쪽만 보는 자리가 생기면 그 자리는 계약이 강제하지 않는 것과 같으므로, 검사를 더할 때 두 검사기에 같은 검사를 넣습니다.
 
@@ -92,6 +95,8 @@ tracer-agent-contract/
 - 구현체에 복제된 타입 목록을 계약의 대체 정본으로 삼지 않습니다. 케이스와 JSON·YAML·OpenAPI 파일을 먼저 갱신합니다.
 - HTTP 경로 변수명은 비교 시 정규화되지만 메서드·경로·응답 봉투·도구 결속은 계약의 일부입니다.
 - 도구 목록은 두 구현체가 같은 능력을 제공한다는 강제 기준입니다. 프롬프트 문구처럼 정본 구현을 기록하는 항목과 구분합니다.
+- 도구가 모델에게 열리는 표면은 `agent/chat/tool.json`의 `surface` 한 칸이 소유합니다. 값은 `read`·`agentRead`·`memory`·`confirm` 넷이며 확인 게이트도 되읽기 분류도 이 값에서 파생됩니다. 구현체는 도구가 부르는 경로의 접두사나 하드코딩한 이름 목록으로 도구를 가르지 않습니다.
+- 칸의 이름만 적으면 두 구현체가 같은 칸에 다른 뜻의 값을 담고도 통과합니다. 값의 단위와 비어 있는 조건은 `conformance/cases/chat.query.json`의 `valueRules`와 `agent/shared/execution.vocabulary.json`의 `identifierRules`·`runObservationRules`가 갖습니다.
 - 새 케이스와 공유 파일은 반드시 `enforcement.json`에 분류합니다.
 - 계약을 고치면 두 검사기와 두 구현체의 전체 테스트·빌드를 함께 실행합니다.
 
