@@ -1,51 +1,51 @@
 {
-    "meaning": "실행 하나가 여러 호출에 걸쳐 예산을 나누는 규칙이다. maxTurns 는 실행 전체의 턴 총량이며 노드마다 다시 주어지는 상한이 아니다. 두 축이 같은 계획에서 같은 턴과 같은 달러를 내야 하므로 떼는 순서와 나머지를 돌리는 규칙까지 정한다.",
-    "reservation": {
-        "meaning": "팬아웃 전에 떼어 두어 전문가 배분에서 제외하는 몫이다. 비율은 뗄 당시의 잔량에 곱하므로 뗄 순서가 바뀌면 같은 비율이 다른 액수가 된다.",
-        "order": [
-            "repair",
-            "survey",
-            "synthesisFloor"
-        ],
-        "repair": {
-            "turns": 2,
-            "budgetShare": 0.2,
-            "reason": "검증에 걸린 산출을 한 번 고칠 최소 턴과, 그때 남은 예산에서 떼는 비율이다."
-        },
-        "survey": {
-            "turns": 1,
-            "budgetShare": 0.1,
-            "reason": "조사 계획을 세우는 턴과 그 몫이다."
-        },
-        "synthesisFloor": {
-            "turns": 3,
-            "budgetShare": 0,
-            "reason": "전문가에게 넘기지 않고 종합이 갖는 바닥 턴이며 달러는 따로 떼지 않는다."
-        }
+  "meaning": "실행 하나가 여러 호출에 걸쳐 예산을 나누는 규칙이다. maxTurns 는 실행 전체의 턴 총량이며 노드마다 다시 주어지는 상한이 아니다. 두 축이 같은 계획에서 같은 턴과 같은 달러를 내야 하므로 떼는 순서와 나머지를 돌리는 규칙까지 정한다.",
+  "reservation": {
+    "meaning": "팬아웃 전에 떼어 두어 전문가 배분에서 제외하는 몫이다. 비율은 뗄 당시의 잔량에 곱하므로 뗄 순서가 바뀌면 같은 비율이 다른 액수가 된다.",
+    "order": [
+      "repair",
+      "survey",
+      "synthesisFloor"
+    ],
+    "repair": {
+      "turns": 2,
+      "budgetShare": 0.2,
+      "reason": "검증에 걸린 산출을 한 번 고칠 최소 턴과, 그때 남은 예산에서 떼는 비율이다."
     },
-    "turnLedger": {
-        "meaning": "실행 하나가 갖는 턴의 총량과 그 소진 규칙이다.",
-        "totalIsWholeExecution": true,
-        "lease": "호출마다 그 시점의 잔량에서 몫을 떼어 그 호출의 상한으로 준다.",
-        "settle": "호출이 끝나면 떼어 준 몫에 실제 지출을 대조해 잔량을 되돌린다.",
-        "settleWithoutReport": "공급자가 실제 턴 수나 비용을 보고하지 않으면 떼어 준 몫 전부를 쓴 것으로 본다.",
-        "reservationReturn": "예약분은 정산 때 잔량으로 되돌리며, 뗄 때 이미 잔량에서 뺐으므로 정산에서 두 번 빼지 않는다."
+    "survey": {
+      "turns": 3,
+      "budgetShare": 0.1,
+      "reason": "조사 계획을 세우는 턴과 그 몫이며, 규모를 읽는 도구 호출과 그 답을 보고 배분하는 턴을 함께 담는다."
     },
-    "weightAllocation": {
-        "meaning": "전문가 셋에 턴을 나눌 때 weight 요청과 가용 턴의 관계에 따라 내림에서 생기는 나머지를 돌려주는 규칙이다. 두 축이 같은 계획에서 같은 배열을 내야 하므로 언어의 정렬 안정성에 맡기지 않고 동률의 순서까지 정한다.",
-        "whenRequestFitsAvailable": "요청 합이 가용 이하면 항목마다 요청한 만큼 그대로 준다.",
-        "whenAvailableBelowCount": "가용이 항목 수보다 적으면 최소 1턴씩도 다 줄 수 없으므로, weight 가 큰 순서로 1턴씩만 주고 나머지 항목은 0이다. 동률이면 인덱스가 작은 쪽을 먼저 준다.",
-        "otherwise": {
-            "floor": "항목마다 1턴을 먼저 깔아 준다.",
-            "proportional": "남은 가용을 항목의 (weight-1) 비례로 나눠 내림해서 얹는다.",
-            "remainder": "내림에서 남고 배분되지 않은 턴을 weight 가 큰 순서로 하나씩 돌려준다. 동률이면 인덱스가 작은 쪽을 먼저 받는다."
-        },
-        "budgetFollowsTurns": "달러는 항목이 배분받은 턴이 전체 배분 턴에서 차지하는 비율만큼 나눈다. 배분된 턴이 모두 0이면 달러도 모두 0이다."
-    },
-    "orchestratorFailureDemotion": {
-        "meaning": "계획 단계가 무너졌을 때 실행이 취하는 모양이다.",
-        "onPlanFailure": "계획 호출이 실패하면 빈 계획으로 강등하고, 그 실행은 전문가를 하나도 부르지 않은 채 빈 결과로 끝난다.",
-        "outcome": "강등한 실행은 실패가 아니라 성공이다.",
-        "trajectory": "강등한 사실은 실행 어휘의 node.failed 로 궤적에 남으며 이후 노드는 이어서 실행되지 않는다."
+    "synthesisFloor": {
+      "turns": 3,
+      "budgetShare": 0,
+      "reason": "전문가에게 넘기지 않고 종합이 갖는 바닥 턴이며 달러는 따로 떼지 않는다."
     }
+  },
+  "turnLedger": {
+    "meaning": "실행 하나가 갖는 턴의 총량과 그 소진 규칙이다.",
+    "totalIsWholeExecution": true,
+    "lease": "호출마다 그 시점의 잔량에서 몫을 떼어 그 호출의 상한으로 준다.",
+    "settle": "호출이 끝나면 떼어 준 몫에 실제 지출을 대조해 잔량을 되돌린다.",
+    "settleWithoutReport": "공급자가 실제 턴 수나 비용을 보고하지 않으면 떼어 준 몫 전부를 쓴 것으로 본다.",
+    "reservationReturn": "예약분은 정산 때 잔량으로 되돌리며, 뗄 때 이미 잔량에서 뺐으므로 정산에서 두 번 빼지 않는다."
+  },
+  "weightAllocation": {
+    "meaning": "전문가 셋에 턴을 나눌 때 weight 요청과 가용 턴의 관계에 따라 내림에서 생기는 나머지를 돌려주는 규칙이다. 두 축이 같은 계획에서 같은 배열을 내야 하므로 언어의 정렬 안정성에 맡기지 않고 동률의 순서까지 정한다.",
+    "whenRequestFitsAvailable": "요청 합이 가용 이하면 항목마다 요청한 만큼 그대로 준다.",
+    "whenAvailableBelowCount": "가용이 항목 수보다 적으면 최소 1턴씩도 다 줄 수 없으므로, weight 가 큰 순서로 1턴씩만 주고 나머지 항목은 0이다. 동률이면 인덱스가 작은 쪽을 먼저 준다.",
+    "otherwise": {
+      "floor": "항목마다 1턴을 먼저 깔아 준다.",
+      "proportional": "남은 가용을 항목의 (weight-1) 비례로 나눠 내림해서 얹는다.",
+      "remainder": "내림에서 남고 배분되지 않은 턴을 weight 가 큰 순서로 하나씩 돌려준다. 동률이면 인덱스가 작은 쪽을 먼저 받는다."
+    },
+    "budgetFollowsTurns": "달러는 항목이 배분받은 턴이 전체 배분 턴에서 차지하는 비율만큼 나눈다. 배분된 턴이 모두 0이면 달러도 모두 0이다."
+  },
+  "orchestratorFailureDemotion": {
+    "meaning": "계획 단계가 무너졌을 때 실행이 취하는 모양이다.",
+    "onPlanFailure": "계획 호출이 실패하면 빈 계획으로 강등하고, 그 실행은 전문가를 하나도 부르지 않은 채 빈 결과로 끝난다.",
+    "outcome": "강등한 실행은 실패가 아니라 성공이다.",
+    "trajectory": "강등한 사실은 실행 어휘의 node.failed 로 궤적에 남으며 이후 노드는 이어서 실행되지 않는다."
+  }
 }

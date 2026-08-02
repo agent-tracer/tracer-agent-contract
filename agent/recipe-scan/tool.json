@@ -1,340 +1,343 @@
 {
-    "agent": "recipe-scan",
-    "version": "v0.0.1",
-    "limits": {
-        "recipeCandidateLimit": 4,
-        "maxRedispatchProbes": 3,
-        "maxRedispatchRounds": 1,
-        "maxProbeWeight": 10
-    },
-    "tools": {
-        "get_task_summary": {
-            "description": "Get a cheap task overview (tool usage counts, top files touched, top commands run, first user message) aggregated over the task's earliest events, window many, default 400. The response's truncated/totalEventCount fields tell you whether later events were left out.",
-            "args": {
-                "taskId": {
-                    "type": "string",
-                    "required": true,
-                    "trim": true,
-                    "minLength": 1,
-                    "description": "The task ID"
-                },
-                "window": {
-                    "type": "integer",
-                    "required": false,
-                    "min": 1,
-                    "max": 2000,
-                    "default": 400,
-                    "description": "How many of the task's earliest events to aggregate (default 400, hard cap 2000)"
-                }
-            }
+  "agent": "recipe-scan",
+  "version": "v0.0.1",
+  "limits": {
+    "recipeCandidateLimit": 4,
+    "maxRedispatchProbes": 3,
+    "maxRedispatchRounds": 1,
+    "maxProbeWeight": 10
+  },
+  "tools": {
+    "get_task_summary": {
+      "description": "Get a cheap task overview (tool usage counts, top files touched, top commands run, first user message) aggregated over the task's earliest events, window many, default 400. The response's truncated/totalEventCount fields tell you whether later events were left out.",
+      "args": {
+        "taskId": {
+          "type": "string",
+          "required": true,
+          "trim": true,
+          "minLength": 1,
+          "description": "The task ID"
         },
-        "get_task_events": {
-            "description": "Get a page of a task's chronological event sequence (user messages, assistant messages, tool runs), up to 300 events per page. You choose how much to read: pick limit, pass the response's nextCursor back as cursor to keep paging, and set order=\"desc\" to start from the latest events. truncated/total tell you whether more events exist.",
-            "args": {
-                "taskId": {
-                    "type": "string",
-                    "required": true,
-                    "trim": true,
-                    "minLength": 1,
-                    "description": "The task ID"
-                },
-                "limit": {
-                    "type": "integer",
-                    "required": false,
-                    "min": 1,
-                    "max": 300,
-                    "default": 100,
-                    "description": "Max events to return in this page (default 100, hard cap 300)"
-                },
-                "cursor": {
-                    "type": "string",
-                    "required": false,
-                    "trim": true,
-                    "description": "Opaque cursor from a previous call's nextCursor. Omit to start from the first page."
-                },
-                "order": {
-                    "type": "enum",
-                    "required": false,
-                    "values": [
-                        "asc",
-                        "desc"
-                    ],
-                    "default": "asc",
-                    "description": "Reading direction: \"asc\" (default) pages from the earliest event forward; \"desc\" pages from the latest event backward."
-                }
-            }
-        },
-        "list_rules": {
-            "description": "List existing global and task-scoped rules that apply to the anchor task, so friction a rule already governs is cited by rule ID in governing_rules instead of re-described.",
-            "args": {
-                "taskId": {
-                    "type": "string",
-                    "required": true,
-                    "trim": true,
-                    "minLength": 1,
-                    "description": "The anchor task ID"
-                }
-            }
-        },
-        "search_events": {
-            "description": "Search indexed events by title/body, ranked by recency. Use q with optional taskId, kind, or toolName filters to find user corrections, instructions, and friction evidence. Pick limit (up to 100 per call) and offset to page through as many results as you need.",
-            "args": {
-                "q": {
-                    "type": "string",
-                    "required": true,
-                    "trim": true,
-                    "minLength": 1,
-                    "description": "Search query"
-                },
-                "taskId": {
-                    "type": "string",
-                    "required": false,
-                    "trim": true,
-                    "description": "Optional task ID filter"
-                },
-                "kind": {
-                    "type": "enum",
-                    "required": false,
-                    "values": [
-                        "execute_tool",
-                        "plan",
-                        "agent_tracer.action.logged",
-                        "agent_tracer.rule.logged",
-                        "agent_tracer.thought.logged",
-                        "agent_tracer.context.saved",
-                        "agent_tracer.context.snapshot",
-                        "agent_tracer.user.prompt.expansion",
-                        "agent_tracer.permission.request",
-                        "agent_tracer.worktree.remove",
-                        "agent_tracer.setup.triggered",
-                        "agent_tracer.file.changed",
-                        "agent_tracer.user.message",
-                        "agent_tracer.assistant.commentary",
-                        "agent_tracer.assistant.response",
-                        "agent_tracer.question.logged",
-                        "agent_tracer.todo.logged",
-                        "invoke_agent",
-                        "agent_tracer.instructions.loaded"
-                    ],
-                    "description": "Optional event kind filter. Must be one of the known event kinds."
-                },
-                "toolName": {
-                    "type": "string",
-                    "required": false,
-                    "trim": true,
-                    "description": "Optional tool name filter"
-                },
-                "limit": {
-                    "type": "integer",
-                    "required": false,
-                    "min": 1,
-                    "max": 100,
-                    "default": 20,
-                    "description": "Max results per call"
-                },
-                "offset": {
-                    "type": "integer",
-                    "required": false,
-                    "min": 0,
-                    "max": 9900,
-                    "default": 0,
-                    "description": "How many ranked results to skip; combine with limit to page beyond the first batch"
-                }
-            },
-            "responseEvent": {
-                "required": [
-                    "id",
-                    "taskId",
-                    "seq",
-                    "kind",
-                    "title",
-                    "filePaths",
-                    "occurredAt"
-                ],
-                "optional": [
-                    "body",
-                    "toolName"
-                ]
-            }
-        },
-        "find_similar_tasks": {
-            "description": "Find tasks with titles similar to the anchor task. Use after inspecting the anchor to check whether the workflow repeats.",
-            "args": {
-                "anchorTaskId": {
-                    "type": "string",
-                    "required": true,
-                    "trim": true,
-                    "minLength": 1,
-                    "description": "The anchor task ID"
-                },
-                "limit": {
-                    "type": "integer",
-                    "required": false,
-                    "min": 1,
-                    "max": 20,
-                    "default": 5,
-                    "description": "Max tasks"
-                }
-            }
-        },
-        "search_recipes": {
-            "description": "Search existing recipes for possible duplicate or outdated targets. Use this before setting revises_recipe_id.",
-            "args": {
-                "q": {
-                    "type": "string",
-                    "required": true,
-                    "trim": true,
-                    "minLength": 1,
-                    "description": "Search query"
-                },
-                "limit": {
-                    "type": "integer",
-                    "required": false,
-                    "min": 1,
-                    "max": 20,
-                    "default": 5,
-                    "description": "Max recipes"
-                }
-            }
-        },
-        "check_citations": {
-            "description": "Check whether the IDs you plan to cite are backed by what your tools actually returned, before you write the final candidates. Pass the task plus the event, turn, and rule IDs you intend to use; the response names the ones that are not citable. A single unsupported ID gets the whole candidate list rejected, so verify here instead of spending your one repair on it.",
-            "args": {
-                "taskId": {
-                    "type": "string",
-                    "required": true,
-                    "trim": true,
-                    "minLength": 1,
-                    "description": "The task the cited IDs belong to"
-                },
-                "eventIds": {
-                    "type": "array",
-                    "required": false,
-                    "maxItems": 200,
-                    "items": {
-                        "type": "string",
-                        "trim": true,
-                        "minLength": 1
-                    },
-                    "description": "Event IDs you intend to cite"
-                },
-                "turnIds": {
-                    "type": "array",
-                    "required": false,
-                    "maxItems": 200,
-                    "items": {
-                        "type": "string",
-                        "trim": true,
-                        "minLength": 1
-                    },
-                    "description": "Turn IDs you intend to cite"
-                },
-                "ruleIds": {
-                    "type": "array",
-                    "required": false,
-                    "maxItems": 200,
-                    "items": {
-                        "type": "string",
-                        "trim": true,
-                        "minLength": 1
-                    },
-                    "description": "Rule IDs you intend to cite in governing_rules"
-                }
-            }
+        "window": {
+          "type": "integer",
+          "required": false,
+          "min": 1,
+          "max": 2000,
+          "default": 400,
+          "description": "How many of the task's earliest events to aggregate (default 400, hard cap 2000)"
         }
+      }
     },
-    "responses": {
-        "get_task_events": {
-            "page": [
-                "events",
-                "truncated",
-                "nextCursor",
-                "total"
-            ],
-            "item": [
-                "id",
-                "seq",
-                "turnId",
-                "kind",
-                "title",
-                "body",
-                "toolName",
-                "filePaths",
-                "occurredAt"
-            ]
+    "get_task_events": {
+      "description": "Get a page of a task's chronological event sequence (user messages, assistant messages, tool runs), up to 300 events per page. You choose how much to read: pick limit, pass the response's nextCursor back as cursor to keep paging, and set order=\"desc\" to start from the latest events. truncated/total tell you whether more events exist.",
+      "args": {
+        "taskId": {
+          "type": "string",
+          "required": true,
+          "trim": true,
+          "minLength": 1,
+          "description": "The task ID"
+        },
+        "limit": {
+          "type": "integer",
+          "required": false,
+          "min": 1,
+          "max": 300,
+          "default": 100,
+          "description": "Max events to return in this page (default 100, hard cap 300)"
+        },
+        "cursor": {
+          "type": "string",
+          "required": false,
+          "trim": true,
+          "description": "Opaque cursor from a previous call's nextCursor. Omit to start from the first page."
+        },
+        "order": {
+          "type": "enum",
+          "required": false,
+          "values": [
+            "asc",
+            "desc"
+          ],
+          "default": "asc",
+          "description": "Reading direction: \"asc\" (default) pages from the earliest event forward; \"desc\" pages from the latest event backward."
         }
+      }
     },
-    "failures": {
-        "toolFailed": "Tool {tool} failed: {reason}. Do not call it again more than once. Continue with the evidence you already have, and state in your rationale which evidence you could not check.",
-        "workerFailed": "Investigation failed: {reason}"
+    "list_rules": {
+      "description": "List existing global and task-scoped rules that apply to the anchor task, so friction a rule already governs is cited by rule ID in governing_rules instead of re-described.",
+      "args": {
+        "taskId": {
+          "type": "string",
+          "required": true,
+          "trim": true,
+          "minLength": 1,
+          "description": "The anchor task ID"
+        }
+      }
     },
-    "steps": {
-        "consecutiveFromOne": true
-    },
-    "verify": {
-        "kinds": [
-            "command",
-            "pattern",
-            "action"
+    "search_events": {
+      "description": "Search indexed events by title/body, ranked by recency. Use q with optional taskId, kind, or toolName filters to find user corrections, instructions, and friction evidence. Pick limit (up to 100 per call) and offset to page through as many results as you need.",
+      "args": {
+        "q": {
+          "type": "string",
+          "required": true,
+          "trim": true,
+          "minLength": 1,
+          "description": "Search query"
+        },
+        "taskId": {
+          "type": "string",
+          "required": false,
+          "trim": true,
+          "description": "Optional task ID filter"
+        },
+        "kind": {
+          "type": "enum",
+          "required": false,
+          "values": [
+            "execute_tool",
+            "plan",
+            "agent_tracer.action.logged",
+            "agent_tracer.rule.logged",
+            "agent_tracer.thought.logged",
+            "agent_tracer.context.saved",
+            "agent_tracer.context.snapshot",
+            "agent_tracer.user.prompt.expansion",
+            "agent_tracer.permission.request",
+            "agent_tracer.worktree.remove",
+            "agent_tracer.setup.triggered",
+            "agent_tracer.file.changed",
+            "agent_tracer.user.message",
+            "agent_tracer.assistant.commentary",
+            "agent_tracer.assistant.response",
+            "agent_tracer.question.logged",
+            "agent_tracer.todo.logged",
+            "invoke_agent",
+            "agent_tracer.instructions.loaded"
+          ],
+          "description": "Optional event kind filter. Must be one of the known event kinds."
+        },
+        "toolName": {
+          "type": "string",
+          "required": false,
+          "trim": true,
+          "description": "Optional tool name filter"
+        },
+        "limit": {
+          "type": "integer",
+          "required": false,
+          "min": 1,
+          "max": 100,
+          "default": 20,
+          "description": "Max results per call"
+        },
+        "offset": {
+          "type": "integer",
+          "required": false,
+          "min": 0,
+          "max": 9900,
+          "default": 0,
+          "description": "How many ranked results to skip; combine with limit to page beyond the first batch"
+        }
+      },
+      "responseEvent": {
+        "required": [
+          "id",
+          "taskId",
+          "seq",
+          "kind",
+          "title",
+          "filePaths",
+          "occurredAt"
         ],
-        "command": {
-            "matchesMin": 1,
-            "matchesMax": 20
-        },
-        "pattern": {
-            "maxLength": 500
-        },
-        "action": {
-            "tools": [
-                "command",
-                "file-read",
-                "file-write",
-                "web"
-            ]
-        }
+        "optional": [
+          "body",
+          "toolName"
+        ]
+      }
     },
-    "orchestration": {
-        "workerMaxTurns": 10,
-        "coordinatorTools": [
-            "check_citations"
-        ],
-        "roles": {
-            "timeline": [
-                "get_task_summary",
-                "get_task_events",
-                "search_events",
-                "check_citations"
-            ],
-            "rules": [
-                "list_rules",
-                "search_recipes",
-                "check_citations"
-            ],
-            "repetition": [
-                "search_events",
-                "find_similar_tasks",
-                "check_citations"
-            ]
+    "find_similar_tasks": {
+      "description": "Find tasks with titles similar to the anchor task. Use after inspecting the anchor to check whether the workflow repeats.",
+      "args": {
+        "anchorTaskId": {
+          "type": "string",
+          "required": true,
+          "trim": true,
+          "minLength": 1,
+          "description": "The anchor task ID"
         },
-        "workerReport": {
-            "required": [
-                "probe",
-                "verdict",
-                "excerpts",
-                "exhausted"
-            ],
-            "excerptRequired": [
-                "taskId",
-                "eventId",
-                "text"
-            ]
-        },
-        "redispatchRequest": {
-            "required": [
-                "probe",
-                "weight",
-                "question"
-            ]
+        "limit": {
+          "type": "integer",
+          "required": false,
+          "min": 1,
+          "max": 20,
+          "default": 5,
+          "description": "Max tasks"
         }
+      }
+    },
+    "search_recipes": {
+      "description": "Search existing recipes for possible duplicate or outdated targets. Use this before setting revises_recipe_id.",
+      "args": {
+        "q": {
+          "type": "string",
+          "required": true,
+          "trim": true,
+          "minLength": 1,
+          "description": "Search query"
+        },
+        "limit": {
+          "type": "integer",
+          "required": false,
+          "min": 1,
+          "max": 20,
+          "default": 5,
+          "description": "Max recipes"
+        }
+      }
+    },
+    "check_citations": {
+      "description": "Check whether the IDs you plan to cite are backed by what your tools actually returned, before you write the final candidates. Pass the task plus the event, turn, and rule IDs you intend to use; the response names the ones that are not citable. A single unsupported ID gets the whole candidate list rejected, so verify here instead of spending your one repair on it.",
+      "args": {
+        "taskId": {
+          "type": "string",
+          "required": true,
+          "trim": true,
+          "minLength": 1,
+          "description": "The task the cited IDs belong to"
+        },
+        "eventIds": {
+          "type": "array",
+          "required": false,
+          "maxItems": 200,
+          "items": {
+            "type": "string",
+            "trim": true,
+            "minLength": 1
+          },
+          "description": "Event IDs you intend to cite"
+        },
+        "turnIds": {
+          "type": "array",
+          "required": false,
+          "maxItems": 200,
+          "items": {
+            "type": "string",
+            "trim": true,
+            "minLength": 1
+          },
+          "description": "Turn IDs you intend to cite"
+        },
+        "ruleIds": {
+          "type": "array",
+          "required": false,
+          "maxItems": 200,
+          "items": {
+            "type": "string",
+            "trim": true,
+            "minLength": 1
+          },
+          "description": "Rule IDs you intend to cite in governing_rules"
+        }
+      }
     }
+  },
+  "responses": {
+    "get_task_events": {
+      "page": [
+        "events",
+        "truncated",
+        "nextCursor",
+        "total"
+      ],
+      "item": [
+        "id",
+        "seq",
+        "turnId",
+        "kind",
+        "title",
+        "body",
+        "toolName",
+        "filePaths",
+        "occurredAt"
+      ]
+    }
+  },
+  "failures": {
+    "toolFailed": "Tool {tool} failed: {reason}. Do not call it again more than once. Continue with the evidence you already have, and state in your rationale which evidence you could not check.",
+    "workerFailed": "Investigation failed: {reason}"
+  },
+  "steps": {
+    "consecutiveFromOne": true
+  },
+  "verify": {
+    "kinds": [
+      "command",
+      "pattern",
+      "action"
+    ],
+    "command": {
+      "matchesMin": 1,
+      "matchesMax": 20
+    },
+    "pattern": {
+      "maxLength": 500
+    },
+    "action": {
+      "tools": [
+        "command",
+        "file-read",
+        "file-write",
+        "web"
+      ]
+    }
+  },
+  "orchestration": {
+    "workerMaxTurns": 10,
+    "surveyTools": [
+      "get_task_summary"
+    ],
+    "coordinatorTools": [
+      "check_citations"
+    ],
+    "roles": {
+      "timeline": [
+        "get_task_summary",
+        "get_task_events",
+        "search_events",
+        "check_citations"
+      ],
+      "rules": [
+        "list_rules",
+        "search_recipes",
+        "check_citations"
+      ],
+      "repetition": [
+        "search_events",
+        "find_similar_tasks",
+        "check_citations"
+      ]
+    },
+    "workerReport": {
+      "required": [
+        "probe",
+        "verdict",
+        "excerpts",
+        "exhausted"
+      ],
+      "excerptRequired": [
+        "taskId",
+        "eventId",
+        "text"
+      ]
+    },
+    "redispatchRequest": {
+      "required": [
+        "probe",
+        "weight",
+        "question"
+      ]
+    }
+  }
 }
