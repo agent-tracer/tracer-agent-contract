@@ -44,6 +44,7 @@ const SHARED = [
     "languages.json",
     "error.subtypes.json",
     "execution.vocabulary.json",
+    "execution.budget.json",
     "redaction.json",
     "scope.token.json",
 ];
