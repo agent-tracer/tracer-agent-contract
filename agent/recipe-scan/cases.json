@@ -407,6 +407,114 @@
             }
         ]
     },
+    "executionBudget": {
+        "meaning": "agent/shared/execution.budget.json 의 규칙을 recipe-scan 의 구체적인 수로 판정하는 케이스다. 계약이 강제하지 않는 것은 검사되지 않으므로 이 케이스가 그 넷을 두 축에 요구한다.",
+        "weightAllocation": {
+            "meaning": "leaseMany(requestedTurns, availableTurns) 하나가 같은 입력에서 두 축이 같은 grantedTurns 와 grantedUsd 를 내는지 본다. grantedUsd 는 availableUsd 를 grantedTurns 비율로 나눈 값이다.",
+            "cases": [
+                {
+                    "name": "요청 합이 가용 이하면 요청대로 준다",
+                    "requestedTurns": [1, 1, 1],
+                    "availableTurns": 3,
+                    "availableUsd": 0.3,
+                    "expect": { "grantedTurns": [1, 1, 1], "grantedUsd": [0.1, 0.1, 0.1] }
+                },
+                {
+                    "name": "내림에서 남는 턴을 weight 가 큰 순서로 하나씩 돌려준다",
+                    "requestedTurns": [5, 3, 2],
+                    "availableTurns": 6,
+                    "availableUsd": 0.6,
+                    "expect": { "grantedTurns": [3, 2, 1], "grantedUsd": [0.3, 0.2, 0.1] }
+                },
+                {
+                    "name": "요청 하나가 도드라져도 바닥과 비례와 나머지 순서로 다시 모인다",
+                    "requestedTurns": [10, 1, 1],
+                    "availableTurns": 5,
+                    "availableUsd": 0.5,
+                    "expect": { "grantedTurns": [3, 1, 1], "grantedUsd": [0.3, 0.1, 0.1] }
+                },
+                {
+                    "name": "항목이 하나면 가용을 그대로 받는다",
+                    "requestedTurns": [1],
+                    "availableTurns": 1,
+                    "availableUsd": 0.2,
+                    "expect": { "grantedTurns": [1], "grantedUsd": [0.2] }
+                },
+                {
+                    "name": "요청이 없으면 아무것도 배분하지 않는다",
+                    "requestedTurns": [],
+                    "availableTurns": 4,
+                    "availableUsd": 0.4,
+                    "expect": { "grantedTurns": [], "grantedUsd": [] }
+                },
+                {
+                    "name": "가용이 항목 수보다 적으면 weight 가 큰 순서로 1턴씩만 주고 나머지는 0이다",
+                    "requestedTurns": [5, 3, 2],
+                    "availableTurns": 2,
+                    "availableUsd": 0.2,
+                    "expect": { "grantedTurns": [1, 1, 0], "grantedUsd": [0.1, 0.1, 0] }
+                }
+            ]
+        },
+        "reservation": {
+            "meaning": "repair → survey → synthesisFloor 순서로 예약을 뜨면서 그때그때의 잔량에 비율을 곱한다. 순서를 바꾸면 같은 비율이 다른 액수가 되므로 이 순서 자체가 판정 대상이다.",
+            "startingRemainingTurns": 15,
+            "startingRemainingBudgetUsd": 2.0,
+            "expect": {
+                "repair": { "grantedTurns": 2, "grantedUsd": 0.4 },
+                "survey": { "grantedTurns": 1, "grantedUsd": 0.16 },
+                "synthesisFloor": { "grantedTurns": 3, "grantedUsd": 0 },
+                "remainingAfterAll": { "turns": 9, "budgetUsd": 1.44 }
+            }
+        },
+        "settlementWithoutReport": {
+            "meaning": "공급자가 실제 사용량을 보고하지 않은 정산은 뗀 몫 전부를 쓴 것으로 본다. 예약 몫을 정산에서 두 번 빼지 않는다.",
+            "startingRemainingTurns": 10,
+            "startingRemainingBudgetUsd": 1.0,
+            "reserve": { "turns": 2, "budgetShare": 0.2 },
+            "afterReserve": { "remainingTurns": 8, "remainingBudgetUsd": 0.8 },
+            "settle": { "costUsd": null, "numTurns": null },
+            "expect": { "remainingTurns": 8, "remainingBudgetUsd": 0.8 }
+        },
+        "outputExclusivity": {
+            "meaning": "recipes 와 redispatch 를 함께 실은 산출을 두 축이 같은 방식으로 거절하는지 본다.",
+            "cases": [
+                {
+                    "name": "recipes 만 채우면 통과한다",
+                    "recipesNonEmpty": true,
+                    "redispatchNonEmpty": false,
+                    "expect": { "valid": true }
+                },
+                {
+                    "name": "redispatch 만 채우면 통과한다",
+                    "recipesNonEmpty": false,
+                    "redispatchNonEmpty": true,
+                    "expect": { "valid": true }
+                },
+                {
+                    "name": "둘 다 비어 있으면 후보 없이 통과한다",
+                    "recipesNonEmpty": false,
+                    "redispatchNonEmpty": false,
+                    "expect": { "valid": true }
+                },
+                {
+                    "name": "recipes 와 redispatch 를 함께 채우면 거절한다",
+                    "recipesNonEmpty": true,
+                    "redispatchNonEmpty": true,
+                    "expect": { "valid": false }
+                }
+            ]
+        },
+        "orchestratorFailure": {
+            "meaning": "계획 호출이 실패한 실행에서 두 축이 같은 결과 모양을 내는지 본다.",
+            "input": { "surveyCallFails": true },
+            "expect": {
+                "candidates": [],
+                "executionOutcome": "success",
+                "orchestrationEvents": ["node.failed"]
+            }
+        }
+    },
     "resultExample": {
         "recipes": [
             {
