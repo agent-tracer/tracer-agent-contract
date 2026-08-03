@@ -133,13 +133,29 @@ jobWorkflows:
       kinds: [title-suggestion, recipe-scan, task-cleanup]
       idReusePolicy: REJECT_DUPLICATE
       activities:
-        - name: runAgentJob
+        - name: prepareAgentJob
+          queue: jobs
+          startToCloseSeconds: 60
+          maximumAttempts: 5
+          meaning: 도메인 문맥을 모아 실행 입력에 싣고 원장을 실행 중으로 옮긴다
+        - name: generateAgentJob
           queue: generate
           startToCloseSeconds: 900
+          scheduleToCloseSeconds: 1200
           heartbeatTimeoutSeconds: 30
           heartbeatIntervalSeconds: 10
           maximumAttempts: 3
-          meaning: 준비와 종결이 이 액티비티 안에서 함께 일어나므로 잡 하나가 액티비티 하나로 끝난다
+          meaning: 이 시도가 쓸 봉투를 받아 그래프를 돌리며 자격이 이 액티비티 밖으로 나가지 않는다
+        - name: finalizeAgentJob
+          queue: jobs
+          startToCloseSeconds: 60
+          maximumAttempts: 5
+          meaning: 생성이 낸 결과를 원장에 종결로 적고 산출물과 완료를 배달한다
+        - name: failAgentJob
+          queue: jobs
+          startToCloseSeconds: 60
+          maximumAttempts: 5
+          meaning: 어느 단계가 무너지든 원장이 그 실행을 실패로 닫는다
         - name: settleCanceledAgentJob
           queue: jobs
           startToCloseSeconds: 30
