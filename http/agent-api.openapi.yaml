@@ -2003,7 +2003,7 @@ components:
       required:
         - id
         - threadId
-        - userMessageId
+        - replayAnchorMessageId
         - status
         - requestedBackend
         - draftText
@@ -2021,7 +2021,9 @@ components:
       properties:
         id: { type: string }
         threadId: { type: string }
-        userMessageId: { type: string }
+        replayAnchorMessageId:
+          type: string
+          description: 이 실행이 되돌려 줄 이력이 끊기는 메시지이며 접수는 사용자 발화를 승인은 도구 결과를 세운다
         status:
           $ref: "#/components/schemas/ChatExecutionStatus"
         requestedBackend:
