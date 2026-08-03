@@ -2,9 +2,30 @@
     "agent": "chat",
     "version": "v0.0.1",
     "tools": {
+        "find_tasks": {
+            "surface": "read",
+            "description": "Find tasks by free text, ranked by relevance. This is the tool for \"the task where I…\", a remembered title, or any wording the user gives you — search_tasks cannot match text, it only filters. Start here whenever you do not already hold the taskId, then pass the id you found to get_task or get_timeline. Results mix two kinds of hit: task hits carry taskId and title, memo hits carry hitType=\"memo\" with the memo body and the task it sits on, so a note the user wrote can lead you to the task. Nothing matches when the words are not in the title or in a memo; widen to search_events, which searches the full body of every event.",
+            "args": {
+                "q": {
+                    "type": "string",
+                    "required": true,
+                    "trim": true,
+                    "minLength": 1,
+                    "description": "The words to look for in task titles and memo bodies. Use the user's own wording first; drop to one or two distinctive words if that finds nothing."
+                },
+                "limit": {
+                    "type": "integer",
+                    "required": false,
+                    "min": 1,
+                    "max": 100,
+                    "default": 20,
+                    "description": "Max hits to return, 1 to 100, default 20. Ranked best-first, so a small limit is usually enough."
+                }
+            }
+        },
         "search_tasks": {
             "surface": "read",
-            "description": "List the user's tasks newest-first. total tells you how many match the filter before you page, so check it first and narrow instead of paging blindly. Most tasks are subagent runs the user never sees: pass root=\"true\" to get only the top-level tasks they actually work on. Narrow further with status (running/waiting/completed/errored), origin (user/server-sdk), archived, or a parentTaskId to look inside one task's subagents. Page with cursor: pass the response's nextCursor back as cursor until it is null. limit is up to 100 per page, default 30. Every page you pull stays in your context and slows the rest of the turn, so pull the narrowest set that answers the question.",
+            "description": "List the user's tasks newest-first, filtered but never searched by text — use find_tasks when the user described a task in words. total tells you how many match the filter before you page, so check it first and narrow instead of paging blindly. Most tasks are subagent runs the user never sees: pass root=\"true\" to get only the top-level tasks they actually work on. Narrow further with status (running/waiting/completed/errored), origin (user/server-sdk), archived, or a parentTaskId to look inside one task's subagents. Page with cursor: pass the response's nextCursor back as cursor until it is null. limit is up to 100 per page, default 30. Every page you pull stays in your context and slows the rest of the turn, so pull the narrowest set that answers the question.",
             "args": {
                 "status": {
                     "type": "enum",
@@ -68,20 +89,20 @@
         },
         "get_task": {
             "surface": "read",
-            "description": "Get one task by taskId: its header (title, status, origin, workspace, parent, timestamps), its runtime sessions, and a resumeTarget when the task can be resumed. Call this after search_tasks to load the details of a single task the user asked about.",
+            "description": "Get one task by taskId: its header (title, status, origin, workspace, parent, timestamps), its runtime sessions, and a resumeTarget when the task can be resumed. Call this after find_tasks or search_tasks to load the details of a single task the user asked about. It answers what the task is, not what happened in it — read get_timeline for that.",
             "args": {
                 "taskId": {
                     "type": "string",
                     "required": true,
                     "trim": true,
                     "minLength": 1,
-                    "description": "The task to load, as returned by search_tasks."
+                    "description": "The task to load, as returned by find_tasks or search_tasks."
                 }
             }
         },
         "get_timeline": {
             "surface": "read",
-            "description": "Get a page of a task's timeline (chronological user messages, assistant messages, tool runs and derived activity) newest-first. Pass taskId; page older with cursor until nextCursor is null. limit is up to 500 per page, default 100. Use this to read what actually happened in a task.",
+            "description": "Get a page of a task's timeline (user messages, assistant messages, tool runs and derived activity) and read what actually happened in it. Pass taskId; page with cursor until nextCursor is null. order decides which end you start from: the default \"desc\" gives the newest entries first and answers \"where did this end up\", while \"asc\" starts at the very first entry and is what you want for \"how did this start\", \"what did the user originally ask\", or any retelling in order. limit is up to 500 per page, default 100. A long task is far more timeline than you need: pick the end that answers the question and take one page, or search_events with this taskId when you are after one specific moment.",
             "args": {
                 "taskId": {
                     "type": "string",
@@ -90,11 +111,20 @@
                     "minLength": 1,
                     "description": "The task whose timeline to read."
                 },
+                "order": {
+                    "type": "enum",
+                    "required": false,
+                    "values": [
+                        "asc",
+                        "desc"
+                    ],
+                    "description": "Which end to read from: \"asc\" starts at the task's first entry and moves forward, \"desc\" (the default) starts at the newest and moves back."
+                },
                 "cursor": {
                     "type": "string",
                     "required": false,
                     "trim": true,
-                    "description": "Opaque cursor from a previous call's nextCursor. Omit to start from the newest entries and page backwards in time."
+                    "description": "Opaque cursor from a previous call's nextCursor. Keep passing the same order with it. Omit to start from the end that order names."
                 },
                 "limit": {
                     "type": "integer",
@@ -106,9 +136,22 @@
                 }
             }
         },
+        "get_event": {
+            "surface": "read",
+            "description": "Get one event by eventId with its full body, kind, lane, tool name, touched file paths and the task and turn it belongs to. Two uses: expand a hit from search_events or get_timeline whose body was cut short, and confirm an eventId is real and is the moment you think it is before you anchor a rule to it with propose_rule_write. An event that belongs to someone else reads as not found.",
+            "args": {
+                "eventId": {
+                    "type": "string",
+                    "required": true,
+                    "trim": true,
+                    "minLength": 1,
+                    "description": "The event to load, as returned by search_events, get_timeline, list_memos or get_rule_evidence."
+                }
+            }
+        },
         "search_events": {
             "surface": "read",
-            "description": "Full-text search across indexed events (and matching memos), ranked by relevance and recency. Combine q with optional taskId, kind, lane, and a from/to time range. limit is up to 100, default 20. Results are a mix: event hits and memo hits (marked hitType). Use this to find corrections, instructions, or specific moments across many tasks.",
+            "description": "Full-text search across the body of every indexed event (and matching memos), ranked by relevance and recency. This is the widest reach you have: use it to find corrections, instructions, or a specific moment across many tasks, and to fall back when find_tasks matched nothing. Narrow q with taskId, lane (which kind of work), kind (which event type), toolName (which tool ran), and a from/to time range — filters cost nothing and cut what lands in your context. Page the same query with offset. limit is up to 100, default 20. Results are a mix: event hits and memo hits (marked hitType). Bodies come back trimmed, so call get_event on a hit that matters.",
             "args": {
                 "q": {
                     "type": "string",
@@ -146,6 +189,12 @@
                     "trim": true,
                     "description": "Keep only events at or before this ISO-8601 timestamp."
                 },
+                "toolName": {
+                    "type": "string",
+                    "required": false,
+                    "trim": true,
+                    "description": "Keep only events produced by this tool, for example Bash, Edit or Read. Use it when the question is about what a particular tool did rather than about words that were said."
+                },
                 "limit": {
                     "type": "integer",
                     "required": false,
@@ -153,6 +202,14 @@
                     "max": 100,
                     "default": 20,
                     "description": "Max hits to return, 1 to 100, default 20."
+                },
+                "offset": {
+                    "type": "integer",
+                    "required": false,
+                    "min": 0,
+                    "max": 1000,
+                    "default": 0,
+                    "description": "How many top-ranked hits to skip, default 0. Repeat the same query with offset raised by limit to read the next page. Ranking puts the best hits first, so page only when the first page truly did not answer the question."
                 }
             }
         },
@@ -218,9 +275,43 @@
             "description": "List the user's tags with their color, description, and how many tasks each is applied to. Use this to answer questions about how the user organizes their tasks.",
             "args": {}
         },
+        "find_recipes": {
+            "surface": "read",
+            "description": "Find recipes (reusable workflows distilled from past tasks) by free text, ranked by relevance. Each hit is deliberately thin — recipeId, title, intent, description and score — so you can weigh several without carrying their steps. Use this whenever the user describes a kind of work rather than naming a recipe, then call get_recipe on the one you chose. Prefer it over list_recipes: a listing returns every recipe in full.",
+            "args": {
+                "q": {
+                    "type": "string",
+                    "required": true,
+                    "trim": true,
+                    "minLength": 1,
+                    "description": "The work to look for, in the user's own words. Describe the task, not the recipe's title."
+                },
+                "limit": {
+                    "type": "integer",
+                    "required": false,
+                    "min": 1,
+                    "max": 10,
+                    "default": 3,
+                    "description": "Max hits to return, 1 to 10, default 3. Ranked best-first, so the default is usually enough to pick one."
+                }
+            }
+        },
+        "get_recipe": {
+            "surface": "read",
+            "description": "Get one recipe in full by recipeId: its intent, description, ordered steps, pitfalls, governing rules, touched files, status and application stats. Call this after find_recipes to explain or follow a single workflow, instead of pulling every recipe with list_recipes.",
+            "args": {
+                "recipeId": {
+                    "type": "string",
+                    "required": true,
+                    "trim": true,
+                    "minLength": 1,
+                    "description": "The recipe to load, as returned by find_recipes or list_recipes."
+                }
+            }
+        },
         "list_recipes": {
             "surface": "read",
-            "description": "List the user's recipes (reusable workflows distilled from past tasks), optionally filtered by status (candidate/active/dismissed/superseded/retired). Each entry carries the full recipe (intent, steps, pitfalls, touched files) plus application stats. Use this to surface or explain a saved workflow.",
+            "description": "List the user's recipes in full (intent, steps, pitfalls, touched files, application stats), optionally filtered by status (candidate/active/dismissed/superseded/retired). Use it only when the question is about the set itself — \"what candidates are waiting\", \"how many are active\". To answer a question about a kind of work, use find_recipes and then get_recipe: this listing has no limit and every recipe it returns stays in your context in full.",
             "args": {
                 "status": {
                     "type": "enum",
@@ -652,6 +743,31 @@
         }
     },
     "responses": {
+        "find_tasks": {
+            "page": [
+                "items"
+            ],
+            "item": [
+                "id",
+                "taskId",
+                "title",
+                "status",
+                "origin",
+                "taskKind",
+                "workspacePath",
+                "archived",
+                "updatedAt"
+            ],
+            "memoItem": [
+                "hitType",
+                "id",
+                "taskId",
+                "eventId",
+                "author",
+                "body",
+                "updatedAt"
+            ]
+        },
         "search_tasks": {
             "page": [
                 "items",
@@ -718,6 +834,29 @@
                 "nextCursor"
             ],
             "item": [
+                "id",
+                "seq",
+                "taskId",
+                "sessionId",
+                "turnId",
+                "kind",
+                "lane",
+                "title",
+                "displayTitle",
+                "body",
+                "toolName",
+                "filePaths",
+                "metadata",
+                "occurredAt",
+                "subtype",
+                "evidenceLevel"
+            ]
+        },
+        "get_event": {
+            "object": [
+                "event"
+            ],
+            "event": [
                 "id",
                 "seq",
                 "taskId",
@@ -847,6 +986,67 @@
                 "createdAt",
                 "updatedAt",
                 "taskCount"
+            ]
+        },
+        "find_recipes": {
+            "page": [
+                "items"
+            ],
+            "item": [
+                "recipeId",
+                "title",
+                "intent",
+                "description",
+                "score"
+            ]
+        },
+        "get_recipe": {
+            "object": [
+                "recipe",
+                "stats",
+                "applications"
+            ],
+            "recipe": [
+                "id",
+                "userId",
+                "status",
+                "title",
+                "intent",
+                "description",
+                "summaryMd",
+                "request",
+                "corrections",
+                "pitfalls",
+                "governingRules",
+                "steps",
+                "touchedFiles",
+                "contributingSlices",
+                "rationale",
+                "language",
+                "rev",
+                "parentRecipeId",
+                "sourceJobId",
+                "userEdited",
+                "lastEditedBy",
+                "error",
+                "createdAt",
+                "updatedAt",
+                "resolvedAt"
+            ],
+            "stats": [
+                "applicationCount",
+                "decidedCount",
+                "successRate"
+            ],
+            "application": [
+                "id",
+                "userId",
+                "recipeId",
+                "taskId",
+                "injectedVia",
+                "outcome",
+                "note",
+                "createdAt"
             ]
         },
         "list_recipes": {
@@ -1013,6 +1213,17 @@
     "bindings": {
         "meaning": "도구 이름은 자기 자리 하나를 갖고, action 을 받는 도구는 그 action 마다 자리를 갖는다. 두 축이 같은 이름과 같은 action 에서 같은 자리를 불러야 한다.",
         "bindings": {
+            "find_tasks": {
+                "method": "GET",
+                "path": "/api/v1/tasks/search",
+                "pathArgs": [],
+                "query": {
+                    "q": "q",
+                    "limit": "limit"
+                },
+                "body": {},
+                "bodyConstants": {}
+            },
             "search_tasks": {
                 "method": "GET",
                 "path": "/api/v1/tasks",
@@ -1046,9 +1257,20 @@
                     "taskId"
                 ],
                 "query": {
+                    "order": "order",
                     "cursor": "cursor",
                     "limit": "limit"
                 },
+                "body": {},
+                "bodyConstants": {}
+            },
+            "get_event": {
+                "method": "GET",
+                "path": "/api/v1/events/{eventId}",
+                "pathArgs": [
+                    "eventId"
+                ],
+                "query": {},
                 "body": {},
                 "bodyConstants": {}
             },
@@ -1063,7 +1285,9 @@
                     "lane": "lane",
                     "from": "from",
                     "to": "to",
-                    "limit": "limit"
+                    "toolName": "toolName",
+                    "limit": "limit",
+                    "offset": "offset"
                 },
                 "body": {},
                 "bodyConstants": {}
@@ -1106,6 +1330,27 @@
                 "method": "GET",
                 "path": "/api/v1/tags",
                 "pathArgs": [],
+                "query": {},
+                "body": {},
+                "bodyConstants": {}
+            },
+            "find_recipes": {
+                "method": "GET",
+                "path": "/api/v1/recipes/search",
+                "pathArgs": [],
+                "query": {
+                    "q": "q",
+                    "limit": "limit"
+                },
+                "body": {},
+                "bodyConstants": {}
+            },
+            "get_recipe": {
+                "method": "GET",
+                "path": "/api/v1/recipes/{recipeId}",
+                "pathArgs": [
+                    "recipeId"
+                ],
                 "query": {},
                 "body": {},
                 "bodyConstants": {}

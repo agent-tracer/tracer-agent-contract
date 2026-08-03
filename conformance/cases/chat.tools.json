@@ -15,6 +15,10 @@
     },
     "tools": {
         "read": [
+            "find_recipes",
+            "find_tasks",
+            "get_event",
+            "get_recipe",
             "get_rule_evidence",
             "get_task",
             "get_timeline",
@@ -44,7 +48,7 @@
         ]
     },
     "counts": {
-        "read": 10,
+        "read": 14,
         "agentRead": 1,
         "memory": 1,
         "confirm": 8
