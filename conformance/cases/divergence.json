@@ -21,49 +21,13 @@
       "resolution": "SDK 축이 재시도와 대체의 2단 절차와 그 판정 오류 목록을 관측 가능하게 노출하거나, 계약이 재시도 대상 오류의 어휘와 재시도 횟수를 정해 두 축이 같은 절차를 갖도록 좁힌다"
     },
     {
-      "id": "agent.run.ttft",
-      "area": "agent",
-      "summary": "첫 토큰까지의 시간을 한 축만 관측 원장에 적는다",
-      "canonical": "ts",
-      "ts": "에이전트 SDK 의 결과 메시지가 실행마다 ttft_ms 를 내므로 그 값을 그대로 관측에 적는다",
-      "python": "실행 체인이 초안 콜백을 받는 chat 에서만 스트리밍이 켜지고 잡은 한 번에 받아 오므로 아직 재지 않는다",
-      "resolution": "python 이 스트리밍이 켜진 실행에서 첫 조각의 시각으로 재고 그 밖의 실행은 계약이 정한 대로 비운다"
-    },
-    {
-      "id": "agent.task.budget",
-      "area": "agent",
-      "summary": "모델이 남은 작업량을 보고 답의 밀도를 정하는 장치를 한 축만 쥘 수 있다",
-      "canonical": "ts",
-      "ts": "에이전트 SDK가 taskBudget을 alpha로 열어 두었고 이 구현체는 아직 켜지 않는다",
-      "python": "실행 체인에 대응물이 없어 켤 자리가 없다",
-      "resolution": "한쪽만 켜면 같은 스레드에서 축이 바뀔 때마다 답의 밀도가 달라지므로 지금은 어느 축도 켜지 않는다. python 체인에 같은 뜻의 장치가 서거나 계약이 남은 작업량의 어휘를 갖는 뒤에 두 축이 함께 켠다."
-    },
-    {
-      "id": "chat.execution.cases",
-      "area": "agent",
-      "summary": "실행 회수 케이스를 한 축만 돌린다",
-      "canonical": "python",
-      "ts": "판정이 TypeORM 의 QueryBuilder 이고 두 배포 단위에 나뉘어 있다. sqlite 구동기가 없어 케이스를 돌릴 자리가 없다",
-      "python": "sqlite 대역 원장이 같은 SQL 을 실행해 여덟 창구의 케이스 마흔둘을 전부 돌린다",
-      "resolution": "접는 조건은 execution.vocabulary.json 의 settlement 가 이미 갖는다. 남은 것은 그 조건을 누가 판정하는가이며, ts 가 sqlite 구동기를 더해 같은 SQL 을 돌리거나 두 축이 판정을 순수 규칙으로 꺼내 케이스를 그 규칙에 물린다. 규칙을 따로 두면 SQL 과 어긋날 수 있으므로 어느 쪽을 고르든 한 벌만 남긴다"
-    },
-    {
-      "id": "job.enqueue.credential",
-      "area": "job",
-      "summary": "접수 시점의 자격 검사가 다르다",
-      "canonical": "ts",
-      "ts": "사용자 설정에 모델 키가 없으면 접수를 거절하고, 로컬 CLI 자격으로 도는 경로는 이 검사를 건너뛴다",
-      "python": "접수가 실행 봉투를 먼저 받고 받지 못하면 502 job.envelope-unavailable로 거절한다",
-      "resolution": "봉투 발급 시점을 한쪽으로 모은 뒤 거절 코드를 하나로 정한다"
-    },
-    {
       "id": "job.workflow.shape",
       "area": "workflow",
-      "summary": "잡 워크플로와 액티비티의 수가 다르다",
+      "summary": "끝난 단계를 다시 태우지 않는 장치가 두 벌이다",
       "canonical": "ts",
-      "ts": "잡 종류마다 워크플로 하나를 두고 준비·생성·종결 액티비티로 나누며 생성만 generate 큐로 보낸다. 생성 안의 단계는 자기 산출을 원장에 적어, 그 액티비티가 다시 시도돼도 끝난 단계를 다시 태우지 않는다",
-      "python": "셋을 agentJobWorkflow 하나가 받고 준비와 종결을 실행 액티비티 안에서 처리하며 그 하나를 generate 큐로 보낸다",
-      "resolution": "궤적 단계 경계는 이미 같다. 남은 것은 워크플로와 액티비티의 수이며 재시도 경계가 그것에 매여 있다. 종착지는 노드마다 액티비티 하나이고 두 단계로 수렴한다. 1단은 python이 준비와 생성과 종결의 세 액티비티까지 이동하고 ts가 이미 한 것처럼 단계 산출을 원장에 적는다. 2단은 두 축이 노드 단위로 이동한다."
+      "ts": "잡 종류마다 워크플로 하나를 두고 준비·생성·종결 액티비티로 나누며 생성만 generate 큐로 보낸다. 끝난 단계의 산출은 ai_job_stage_outputs 에 남아 다시 시도한 실행이 앞선 단계를 다시 태우지 않는다",
+      "python": "agentJobWorkflow 하나가 셋을 받고 같은 단계 경계와 같은 큐 배치와 같은 재시도 상한을 갖는다. 다시 태우지 않는 장치는 생성 액티비티 안의 LangGraph 체크포인트이며 그 상태는 계약이 소유하지 않는 스키마에 있다",
+      "resolution": "단계 경계와 큐와 재시도 상한은 workflow/queues.yaml 이 이미 갖는다. 남은 것은 재개 상태를 어디에 두는가이며, python 이 ai_job_stage_outputs 로 옮기거나 계약이 재개의 보장만 갖고 저장소를 구현체에 남긴다. 두 벌을 함께 두면 같은 사실이 두 자리에 적혀 어긋날 수 있으므로 어느 쪽을 고르든 한 벌만 남긴다"
     }
   ],
   "canonical": "ts가 정본이다. 항목의 canonical이 python이면 SDK나 LangGraph가 강제해 정본이 따라가야 하는 자리다.",
