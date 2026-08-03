@@ -98,6 +98,15 @@ PROVIDER_REQUEST_RULES = ["unit", "source", "absent", "notSession", "manyCalls"]
 TTFT_RULES = ["unit", "source", "absent", "notDuration", "noEstimate"]
 CREDENTIAL_CHECK_PLACES = ["meaning", "appliesTo", "rejection", "reason", "notEnvelope"]
 PACING_PLACES = ["meaning", "unit", "progressNotice", "landingDirective"]
+TURN_LEDGER_PLACES = [
+    "meaning",
+    "totalIsWholeExecution",
+    "lease",
+    "settle",
+    "settleWithoutReport",
+    "settleFromUsage",
+    "reservationReturn",
+]
 PROGRESS_NOTICE_PLACES = ["template", "when", "placeholders", "reason"]
 LANDING_DIRECTIVE_PLACES = ["when", "structured", "freeText", "reason"]
 NON_AXIS_WORDS = ["claude-sdk", "typescript"]
@@ -435,6 +444,10 @@ def main() -> None:
         raise SystemExit(
             f"첫 토큰까지의 시간에 관한 규칙에 있어야 할 자리가 없다 — {', '.join(missing_ttft)}"
         )
+    turn_ledger = read_shared("execution.budget.json").get("turnLedger", {})
+    missing_ledger = [place for place in TURN_LEDGER_PLACES if place not in turn_ledger]
+    if missing_ledger:
+        raise SystemExit(f"턴 원장에 있어야 할 자리가 없다 — {', '.join(missing_ledger)}")
     pacing = read_shared("execution.budget.json").get("pacing", {})
     missing_pacing = [place for place in PACING_PLACES if place not in pacing]
     if missing_pacing:
@@ -473,6 +486,7 @@ def main() -> None:
     print(f"첫 토큰까지의 시간에 관한 규칙 {len(TTFT_RULES)}개를 계약이 갖는다")
     print(f"접수의 자격 검사에 관한 자리 {len(CREDENTIAL_CHECK_PLACES)}개를 계약이 갖는다")
     print(f"예산 페이싱에 관한 자리 {len(PACING_PLACES)}개를 계약이 갖는다")
+    print(f"턴 원장의 정산 규칙 {len(TURN_LEDGER_PLACES)}개를 계약이 갖는다")
     print(
         f"실행에 매인 자격은 {scope_token['prefix']} 로 시작해 "
         f"{len(scope_token['payload']['fields'])}개 칸을 "

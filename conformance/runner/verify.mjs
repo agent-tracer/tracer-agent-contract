@@ -404,8 +404,23 @@ if (missingTtft.length > 0) {
 }
 const pacing = readShared("execution.budget.json").pacing ?? {};
 const PACING_PLACES = ["meaning", "unit", "progressNotice", "landingDirective"];
+const TURN_LEDGER_PLACES = [
+    "meaning",
+    "totalIsWholeExecution",
+    "lease",
+    "settle",
+    "settleWithoutReport",
+    "settleFromUsage",
+    "reservationReturn",
+];
 const PROGRESS_NOTICE_PLACES = ["template", "when", "placeholders", "reason"];
 const LANDING_DIRECTIVE_PLACES = ["when", "structured", "freeText", "reason"];
+const turnLedger = readShared("execution.budget.json").turnLedger ?? {};
+const missingLedger = TURN_LEDGER_PLACES.filter((place) => turnLedger[place] === undefined);
+if (missingLedger.length > 0) {
+    console.error(`턴 원장에 있어야 할 자리가 없다 — ${missingLedger.join(", ")}`);
+    process.exit(1);
+}
 const missingPacing = PACING_PLACES.filter((place) => pacing[place] === undefined);
 if (missingPacing.length > 0) {
     throw new Error(`예산 페이싱에 있어야 할 자리가 없다 — ${missingPacing.join(", ")}`);
@@ -453,6 +468,7 @@ console.log(`공급자 요청 식별자의 값 규칙 ${PROVIDER_REQUEST_RULES.l
 console.log(`첫 토큰까지의 시간에 관한 규칙 ${TTFT_RULES.length}개를 계약이 갖는다`);
 console.log(`접수의 자격 검사에 관한 자리 ${CREDENTIAL_CHECK_PLACES.length}개를 계약이 갖는다`);
 console.log(`예산 페이싱에 관한 자리 ${PACING_PLACES.length}개를 계약이 갖는다`);
+console.log(`턴 원장의 정산 규칙 ${TURN_LEDGER_PLACES.length}개를 계약이 갖는다`);
 console.log(
     `실행에 매인 자격은 ${scopeToken.prefix} 로 시작해 ${scopeToken.payload.fields.length}개 칸을 ` +
         `${scopeToken.signature.algorithm} 으로 서명한다`,
