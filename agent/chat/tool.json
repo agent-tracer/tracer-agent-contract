@@ -290,13 +290,46 @@
                 }
             }
         },
-        "update_task": {
+        "enqueue_job": {
             "surface": "confirm",
-            "description": "PROPOSAL (requires user confirmation, does not run immediately): change a task's title and/or status by taskId. status is one of running/waiting/completed/errored. Pass at least one of title or status. The change is queued and only applied after the user approves; tell the user you are awaiting their confirmation.",
+            "description": "PROPOSAL (requires user confirmation, and running it starts a real, metered agent run that costs money): launch an AI job. kind is one of title.suggestion (auto-title a task), recipe.scan (distill a recipe from a task), task.cleanup (suggest cleanup across tasks), or rule.generation (draft verification rules for a task). input is a JSON object with the fields that kind needs: title.suggestion takes {\"taskId\":\"...\"}; recipe.scan takes {\"taskId\":\"...\"} plus optional userPrompt, language, and trigger (dashboard/session); task.cleanup takes {} or {\"filters\":{\"maxSuggestions\":N}}; rule.generation requires {\"taskId\":\"...\",\"anchorEventId\":\"...\"} and may also include focus (recent), maxRules, and intent describing what to verify. Queued until the user approves — never claim the job has started yet.",
             "args": {
+                "kind": {
+                    "type": "enum",
+                    "required": true,
+                    "values": [
+                        "title.suggestion",
+                        "recipe.scan",
+                        "task.cleanup",
+                        "rule.generation"
+                    ],
+                    "description": "Which job to launch: title.suggestion, recipe.scan, task.cleanup, or rule.generation."
+                },
+                "input": {
+                    "type": "object",
+                    "required": true,
+                    "description": "JSON object carrying what that kind needs, for example {\"taskId\":\"...\"} for title.suggestion and recipe.scan."
+                }
+            }
+        },
+        "propose_task_write": {
+            "surface": "confirm",
+            "description": "PROPOSAL (requires user confirmation, does not run immediately): change one task. action picks what to do — update changes title and/or status, archive hides it, unarchive brings it back, delete removes it. taskId is always required; update needs at least one of title or status. The change is queued and only applied after the user approves; tell the user you are awaiting their confirmation.",
+            "args": {
+                "action": {
+                    "type": "enum",
+                    "required": true,
+                    "values": [
+                        "update",
+                        "archive",
+                        "unarchive",
+                        "delete"
+                    ],
+                    "description": "What to do with the task: update, archive, unarchive, or delete."
+                },
                 "taskId": {
                     "type": "string",
-                    "required": true,
+                    "required": false,
                     "trim": true,
                     "minLength": 1,
                     "description": "The task to change."
@@ -318,61 +351,46 @@
                     ],
                     "description": "The new lifecycle state: running, waiting, completed, or errored. Omit to leave the status as it is."
                 }
+            },
+            "requiredByAction": {
+                "update": [
+                    "taskId"
+                ],
+                "archive": [
+                    "taskId"
+                ],
+                "unarchive": [
+                    "taskId"
+                ],
+                "delete": [
+                    "taskId"
+                ]
             }
         },
-        "archive_task": {
+        "propose_memo_write": {
             "surface": "confirm",
-            "description": "PROPOSAL (requires user confirmation): archive a task by taskId so it drops out of the default listing. Queued until the user approves — never claim it is archived yet.",
+            "description": "PROPOSAL (requires user confirmation, does not run immediately): write one memo. action picks what to do — create adds a memo to a task, update rewrites one, delete removes one. create needs taskId and body, update needs memoId and body, delete needs memoId. The change is queued and only applied after the user approves; tell the user you are awaiting their confirmation.",
             "args": {
+                "action": {
+                    "type": "enum",
+                    "required": true,
+                    "values": [
+                        "create",
+                        "update",
+                        "delete"
+                    ],
+                    "description": "What to do with the memo: create, update, or delete."
+                },
                 "taskId": {
                     "type": "string",
-                    "required": true,
-                    "trim": true,
-                    "minLength": 1,
-                    "description": "The task to archive."
-                }
-            }
-        },
-        "unarchive_task": {
-            "surface": "confirm",
-            "description": "PROPOSAL (requires user confirmation): restore an archived task by taskId. Queued until the user approves.",
-            "args": {
-                "taskId": {
-                    "type": "string",
-                    "required": true,
-                    "trim": true,
-                    "minLength": 1,
-                    "description": "The archived task to restore."
-                }
-            }
-        },
-        "delete_task": {
-            "surface": "confirm",
-            "description": "PROPOSAL (requires user confirmation): hide a task by taskId (and its subagent descendants) from the user's views. Queued until the user approves — never claim it is deleted yet.",
-            "args": {
-                "taskId": {
-                    "type": "string",
-                    "required": true,
-                    "trim": true,
-                    "minLength": 1,
-                    "description": "The task to hide, together with its subagent descendants."
-                }
-            }
-        },
-        "create_memo": {
-            "surface": "confirm",
-            "description": "PROPOSAL (requires user confirmation): write a new memo with body on a task (taskId), optionally threaded on an eventId. Queued until the user approves.",
-            "args": {
-                "taskId": {
-                    "type": "string",
-                    "required": true,
+                    "required": false,
                     "trim": true,
                     "minLength": 1,
                     "description": "The task the memo belongs to."
                 },
                 "body": {
                     "type": "string",
-                    "required": true,
+                    "required": false,
                     "trim": true,
                     "minLength": 1,
                     "description": "The memo text to write."
@@ -382,70 +400,69 @@
                     "required": false,
                     "trim": true,
                     "description": "Thread the memo on this single event. Omit to attach it to the task as a whole."
-                }
-            }
-        },
-        "update_memo": {
-            "surface": "confirm",
-            "description": "PROPOSAL (requires user confirmation): replace the body of an existing memo by memoId. Queued until the user approves.",
-            "args": {
+                },
                 "memoId": {
                     "type": "string",
-                    "required": true,
+                    "required": false,
                     "trim": true,
                     "minLength": 1,
                     "description": "The memo to rewrite."
+                }
+            },
+            "requiredByAction": {
+                "create": [
+                    "taskId",
+                    "body"
+                ],
+                "update": [
+                    "memoId",
+                    "body"
+                ],
+                "delete": [
+                    "memoId"
+                ]
+            }
+        },
+        "propose_rule_write": {
+            "surface": "confirm",
+            "description": "PROPOSAL (requires user confirmation, does not run immediately): write one rule. action picks what to do — create declares a rule anchored to an event, update rewrites one, delete removes one, approve promotes a proposed rule, reevaluate runs it again over its evidence. create needs taskId, anchorEventId, name and expectation; the rest need ruleId. The change is queued and only applied after the user approves; tell the user you are awaiting their confirmation.",
+            "args": {
+                "action": {
+                    "type": "enum",
+                    "required": true,
+                    "values": [
+                        "create",
+                        "update",
+                        "delete",
+                        "approve",
+                        "reevaluate"
+                    ],
+                    "description": "What to do with the rule: create, update, delete, approve, or reevaluate."
                 },
-                "body": {
-                    "type": "string",
-                    "required": true,
-                    "trim": true,
-                    "minLength": 1,
-                    "description": "The new memo text, which replaces the old body entirely."
-                }
-            }
-        },
-        "delete_memo": {
-            "surface": "confirm",
-            "description": "PROPOSAL (requires user confirmation): delete a memo by memoId. Queued until the user approves.",
-            "args": {
-                "memoId": {
-                    "type": "string",
-                    "required": true,
-                    "trim": true,
-                    "minLength": 1,
-                    "description": "The memo to delete."
-                }
-            }
-        },
-        "create_rule": {
-            "surface": "confirm",
-            "description": "PROPOSAL (requires user confirmation): create a verification rule on a task. Pass taskId, anchorEventId, a name, and expectation as a JSON object of the form {\"kind\":\"command\",\"commandMatches\":[...]} or {\"kind\":\"pattern\",\"pattern\":\"...\",\"tool\":\"...\"} or {\"kind\":\"action\",\"tool\":\"...\"}; severity is info/warn/block. Queued until the user approves.",
-            "args": {
                 "taskId": {
                     "type": "string",
-                    "required": true,
+                    "required": false,
                     "trim": true,
                     "minLength": 1,
                     "description": "The task the rule watches."
                 },
                 "anchorEventId": {
                     "type": "string",
-                    "required": true,
+                    "required": false,
                     "trim": true,
                     "minLength": 1,
                     "description": "The single utterance the rule hangs on, normally the user message that stated the request."
                 },
                 "name": {
                     "type": "string",
-                    "required": true,
+                    "required": false,
                     "trim": true,
                     "minLength": 1,
                     "description": "Short human-readable name for the rule."
                 },
                 "expectation": {
                     "type": "object",
-                    "required": true,
+                    "required": false,
                     "description": "JSON object saying what must happen: {\"kind\":\"command\",\"commandMatches\":[...]}, {\"kind\":\"pattern\",\"pattern\":\"...\",\"tool\":\"...\"}, or {\"kind\":\"action\",\"tool\":\"...\"}."
                 },
                 "severity": {
@@ -463,95 +480,54 @@
                     "required": false,
                     "trim": true,
                     "description": "Why the rule exists, shown to the user when the verdict is unmet."
-                }
-            }
-        },
-        "update_rule": {
-            "surface": "confirm",
-            "description": "PROPOSAL (requires user confirmation): edit a rule by ruleId — its name, expectation (JSON object as in create_rule), severity (info/warn/block), or rationale. Queued until the user approves.",
-            "args": {
+                },
                 "ruleId": {
                     "type": "string",
-                    "required": true,
+                    "required": false,
                     "trim": true,
                     "minLength": 1,
                     "description": "The rule to edit."
-                },
-                "name": {
-                    "type": "string",
-                    "required": false,
-                    "trim": true,
-                    "description": "The new name. Omit to leave it as it is."
-                },
-                "expectation": {
-                    "type": "object",
-                    "required": false,
-                    "description": "The new expectation as a JSON object in the same form create_rule takes. Omit to leave it as it is."
-                },
-                "severity": {
+                }
+            },
+            "requiredByAction": {
+                "create": [
+                    "taskId",
+                    "anchorEventId",
+                    "name",
+                    "expectation"
+                ],
+                "update": [
+                    "ruleId"
+                ],
+                "delete": [
+                    "ruleId"
+                ],
+                "approve": [
+                    "ruleId"
+                ],
+                "reevaluate": [
+                    "ruleId"
+                ]
+            }
+        },
+        "propose_tag_write": {
+            "surface": "confirm",
+            "description": "PROPOSAL (requires user confirmation, does not run immediately): write one tag or a task's tag set. action picks what to do — create adds a tag, update renames or recolors one, delete removes one, assign replaces the whole tag set of one task. create needs name, update and delete need tagId, assign needs taskId and tagIds. The change is queued and only applied after the user approves; tell the user you are awaiting their confirmation.",
+            "args": {
+                "action": {
                     "type": "enum",
-                    "required": false,
+                    "required": true,
                     "values": [
-                        "info",
-                        "warn",
-                        "block"
+                        "create",
+                        "update",
+                        "delete",
+                        "assign"
                     ],
-                    "description": "The new severity: info, warn, or block. Omit to leave it as it is."
+                    "description": "What to do: create, update or delete a tag, or assign replaces one task's whole tag set."
                 },
-                "rationale": {
-                    "type": "string",
-                    "required": false,
-                    "trim": true,
-                    "description": "The new rationale. Omit to leave it as it is."
-                }
-            }
-        },
-        "delete_rule": {
-            "surface": "confirm",
-            "description": "PROPOSAL (requires user confirmation): delete a rule by ruleId. Queued until the user approves.",
-            "args": {
-                "ruleId": {
-                    "type": "string",
-                    "required": true,
-                    "trim": true,
-                    "minLength": 1,
-                    "description": "The rule to delete."
-                }
-            }
-        },
-        "approve_rule": {
-            "surface": "confirm",
-            "description": "PROPOSAL (requires user confirmation): approve a proposed rule by ruleId and backfill its verdict over the task. Queued until the user approves.",
-            "args": {
-                "ruleId": {
-                    "type": "string",
-                    "required": true,
-                    "trim": true,
-                    "minLength": 1,
-                    "description": "The proposed rule to approve and backfill over its task."
-                }
-            }
-        },
-        "reevaluate_rule": {
-            "surface": "confirm",
-            "description": "PROPOSAL (requires user confirmation): re-run a rule's verdict over its task by ruleId. Queued until the user approves.",
-            "args": {
-                "ruleId": {
-                    "type": "string",
-                    "required": true,
-                    "trim": true,
-                    "minLength": 1,
-                    "description": "The rule whose verdict to re-run over its task."
-                }
-            }
-        },
-        "create_tag": {
-            "surface": "confirm",
-            "description": "PROPOSAL (requires user confirmation): create a tag with name, optional color (#rrggbb lowercase hex), and optional description. Queued until the user approves.",
-            "args": {
                 "name": {
                     "type": "string",
-                    "required": true,
+                    "required": false,
                     "trim": true,
                     "minLength": 1,
                     "description": "The tag name the user will see."
@@ -567,67 +543,24 @@
                     "required": false,
                     "trim": true,
                     "description": "What the tag is for. Omit when the name already says it."
-                }
-            }
-        },
-        "update_tag": {
-            "surface": "confirm",
-            "description": "PROPOSAL (requires user confirmation): edit a tag by tagId — its name, color (#rrggbb), or description. Queued until the user approves.",
-            "args": {
+                },
                 "tagId": {
                     "type": "string",
-                    "required": true,
+                    "required": false,
                     "trim": true,
                     "minLength": 1,
                     "description": "The tag to edit."
                 },
-                "name": {
-                    "type": "string",
-                    "required": false,
-                    "trim": true,
-                    "description": "The new name. Omit to leave it as it is."
-                },
-                "color": {
-                    "type": "string",
-                    "required": false,
-                    "trim": true,
-                    "description": "The new lowercase #rrggbb hex color. Omit to leave it as it is."
-                },
-                "description": {
-                    "type": "string",
-                    "required": false,
-                    "trim": true,
-                    "description": "The new description. Omit to leave it as it is."
-                }
-            }
-        },
-        "delete_tag": {
-            "surface": "confirm",
-            "description": "PROPOSAL (requires user confirmation): delete a tag by tagId and detach it from every task. Queued until the user approves.",
-            "args": {
-                "tagId": {
-                    "type": "string",
-                    "required": true,
-                    "trim": true,
-                    "minLength": 1,
-                    "description": "The tag to delete and detach from every task."
-                }
-            }
-        },
-        "set_task_tags": {
-            "surface": "confirm",
-            "description": "PROPOSAL (requires user confirmation): replace the full set of tags on a task. Pass taskId and tagIds as a JSON array of tag ids (an empty array detaches all). Queued until the user approves.",
-            "args": {
                 "taskId": {
                     "type": "string",
-                    "required": true,
+                    "required": false,
                     "trim": true,
                     "minLength": 1,
                     "description": "The task whose tags to replace."
                 },
                 "tagIds": {
                     "type": "array",
-                    "required": true,
+                    "required": false,
                     "maxItems": 50,
                     "items": {
                         "type": "string",
@@ -636,93 +569,85 @@
                     },
                     "description": "JSON array of tag ids that becomes the task's full tag set. An empty array detaches every tag."
                 }
+            },
+            "requiredByAction": {
+                "create": [
+                    "name"
+                ],
+                "update": [
+                    "tagId"
+                ],
+                "delete": [
+                    "tagId"
+                ],
+                "assign": [
+                    "taskId",
+                    "tagIds"
+                ]
             }
         },
-        "accept_recipe": {
+        "propose_recipe_write": {
             "surface": "confirm",
-            "description": "PROPOSAL (requires user confirmation): accept a recipe by recipeId, activating it. Queued until the user approves.",
+            "description": "PROPOSAL (requires user confirmation, does not run immediately): settle one recipe candidate. action picks what to do — accept adopts it, dismiss drops it, retire withdraws one already in use. recipeId is always required. The change is queued and only applied after the user approves; tell the user you are awaiting their confirmation.",
             "args": {
+                "action": {
+                    "type": "enum",
+                    "required": true,
+                    "values": [
+                        "accept",
+                        "dismiss",
+                        "retire"
+                    ],
+                    "description": "What to do with the recipe candidate: accept, dismiss, or retire."
+                },
                 "recipeId": {
                     "type": "string",
-                    "required": true,
+                    "required": false,
                     "trim": true,
                     "minLength": 1,
                     "description": "The recipe to accept, activating it."
                 }
+            },
+            "requiredByAction": {
+                "accept": [
+                    "recipeId"
+                ],
+                "dismiss": [
+                    "recipeId"
+                ],
+                "retire": [
+                    "recipeId"
+                ]
             }
         },
-        "dismiss_recipe": {
+        "propose_cleanup_write": {
             "surface": "confirm",
-            "description": "PROPOSAL (requires user confirmation): dismiss a recipe by recipeId. Queued until the user approves.",
+            "description": "PROPOSAL (requires user confirmation, does not run immediately): settle one cleanup suggestion. action picks what to do — accept archives the suggested tasks, dismiss drops the suggestion. suggestionId is always required. The change is queued and only applied after the user approves; tell the user you are awaiting their confirmation.",
             "args": {
-                "recipeId": {
-                    "type": "string",
+                "action": {
+                    "type": "enum",
                     "required": true,
-                    "trim": true,
-                    "minLength": 1,
-                    "description": "The recipe to dismiss."
-                }
-            }
-        },
-        "retire_recipe": {
-            "surface": "confirm",
-            "description": "PROPOSAL (requires user confirmation): retire an active recipe by recipeId. Queued until the user approves.",
-            "args": {
-                "recipeId": {
-                    "type": "string",
-                    "required": true,
-                    "trim": true,
-                    "minLength": 1,
-                    "description": "The active recipe to retire."
-                }
-            }
-        },
-        "accept_cleanup": {
-            "surface": "confirm",
-            "description": "PROPOSAL (requires user confirmation): accept a task-cleanup suggestion by suggestionId, applying its proposed change. Queued until the user approves.",
-            "args": {
+                    "values": [
+                        "accept",
+                        "dismiss"
+                    ],
+                    "description": "What to do with the cleanup suggestion: accept or dismiss."
+                },
                 "suggestionId": {
                     "type": "string",
-                    "required": true,
+                    "required": false,
                     "trim": true,
                     "minLength": 1,
                     "description": "The cleanup suggestion to accept and apply."
                 }
-            }
-        },
-        "dismiss_cleanup": {
-            "surface": "confirm",
-            "description": "PROPOSAL (requires user confirmation): dismiss a task-cleanup suggestion by suggestionId. Queued until the user approves.",
-            "args": {
-                "suggestionId": {
-                    "type": "string",
-                    "required": true,
-                    "trim": true,
-                    "minLength": 1,
-                    "description": "The cleanup suggestion to dismiss."
-                }
-            }
-        },
-        "enqueue_job": {
-            "surface": "confirm",
-            "description": "PROPOSAL (requires user confirmation, and running it starts a real, metered agent run that costs money): launch an AI job. kind is one of title.suggestion (auto-title a task), recipe.scan (distill a recipe from a task), task.cleanup (suggest cleanup across tasks), or rule.generation (draft verification rules for a task). input is a JSON object with the fields that kind needs: title.suggestion takes {\"taskId\":\"...\"}; recipe.scan takes {\"taskId\":\"...\"} plus optional userPrompt, language, and trigger (dashboard/session); task.cleanup takes {} or {\"filters\":{\"maxSuggestions\":N}}; rule.generation requires {\"taskId\":\"...\",\"anchorEventId\":\"...\"} and may also include focus (recent), maxRules, and intent describing what to verify. Queued until the user approves — never claim the job has started yet.",
-            "args": {
-                "kind": {
-                    "type": "enum",
-                    "required": true,
-                    "values": [
-                        "title.suggestion",
-                        "recipe.scan",
-                        "task.cleanup",
-                        "rule.generation"
-                    ],
-                    "description": "Which job to launch: title.suggestion, recipe.scan, task.cleanup, or rule.generation."
-                },
-                "input": {
-                    "type": "object",
-                    "required": true,
-                    "description": "JSON object carrying what that kind needs, for example {\"taskId\":\"...\"} for title.suggestion and recipe.scan."
-                }
+            },
+            "requiredByAction": {
+                "accept": [
+                    "suggestionId"
+                ],
+                "dismiss": [
+                    "suggestionId"
+                ]
             }
         }
     },
@@ -1016,196 +941,61 @@
                 "status"
             ]
         },
-        "update_task": {
-            "proposal": [
-                "confirmationId",
-                "toolName",
-                "status",
-                "summary",
-                "note"
-            ]
-        },
-        "archive_task": {
-            "proposal": [
-                "confirmationId",
-                "toolName",
-                "status",
-                "summary",
-                "note"
-            ]
-        },
-        "unarchive_task": {
-            "proposal": [
-                "confirmationId",
-                "toolName",
-                "status",
-                "summary",
-                "note"
-            ]
-        },
-        "delete_task": {
-            "proposal": [
-                "confirmationId",
-                "toolName",
-                "status",
-                "summary",
-                "note"
-            ]
-        },
-        "create_memo": {
-            "proposal": [
-                "confirmationId",
-                "toolName",
-                "status",
-                "summary",
-                "note"
-            ]
-        },
-        "update_memo": {
-            "proposal": [
-                "confirmationId",
-                "toolName",
-                "status",
-                "summary",
-                "note"
-            ]
-        },
-        "delete_memo": {
-            "proposal": [
-                "confirmationId",
-                "toolName",
-                "status",
-                "summary",
-                "note"
-            ]
-        },
-        "create_rule": {
-            "proposal": [
-                "confirmationId",
-                "toolName",
-                "status",
-                "summary",
-                "note"
-            ]
-        },
-        "update_rule": {
-            "proposal": [
-                "confirmationId",
-                "toolName",
-                "status",
-                "summary",
-                "note"
-            ]
-        },
-        "delete_rule": {
-            "proposal": [
-                "confirmationId",
-                "toolName",
-                "status",
-                "summary",
-                "note"
-            ]
-        },
-        "approve_rule": {
-            "proposal": [
-                "confirmationId",
-                "toolName",
-                "status",
-                "summary",
-                "note"
-            ]
-        },
-        "reevaluate_rule": {
-            "proposal": [
-                "confirmationId",
-                "toolName",
-                "status",
-                "summary",
-                "note"
-            ]
-        },
-        "create_tag": {
-            "proposal": [
-                "confirmationId",
-                "toolName",
-                "status",
-                "summary",
-                "note"
-            ]
-        },
-        "update_tag": {
-            "proposal": [
-                "confirmationId",
-                "toolName",
-                "status",
-                "summary",
-                "note"
-            ]
-        },
-        "delete_tag": {
-            "proposal": [
-                "confirmationId",
-                "toolName",
-                "status",
-                "summary",
-                "note"
-            ]
-        },
-        "set_task_tags": {
-            "proposal": [
-                "confirmationId",
-                "toolName",
-                "status",
-                "summary",
-                "note"
-            ]
-        },
-        "accept_recipe": {
-            "proposal": [
-                "confirmationId",
-                "toolName",
-                "status",
-                "summary",
-                "note"
-            ]
-        },
-        "dismiss_recipe": {
-            "proposal": [
-                "confirmationId",
-                "toolName",
-                "status",
-                "summary",
-                "note"
-            ]
-        },
-        "retire_recipe": {
-            "proposal": [
-                "confirmationId",
-                "toolName",
-                "status",
-                "summary",
-                "note"
-            ]
-        },
-        "accept_cleanup": {
-            "proposal": [
-                "confirmationId",
-                "toolName",
-                "status",
-                "summary",
-                "note"
-            ]
-        },
-        "dismiss_cleanup": {
-            "proposal": [
-                "confirmationId",
-                "toolName",
-                "status",
-                "summary",
-                "note"
-            ]
-        },
         "enqueue_job": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "propose_task_write": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "propose_memo_write": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "propose_rule_write": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "propose_tag_write": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "propose_recipe_write": {
+            "proposal": [
+                "confirmationId",
+                "toolName",
+                "status",
+                "summary",
+                "note"
+            ]
+        },
+        "propose_cleanup_write": {
             "proposal": [
                 "confirmationId",
                 "toolName",
@@ -1221,6 +1011,7 @@
     "proposalNote": "Queued for user confirmation. This action has NOT run yet and will only run after the user approves it. Tell the user you are awaiting their confirmation; never claim the change is already done.",
     "approvalReportNote": "The user approved the action above and it has now run. Tell them what it did, grounded in that result, and do not propose it again.",
     "bindings": {
+        "meaning": "도구 이름은 자기 자리 하나를 갖고, action 을 받는 도구는 그 action 마다 자리를 갖는다. 두 축이 같은 이름과 같은 action 에서 같은 자리를 불러야 한다.",
         "bindings": {
             "search_tasks": {
                 "method": "GET",
@@ -1349,242 +1140,6 @@
                 "body": {},
                 "bodyConstants": {}
             },
-            "update_task": {
-                "method": "PATCH",
-                "path": "/api/v1/tasks/{taskId}",
-                "pathArgs": [
-                    "taskId"
-                ],
-                "query": {},
-                "body": {
-                    "title": "title",
-                    "status": "status"
-                },
-                "bodyConstants": {}
-            },
-            "archive_task": {
-                "method": "POST",
-                "path": "/api/v1/tasks/{taskId}/archive",
-                "pathArgs": [
-                    "taskId"
-                ],
-                "query": {},
-                "body": {},
-                "bodyConstants": {}
-            },
-            "unarchive_task": {
-                "method": "DELETE",
-                "path": "/api/v1/tasks/{taskId}/archive",
-                "pathArgs": [
-                    "taskId"
-                ],
-                "query": {},
-                "body": {},
-                "bodyConstants": {}
-            },
-            "delete_task": {
-                "method": "DELETE",
-                "path": "/api/v1/tasks/{taskId}",
-                "pathArgs": [
-                    "taskId"
-                ],
-                "query": {},
-                "body": {},
-                "bodyConstants": {}
-            },
-            "create_memo": {
-                "method": "POST",
-                "path": "/api/v1/memos",
-                "pathArgs": [],
-                "query": {},
-                "body": {
-                    "taskId": "taskId",
-                    "body": "body",
-                    "eventId": "eventId"
-                },
-                "bodyConstants": {
-                    "author": "agent"
-                }
-            },
-            "update_memo": {
-                "method": "PATCH",
-                "path": "/api/v1/memos/{memoId}",
-                "pathArgs": [
-                    "memoId"
-                ],
-                "query": {},
-                "body": {
-                    "body": "body"
-                },
-                "bodyConstants": {}
-            },
-            "delete_memo": {
-                "method": "DELETE",
-                "path": "/api/v1/memos/{memoId}",
-                "pathArgs": [
-                    "memoId"
-                ],
-                "query": {},
-                "body": {},
-                "bodyConstants": {}
-            },
-            "create_rule": {
-                "method": "POST",
-                "path": "/api/v1/rules",
-                "pathArgs": [],
-                "query": {},
-                "body": {
-                    "taskId": "taskId",
-                    "anchorEventId": "anchorEventId",
-                    "name": "name",
-                    "expectation": "expect",
-                    "severity": "severity",
-                    "rationale": "rationale"
-                },
-                "bodyConstants": {}
-            },
-            "update_rule": {
-                "method": "PATCH",
-                "path": "/api/v1/rules/{ruleId}",
-                "pathArgs": [
-                    "ruleId"
-                ],
-                "query": {},
-                "body": {
-                    "name": "name",
-                    "expectation": "expect",
-                    "severity": "severity",
-                    "rationale": "rationale"
-                },
-                "bodyConstants": {}
-            },
-            "delete_rule": {
-                "method": "DELETE",
-                "path": "/api/v1/rules/{ruleId}",
-                "pathArgs": [
-                    "ruleId"
-                ],
-                "query": {},
-                "body": {},
-                "bodyConstants": {}
-            },
-            "approve_rule": {
-                "method": "POST",
-                "path": "/api/v1/rules/{ruleId}/approve",
-                "pathArgs": [
-                    "ruleId"
-                ],
-                "query": {},
-                "body": {},
-                "bodyConstants": {}
-            },
-            "reevaluate_rule": {
-                "method": "POST",
-                "path": "/api/v1/rules/{ruleId}/reevaluate",
-                "pathArgs": [
-                    "ruleId"
-                ],
-                "query": {},
-                "body": {},
-                "bodyConstants": {}
-            },
-            "create_tag": {
-                "method": "POST",
-                "path": "/api/v1/tags",
-                "pathArgs": [],
-                "query": {},
-                "body": {
-                    "name": "name",
-                    "color": "color",
-                    "description": "description"
-                },
-                "bodyConstants": {}
-            },
-            "update_tag": {
-                "method": "PATCH",
-                "path": "/api/v1/tags/{tagId}",
-                "pathArgs": [
-                    "tagId"
-                ],
-                "query": {},
-                "body": {
-                    "name": "name",
-                    "color": "color",
-                    "description": "description"
-                },
-                "bodyConstants": {}
-            },
-            "delete_tag": {
-                "method": "DELETE",
-                "path": "/api/v1/tags/{tagId}",
-                "pathArgs": [
-                    "tagId"
-                ],
-                "query": {},
-                "body": {},
-                "bodyConstants": {}
-            },
-            "set_task_tags": {
-                "method": "PUT",
-                "path": "/api/v1/task-tags",
-                "pathArgs": [],
-                "query": {},
-                "body": {
-                    "taskId": "taskId",
-                    "tagIds": "tagIds"
-                },
-                "bodyConstants": {}
-            },
-            "accept_recipe": {
-                "method": "POST",
-                "path": "/api/v1/recipes/{recipeId}/accept",
-                "pathArgs": [
-                    "recipeId"
-                ],
-                "query": {},
-                "body": {},
-                "bodyConstants": {}
-            },
-            "dismiss_recipe": {
-                "method": "POST",
-                "path": "/api/v1/recipes/{recipeId}/dismiss",
-                "pathArgs": [
-                    "recipeId"
-                ],
-                "query": {},
-                "body": {},
-                "bodyConstants": {}
-            },
-            "retire_recipe": {
-                "method": "POST",
-                "path": "/api/v1/recipes/{recipeId}/retire",
-                "pathArgs": [
-                    "recipeId"
-                ],
-                "query": {},
-                "body": {},
-                "bodyConstants": {}
-            },
-            "accept_cleanup": {
-                "method": "POST",
-                "path": "/api/v1/task-cleanup/suggestions/{suggestionId}/accept",
-                "pathArgs": [
-                    "suggestionId"
-                ],
-                "query": {},
-                "body": {},
-                "bodyConstants": {}
-            },
-            "dismiss_cleanup": {
-                "method": "POST",
-                "path": "/api/v1/task-cleanup/suggestions/{suggestionId}/dismiss",
-                "pathArgs": [
-                    "suggestionId"
-                ],
-                "query": {},
-                "body": {},
-                "bodyConstants": {}
-            },
             "enqueue_job": {
                 "method": "POST",
                 "path": "/api/agent/jobs",
@@ -1615,6 +1170,256 @@
                     "content": "content"
                 },
                 "bodyConstants": {}
+            }
+        },
+        "actionBindings": {
+            "propose_task_write": {
+                "update": {
+                    "method": "PATCH",
+                    "path": "/api/v1/tasks/{taskId}",
+                    "pathArgs": [
+                        "taskId"
+                    ],
+                    "query": {},
+                    "body": {
+                        "title": "title",
+                        "status": "status"
+                    },
+                    "bodyConstants": {}
+                },
+                "archive": {
+                    "method": "POST",
+                    "path": "/api/v1/tasks/{taskId}/archive",
+                    "pathArgs": [
+                        "taskId"
+                    ],
+                    "query": {},
+                    "body": {},
+                    "bodyConstants": {}
+                },
+                "unarchive": {
+                    "method": "DELETE",
+                    "path": "/api/v1/tasks/{taskId}/archive",
+                    "pathArgs": [
+                        "taskId"
+                    ],
+                    "query": {},
+                    "body": {},
+                    "bodyConstants": {}
+                },
+                "delete": {
+                    "method": "DELETE",
+                    "path": "/api/v1/tasks/{taskId}",
+                    "pathArgs": [
+                        "taskId"
+                    ],
+                    "query": {},
+                    "body": {},
+                    "bodyConstants": {}
+                }
+            },
+            "propose_memo_write": {
+                "create": {
+                    "method": "POST",
+                    "path": "/api/v1/memos",
+                    "pathArgs": [],
+                    "query": {},
+                    "body": {
+                        "taskId": "taskId",
+                        "body": "body",
+                        "eventId": "eventId"
+                    },
+                    "bodyConstants": {
+                        "author": "agent"
+                    }
+                },
+                "update": {
+                    "method": "PATCH",
+                    "path": "/api/v1/memos/{memoId}",
+                    "pathArgs": [
+                        "memoId"
+                    ],
+                    "query": {},
+                    "body": {
+                        "body": "body"
+                    },
+                    "bodyConstants": {}
+                },
+                "delete": {
+                    "method": "DELETE",
+                    "path": "/api/v1/memos/{memoId}",
+                    "pathArgs": [
+                        "memoId"
+                    ],
+                    "query": {},
+                    "body": {},
+                    "bodyConstants": {}
+                }
+            },
+            "propose_rule_write": {
+                "create": {
+                    "method": "POST",
+                    "path": "/api/v1/rules",
+                    "pathArgs": [],
+                    "query": {},
+                    "body": {
+                        "taskId": "taskId",
+                        "anchorEventId": "anchorEventId",
+                        "name": "name",
+                        "expectation": "expect",
+                        "severity": "severity",
+                        "rationale": "rationale"
+                    },
+                    "bodyConstants": {}
+                },
+                "update": {
+                    "method": "PATCH",
+                    "path": "/api/v1/rules/{ruleId}",
+                    "pathArgs": [
+                        "ruleId"
+                    ],
+                    "query": {},
+                    "body": {
+                        "name": "name",
+                        "expectation": "expect",
+                        "severity": "severity",
+                        "rationale": "rationale"
+                    },
+                    "bodyConstants": {}
+                },
+                "delete": {
+                    "method": "DELETE",
+                    "path": "/api/v1/rules/{ruleId}",
+                    "pathArgs": [
+                        "ruleId"
+                    ],
+                    "query": {},
+                    "body": {},
+                    "bodyConstants": {}
+                },
+                "approve": {
+                    "method": "POST",
+                    "path": "/api/v1/rules/{ruleId}/approve",
+                    "pathArgs": [
+                        "ruleId"
+                    ],
+                    "query": {},
+                    "body": {},
+                    "bodyConstants": {}
+                },
+                "reevaluate": {
+                    "method": "POST",
+                    "path": "/api/v1/rules/{ruleId}/reevaluate",
+                    "pathArgs": [
+                        "ruleId"
+                    ],
+                    "query": {},
+                    "body": {},
+                    "bodyConstants": {}
+                }
+            },
+            "propose_tag_write": {
+                "create": {
+                    "method": "POST",
+                    "path": "/api/v1/tags",
+                    "pathArgs": [],
+                    "query": {},
+                    "body": {
+                        "name": "name",
+                        "color": "color",
+                        "description": "description"
+                    },
+                    "bodyConstants": {}
+                },
+                "update": {
+                    "method": "PATCH",
+                    "path": "/api/v1/tags/{tagId}",
+                    "pathArgs": [
+                        "tagId"
+                    ],
+                    "query": {},
+                    "body": {
+                        "name": "name",
+                        "color": "color",
+                        "description": "description"
+                    },
+                    "bodyConstants": {}
+                },
+                "delete": {
+                    "method": "DELETE",
+                    "path": "/api/v1/tags/{tagId}",
+                    "pathArgs": [
+                        "tagId"
+                    ],
+                    "query": {},
+                    "body": {},
+                    "bodyConstants": {}
+                },
+                "assign": {
+                    "method": "PUT",
+                    "path": "/api/v1/task-tags",
+                    "pathArgs": [],
+                    "query": {},
+                    "body": {
+                        "taskId": "taskId",
+                        "tagIds": "tagIds"
+                    },
+                    "bodyConstants": {}
+                }
+            },
+            "propose_recipe_write": {
+                "accept": {
+                    "method": "POST",
+                    "path": "/api/v1/recipes/{recipeId}/accept",
+                    "pathArgs": [
+                        "recipeId"
+                    ],
+                    "query": {},
+                    "body": {},
+                    "bodyConstants": {}
+                },
+                "dismiss": {
+                    "method": "POST",
+                    "path": "/api/v1/recipes/{recipeId}/dismiss",
+                    "pathArgs": [
+                        "recipeId"
+                    ],
+                    "query": {},
+                    "body": {},
+                    "bodyConstants": {}
+                },
+                "retire": {
+                    "method": "POST",
+                    "path": "/api/v1/recipes/{recipeId}/retire",
+                    "pathArgs": [
+                        "recipeId"
+                    ],
+                    "query": {},
+                    "body": {},
+                    "bodyConstants": {}
+                }
+            },
+            "propose_cleanup_write": {
+                "accept": {
+                    "method": "POST",
+                    "path": "/api/v1/task-cleanup/suggestions/{suggestionId}/accept",
+                    "pathArgs": [
+                        "suggestionId"
+                    ],
+                    "query": {},
+                    "body": {},
+                    "bodyConstants": {}
+                },
+                "dismiss": {
+                    "method": "POST",
+                    "path": "/api/v1/task-cleanup/suggestions/{suggestionId}/dismiss",
+                    "pathArgs": [
+                        "suggestionId"
+                    ],
+                    "query": {},
+                    "body": {},
+                    "bodyConstants": {}
+                }
             }
         },
         "local": []

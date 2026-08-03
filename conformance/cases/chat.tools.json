@@ -10,7 +10,8 @@
     "derivation": {
         "meaning": "구현체는 surface 하나만 읽고 네 분류를 파생시킨다. 경로 접두사와 하드코딩한 이름 목록으로 도구를 가르지 않는다",
         "gate": "surface 가 confirm 인 도구만 확인 대기 행을 세운다",
-        "path": "도구가 부르는 경로는 표면을 정하지 않는다. 에이전트 원장을 쓰는 도구도 confirm 이다"
+        "path": "도구가 부르는 경로는 표면을 정하지 않는다. 에이전트 원장을 쓰는 도구도 confirm 이다",
+        "action": "action 을 받는 확인 도구는 그 action 마다 자리가 다르다. 구현체는 이름과 action 을 함께 보고 자리를 고르며, requiredByAction 이 그 action 에 필요한 인자를 정한다"
     },
     "tools": {
         "read": [
@@ -32,35 +33,20 @@
             "recall_facts"
         ],
         "confirm": [
-            "accept_cleanup",
-            "accept_recipe",
-            "approve_rule",
-            "archive_task",
-            "create_memo",
-            "create_rule",
-            "create_tag",
-            "delete_memo",
-            "delete_rule",
-            "delete_tag",
-            "delete_task",
-            "dismiss_cleanup",
-            "dismiss_recipe",
             "enqueue_job",
-            "reevaluate_rule",
-            "remember_fact",
-            "retire_recipe",
-            "set_task_tags",
-            "unarchive_task",
-            "update_memo",
-            "update_rule",
-            "update_tag",
-            "update_task"
+            "propose_cleanup_write",
+            "propose_memo_write",
+            "propose_recipe_write",
+            "propose_rule_write",
+            "propose_tag_write",
+            "propose_task_write",
+            "remember_fact"
         ]
     },
     "counts": {
         "read": 10,
         "agentRead": 1,
         "memory": 1,
-        "confirm": 23
+        "confirm": 8
     }
 }
