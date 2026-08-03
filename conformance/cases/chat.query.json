@@ -146,7 +146,8 @@
                 "confirmationId",
                 "toolName",
                 "status",
-                "result"
+                "result",
+                "execution"
             ]
         },
         "snapshot": {
@@ -353,6 +354,7 @@
     "replayRules": {
         "meaning": "재생 계산이 두 축에서 같아야 하므로 창 자르기와 짝 맞추기를 여기에 못 박는다",
         "window": "실행이 가리키는 앵커 메시지까지가 이력이며 그 뒤 행은 싣지 않는다",
+        "approvalAnchor": "승인이 세운 후속 턴은 그 승인이 적재한 도구 결과를 앵커로 삼으므로 제안한 어시스턴트 줄과 그 결과가 창에 함께 든다",
         "unpairedToolResult": "짝을 잃은 도구 결과는 버리지 않고 toolCallId만 벗겨 평문으로 싣는다",
         "unpairedToolCall": "결과를 못 받은 호출은 벗기고 남은 본문이 비면 그 메시지를 싣지 않는다",
         "summary": "요약이 있으면 그 값을 함께 내고 없으면 비어 있다",

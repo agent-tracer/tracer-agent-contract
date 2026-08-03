@@ -378,7 +378,7 @@ paths:
       operationId: decideChatTool
       tags: [chat]
       summary: 대기 중인 도구 호출 하나를 승인이나 거절로 해소한다
-      description: 승인이면 창구가 그 도구를 실제로 부르고 그 결과를 대화에 한 줄로 남긴다.
+      description: 승인이면 창구가 그 도구를 실제로 부르고 그 결과를 대화에 남긴 뒤 그 결과를 앵커로 삼는 후속 턴을 세운다.
       parameters:
         - $ref: "#/components/parameters/ThreadId"
         - $ref: "#/components/parameters/ConfirmationId"
@@ -1964,7 +1964,7 @@ components:
     ChatToolDecision:
       type: object
       description: 대기 중이던 도구 호출 하나의 해소 결과다
-      required: [confirmationId, toolName, status, result]
+      required: [confirmationId, toolName, status, result, execution]
       properties:
         confirmationId: { type: string }
         toolName: { type: string }
@@ -1973,6 +1973,11 @@ components:
         result:
           type: string
           description: 승인이면 실제 호출의 결과 문장이고 거절이면 거절을 알리는 문장이다
+        execution:
+          oneOf:
+            - $ref: "#/components/schemas/ChatExecution"
+            - type: "null"
+          description: 승인이 세운 후속 턴이며 거절이거나 스레드가 이미 바쁘면 비어 있다
 
     ChatConfirmationStatus:
       type: string
