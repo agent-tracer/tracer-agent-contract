@@ -29,6 +29,7 @@ from contract import (
     read_openapi_enum,
     read_redaction,
     read_scope_token,
+    read_shared,
     read_identifier_rules,
     read_run_observation_rules,
     read_settlement,
@@ -96,6 +97,9 @@ TOOL_SURFACES = ["read", "agentRead", "memory", "confirm"]
 PROVIDER_REQUEST_RULES = ["unit", "source", "absent", "notSession", "manyCalls"]
 TTFT_RULES = ["unit", "source", "absent", "notDuration", "noEstimate"]
 CREDENTIAL_CHECK_PLACES = ["meaning", "appliesTo", "rejection", "reason", "notEnvelope"]
+PACING_PLACES = ["meaning", "unit", "progressNotice", "landingDirective"]
+PROGRESS_NOTICE_PLACES = ["template", "when", "placeholders", "reason"]
+LANDING_DIRECTIVE_PLACES = ["when", "structured", "freeText", "reason"]
 NON_AXIS_WORDS = ["claude-sdk", "typescript"]
 AXIS_DURATION_UNIT = "seconds"
 # 지표 창구는 수집기를 지나지 않으므로 Prometheus 의 고전 라벨 이름 규칙을 그대로 받는다.
@@ -431,6 +435,22 @@ def main() -> None:
         raise SystemExit(
             f"첫 토큰까지의 시간에 관한 규칙에 있어야 할 자리가 없다 — {', '.join(missing_ttft)}"
         )
+    pacing = read_shared("execution.budget.json").get("pacing", {})
+    missing_pacing = [place for place in PACING_PLACES if place not in pacing]
+    if missing_pacing:
+        raise SystemExit(f"예산 페이싱에 있어야 할 자리가 없다 — {', '.join(missing_pacing)}")
+    missing_notice = [place for place in PROGRESS_NOTICE_PLACES if place not in pacing["progressNotice"]]
+    if missing_notice:
+        raise SystemExit(f"남은 몫 통지에 있어야 할 자리가 없다 — {', '.join(missing_notice)}")
+    missing_landing = [place for place in LANDING_DIRECTIVE_PLACES if place not in pacing["landingDirective"]]
+    if missing_landing:
+        raise SystemExit(f"마무리 지시에 있어야 할 자리가 없다 — {', '.join(missing_landing)}")
+    template = pacing["progressNotice"]["template"]
+    missing_slots = [
+        slot for slot in pacing["progressNotice"]["placeholders"] if "{" + slot + "}" not in template
+    ]
+    if missing_slots:
+        raise SystemExit(f"남은 몫 통지의 문구가 채울 자리를 갖지 않는다 — {', '.join(missing_slots)}")
     intake = read_case("job.intake")
     credential_check = intake.get("credentialCheck", {})
     missing_credential = [place for place in CREDENTIAL_CHECK_PLACES if place not in credential_check]
@@ -451,6 +471,8 @@ def main() -> None:
     print(f"실행을 접는 조건 {len(SETTLEMENT_PLACES)}개를 계약이 갖는다")
     print(f"공급자 요청 식별자의 값 규칙 {len(PROVIDER_REQUEST_RULES)}개를 계약이 갖는다")
     print(f"첫 토큰까지의 시간에 관한 규칙 {len(TTFT_RULES)}개를 계약이 갖는다")
+    print(f"접수의 자격 검사에 관한 자리 {len(CREDENTIAL_CHECK_PLACES)}개를 계약이 갖는다")
+    print(f"예산 페이싱에 관한 자리 {len(PACING_PLACES)}개를 계약이 갖는다")
     print(
         f"실행에 매인 자격은 {scope_token['prefix']} 로 시작해 "
         f"{len(scope_token['payload']['fields'])}개 칸을 "

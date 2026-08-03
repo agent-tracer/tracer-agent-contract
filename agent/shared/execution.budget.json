@@ -48,6 +48,25 @@
     "outcome": "강등한 실행은 실패가 아니라 성공이다.",
     "trajectory": "강등한 사실은 실행 어휘의 node.failed 로 궤적에 남으며 이후 노드는 이어서 실행되지 않는다."
   },
+  "pacing": {
+    "meaning": "모델이 남은 몫을 보고 답의 밀도를 정하도록 실행이 건네는 문장이다. 두 축이 같은 자리에서 같은 문장을 주어야 같은 계획에서 같은 밀도가 나온다. 이 문장은 종료를 결정하지 않으며 예산을 세는 것은 turnLedger 가 갖는다.",
+    "unit": "모델 호출 턴",
+    "progressNotice": {
+      "template": "You have used {used} of {total} tool-calling turns; converge as you approach the limit.",
+      "when": "도구를 여는 시점마다 그때까지 쓴 턴과 총량을 넣어 건넨다",
+      "placeholders": [
+        "used",
+        "total"
+      ],
+      "reason": "총량만 알리면 모델이 자기 위치를 모르므로 쓴 만큼을 함께 준다"
+    },
+    "landingDirective": {
+      "when": "예산이 착지에 닿아 도구를 더 열지 않는 시점에 건넨다",
+      "structured": "The execution budget is exhausted. Stop calling tools and produce the final structured output now using only what you already verified.",
+      "freeText": "The execution budget is exhausted. Stop calling tools and write your final answer to the user now in plain prose, using only what you already retrieved.",
+      "reason": "도구만 닫고 지시를 주지 않으면 모델이 도구 실패로 읽고 같은 호출을 되풀이한다"
+    }
+  },
   "wallClock": {
     "meaning": "단계 하나가 진전 없이 머물 수 있는 상한이며 실행 데드라인에 곱하는 비율로 적는다. 전문가 하나가 데드라인 전부를 쓰면 종합이 굶으므로 두 축이 같은 비율을 읽는다.",
     "survey": 0.15,

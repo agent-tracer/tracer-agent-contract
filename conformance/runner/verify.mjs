@@ -25,6 +25,7 @@ import {
     readOpenApiEnum,
     readRedaction,
     readScopeToken,
+    readShared,
     readSettlement,
     readTraceAttributeNames,
     readVersion,
@@ -401,6 +402,33 @@ const missingTtft = TTFT_RULES.filter((rule) => ttft[rule] === undefined);
 if (missingTtft.length > 0) {
     throw new Error(`첫 토큰까지의 시간에 관한 규칙에 있어야 할 자리가 없다 — ${missingTtft.join(", ")}`);
 }
+const pacing = readShared("execution.budget.json").pacing ?? {};
+const PACING_PLACES = ["meaning", "unit", "progressNotice", "landingDirective"];
+const PROGRESS_NOTICE_PLACES = ["template", "when", "placeholders", "reason"];
+const LANDING_DIRECTIVE_PLACES = ["when", "structured", "freeText", "reason"];
+const missingPacing = PACING_PLACES.filter((place) => pacing[place] === undefined);
+if (missingPacing.length > 0) {
+    throw new Error(`예산 페이싱에 있어야 할 자리가 없다 — ${missingPacing.join(", ")}`);
+}
+const missingNotice = PROGRESS_NOTICE_PLACES.filter(
+    (place) => pacing.progressNotice[place] === undefined,
+);
+if (missingNotice.length > 0) {
+    throw new Error(`남은 몫 통지에 있어야 할 자리가 없다 — ${missingNotice.join(", ")}`);
+}
+const missingLanding = LANDING_DIRECTIVE_PLACES.filter(
+    (place) => pacing.landingDirective[place] === undefined,
+);
+if (missingLanding.length > 0) {
+    throw new Error(`마무리 지시에 있어야 할 자리가 없다 — ${missingLanding.join(", ")}`);
+}
+const missingSlots = pacing.progressNotice.placeholders.filter(
+    (slot) => !pacing.progressNotice.template.includes(`{${slot}}`),
+);
+if (missingSlots.length > 0) {
+    throw new Error(`남은 몫 통지의 문구가 채울 자리를 갖지 않는다 — ${missingSlots.join(", ")}`);
+}
+
 const intakeCase = readCase("job.intake");
 const credentialCheck = intakeCase.credentialCheck ?? {};
 const CREDENTIAL_CHECK_PLACES = ["meaning", "appliesTo", "rejection", "reason", "notEnvelope"];
@@ -423,6 +451,8 @@ if (missingScopeToken.length > 0) {
 console.log(`실행을 접는 조건 ${SETTLEMENT_PLACES.length}개를 계약이 갖는다`);
 console.log(`공급자 요청 식별자의 값 규칙 ${PROVIDER_REQUEST_RULES.length}개를 계약이 갖는다`);
 console.log(`첫 토큰까지의 시간에 관한 규칙 ${TTFT_RULES.length}개를 계약이 갖는다`);
+console.log(`접수의 자격 검사에 관한 자리 ${CREDENTIAL_CHECK_PLACES.length}개를 계약이 갖는다`);
+console.log(`예산 페이싱에 관한 자리 ${PACING_PLACES.length}개를 계약이 갖는다`);
 console.log(
     `실행에 매인 자격은 ${scopeToken.prefix} 로 시작해 ${scopeToken.payload.fields.length}개 칸을 ` +
         `${scopeToken.signature.algorithm} 으로 서명한다`,
