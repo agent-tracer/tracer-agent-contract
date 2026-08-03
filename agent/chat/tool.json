@@ -1219,6 +1219,7 @@
         "toolFailed": "Tool {tool} failed: {reason}. Do not call it again more than once. Continue with what you already know, and tell the user plainly which information you could not read."
     },
     "proposalNote": "Queued for user confirmation. This action has NOT run yet and will only run after the user approves it. Tell the user you are awaiting their confirmation; never claim the change is already done.",
+    "approvalReportNote": "The user approved the action above and it has now run. Tell them what it did, grounded in that result, and do not propose it again.",
     "bindings": {
         "bindings": {
             "search_tasks": {
