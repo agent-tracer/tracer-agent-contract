@@ -277,7 +277,7 @@
         },
         "find_recipes": {
             "surface": "read",
-            "description": "Find recipes (reusable workflows distilled from past tasks) by free text, ranked by relevance. Each hit is deliberately thin — recipeId, title, intent, description and score — so you can weigh several without carrying their steps. Use this whenever the user describes a kind of work rather than naming a recipe, then call get_recipe on the one you chose. Prefer it over list_recipes: a listing returns every recipe in full.",
+            "description": "Find recipes (reusable workflows distilled from past tasks) by free text, ranked by relevance. Each hit is deliberately thin — recipeId, title, intent, description and score — so you can weigh several without carrying their steps. Use this whenever the user describes a kind of work rather than naming a recipe, then call get_recipe on the one you chose. It searches only recipes the user has accepted, so a candidate awaiting their decision never appears here: reach for list_recipes with a status when the question is about candidates. Nothing matching does not mean the user has no recipe on the subject.",
             "args": {
                 "q": {
                     "type": "string",
@@ -311,7 +311,7 @@
         },
         "list_recipes": {
             "surface": "read",
-            "description": "List the user's recipes in full (intent, steps, pitfalls, touched files, application stats), optionally filtered by status (candidate/active/dismissed/superseded/retired). Use it only when the question is about the set itself — \"what candidates are waiting\", \"how many are active\". To answer a question about a kind of work, use find_recipes and then get_recipe: this listing has no limit and every recipe it returns stays in your context in full.",
+            "description": "List the user's recipes in full (intent, steps, pitfalls, touched files, application stats), optionally filtered by status (candidate/active/dismissed/superseded/retired). This is the only way to see recipes that are not active, so use it for \"what candidates are waiting\" or \"how many are active\" — questions about the set itself. To answer a question about a kind of work, use find_recipes and then get_recipe: this listing has no limit and every recipe it returns stays in your context in full.",
             "args": {
                 "status": {
                     "type": "enum",
