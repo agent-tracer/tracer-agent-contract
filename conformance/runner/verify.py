@@ -95,6 +95,7 @@ THREAD_ACTIVITIES = ["getNextChatExecution"]
 TOOL_SURFACES = ["read", "agentRead", "memory", "confirm"]
 PROVIDER_REQUEST_RULES = ["unit", "source", "absent", "notSession", "manyCalls"]
 TTFT_RULES = ["unit", "source", "absent", "notDuration", "noEstimate"]
+CREDENTIAL_CHECK_PLACES = ["meaning", "appliesTo", "rejection", "reason", "notEnvelope"]
 NON_AXIS_WORDS = ["claude-sdk", "typescript"]
 AXIS_DURATION_UNIT = "seconds"
 # 지표 창구는 수집기를 지나지 않으므로 Prometheus 의 고전 라벨 이름 규칙을 그대로 받는다.
@@ -429,6 +430,18 @@ def main() -> None:
     if missing_ttft:
         raise SystemExit(
             f"첫 토큰까지의 시간에 관한 규칙에 있어야 할 자리가 없다 — {', '.join(missing_ttft)}"
+        )
+    intake = read_case("job.intake")
+    credential_check = intake.get("credentialCheck", {})
+    missing_credential = [place for place in CREDENTIAL_CHECK_PLACES if place not in credential_check]
+    if missing_credential:
+        raise SystemExit(
+            f"접수의 자격 검사에 있어야 할 자리가 없다 — {', '.join(missing_credential)}"
+        )
+    rejection_codes = [rejection["code"] for rejection in intake["rejections"]]
+    if credential_check["rejection"] not in rejection_codes:
+        raise SystemExit(
+            f"접수의 자격 검사가 내는 {credential_check['rejection']} 를 거절 목록이 갖지 않는다"
         )
     print(f"추적이 나르는 속성 {len(trace_attributes)}개를 계약이 갖는다")
     scope_token = read_scope_token()

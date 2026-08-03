@@ -401,6 +401,18 @@ const missingTtft = TTFT_RULES.filter((rule) => ttft[rule] === undefined);
 if (missingTtft.length > 0) {
     throw new Error(`첫 토큰까지의 시간에 관한 규칙에 있어야 할 자리가 없다 — ${missingTtft.join(", ")}`);
 }
+const intakeCase = readCase("job.intake");
+const credentialCheck = intakeCase.credentialCheck ?? {};
+const CREDENTIAL_CHECK_PLACES = ["meaning", "appliesTo", "rejection", "reason", "notEnvelope"];
+const missingCredentialCheck = CREDENTIAL_CHECK_PLACES.filter(
+    (place) => credentialCheck[place] === undefined,
+);
+if (missingCredentialCheck.length > 0) {
+    throw new Error(`접수의 자격 검사에 있어야 할 자리가 없다 — ${missingCredentialCheck.join(", ")}`);
+}
+if (!intakeCase.rejections.some((rejection) => rejection.code === credentialCheck.rejection)) {
+    throw new Error(`접수의 자격 검사가 내는 ${credentialCheck.rejection} 를 거절 목록이 갖지 않는다`);
+}
 console.log(`추적이 나르는 속성 ${traceAttributes.length}개를 계약이 갖는다`);
 const scopeToken = readScopeToken();
 const SCOPE_TOKEN_PLACES = ["meaning", "prefix", "prefixReason", "shape", "payload", "signature", "secret", "lifetime", "precedence"];

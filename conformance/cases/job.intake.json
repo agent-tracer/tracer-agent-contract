@@ -203,8 +203,21 @@
             "status": 400,
             "code": "job.invalid-rule-anchor",
             "message": "Rule generation anchor event does not belong to the task"
+        },
+        {
+            "name": "실행할 모델 자격이 그 사용자에게 없다",
+            "status": 400,
+            "code": "job.llm-key-missing",
+            "message": "Model credential is not configured"
         }
     ],
+    "credentialCheck": {
+        "meaning": "워크플로가 태우는 잡은 접수가 모델 자격을 먼저 보고 없으면 거절한다. 자격이 어디서 오는지는 배포가 정하며 계약은 없을 때의 결말만 갖는다.",
+        "appliesTo": "워크플로가 태우는 종류. 실행기가 자기 자격으로 도는 종류는 접수가 보지 않는다",
+        "rejection": "job.llm-key-missing",
+        "reason": "접수가 보지 않으면 대기 행이 선 뒤 워커에서 실패해 사용자가 사유를 늦게 받고 원장에 끝내 돌지 못한 행이 남는다",
+        "notEnvelope": "봉투 발급이 닿지 않아 생기는 거절은 이 자리가 아니다. 그 실패는 실행 시도가 받으며 접수의 결말과 코드를 나누지 않는다"
+    },
     "response": {
         "meaning": "접수와 조회와 취소가 모두 원장 행 하나를 같은 칸으로 낸다. 봉투를 벗긴 data를 대조하며 jobFields라 적은 자리는 그 칸 목록을, jobFields[]는 그 배열을, jobFields?는 그 모양이거나 비어 있음을 요구한다.",
         "axis": "backend는 이 잡을 받은 접수구의 축이며 접수 본문은 그것을 싣지 않는다. 값의 목록은 OpenAPI의 AgentAxis가 소유하고 두 구현체가 그것을 읽는다",
