@@ -19,6 +19,8 @@ import {
     readChatThreadQueue,
     readJobLedgerAxisColumn,
     readJson,
+    readLeaseOwnerPaths,
+    readLeaseOwnerRejectionRef,
     readText,
     readToolBindingPaths,
     readToolSurfaces,
@@ -482,6 +484,32 @@ if (missingCredentialCheck.length > 0) {
 if (!intakeCase.rejections.some((rejection) => rejection.code === credentialCheck.rejection)) {
     throw new Error(`접수의 자격 검사가 내는 ${credentialCheck.rejection} 를 거절 목록이 갖지 않는다`);
 }
+const leaseOwner = intakeCase.leaseOwner;
+const LEASE_OWNER_PLACES = ["meaning", "header", "rejection", "paths"];
+const missingLeaseOwner = LEASE_OWNER_PLACES.filter((place) => leaseOwner?.[place] === undefined);
+if (missingLeaseOwner.length > 0) {
+    throw new Error(`리스 소유자 검사에 있어야 할 자리가 없다 — ${missingLeaseOwner.join(", ")}`);
+}
+const leaseRejection = readLeaseOwnerRejectionRef();
+const declaredLeaseRejection = intakeCase.rejections.find((rejection) => rejection.code === leaseOwner.rejection);
+if (declaredLeaseRejection === undefined) {
+    throw new Error(`리스 소유자 검사가 내는 ${leaseOwner.rejection} 를 거절 목록이 갖지 않는다`);
+}
+if (leaseRejection.code !== leaseOwner.rejection || leaseRejection.message !== declaredLeaseRejection.message) {
+    throw new Error(
+        `리스 소유자 거절을 표면과 케이스가 다르게 적는다 — ` +
+            `${leaseRejection.code}/${leaseRejection.message} 와 ${leaseOwner.rejection}/${declaredLeaseRejection.message}`,
+    );
+}
+const leasePaths = readLeaseOwnerPaths();
+const unguarded = leasePaths.filter((path) => !leaseOwner.paths.includes(path));
+const overguarded = leaseOwner.paths.filter((path) => !leasePaths.includes(path));
+if (unguarded.length > 0 || overguarded.length > 0) {
+    throw new Error(
+        `리스 소유자를 요구하는 창구를 표면과 케이스가 다르게 적는다 — ` +
+            `${[...unguarded, ...overguarded].join(", ")}`,
+    );
+}
 console.log(`추적이 나르는 속성 ${traceAttributes.length}개를 계약이 갖는다`);
 const scopeToken = readScopeToken();
 const SCOPE_TOKEN_PLACES = ["meaning", "prefix", "prefixReason", "shape", "payload", "signature", "secret", "lifetime", "precedence"];
@@ -493,6 +521,7 @@ console.log(`실행을 접는 조건 ${SETTLEMENT_PLACES.length}개를 계약이
 console.log(`공급자 요청 식별자의 값 규칙 ${PROVIDER_REQUEST_RULES.length}개를 계약이 갖는다`);
 console.log(`첫 토큰까지의 시간에 관한 규칙 ${TTFT_RULES.length}개를 계약이 갖는다`);
 console.log(`접수의 자격 검사에 관한 자리 ${CREDENTIAL_CHECK_PLACES.length}개를 계약이 갖는다`);
+console.log(`리스 소유자를 요구하는 창구 ${leasePaths.length}자리가 ${leaseOwner.rejection} 로 거절한다`);
 console.log(`예산 페이싱에 관한 자리 ${PACING_PLACES.length}개를 계약이 갖는다`);
 console.log(`턴 원장의 정산 규칙 ${TURN_LEDGER_PLACES.length}개를 계약이 갖는다`);
 console.log(

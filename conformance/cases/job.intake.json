@@ -209,6 +209,12 @@
             "status": 400,
             "code": "job.llm-key-missing",
             "message": "Model credential is not configured"
+        },
+        {
+            "name": "리스를 쥔 실행기의 이름이 없다",
+            "status": 400,
+            "code": "job.lease-owner-missing",
+            "message": "Lease owner header is required"
         }
     ],
     "credentialCheck": {
@@ -492,6 +498,18 @@
                 "canonical": "{\"taskId\":\"t1\",\"anchorEventId\":\"ev-1\",\"focus\":null,\"maxRules\":null,\"intent\":\"테스트를 먼저 쓴다\"}",
                 "hash": "c6a338d146c18563adf2c5a1ca42b4e454f096e41c3e055713c5900bae0bd9b9"
             }
+        ]
+    },
+    "leaseOwner": {
+        "meaning": "리스를 쥔 실행기만 잡을 움직이므로 이름이 없는 요청은 어느 창구에서든 같은 낱말로 거절한다. 축마다 낱말이 다르면 실행기가 축을 보고 거절을 가려야 한다.",
+        "header": "x-monitor-lease-owner",
+        "rejection": "job.lease-owner-missing",
+        "paths": [
+            "/api/agent/jobs/{id}/start",
+            "/api/agent/jobs/{id}/lease",
+            "/api/agent/jobs/{id}/release",
+            "/api/agent/jobs/{id}/results",
+            "/api/agent/jobs/{id}/fail"
         ]
     }
 }

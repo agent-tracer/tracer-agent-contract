@@ -944,6 +944,8 @@ paths:
                 $ref: "#/components/schemas/RuleJobLeaseEnvelope"
         "409":
           $ref: "#/components/responses/JobLeaseHeld"
+        "400":
+          $ref: "#/components/responses/LeaseOwnerMissing"
         "404":
           $ref: "#/components/responses/JobNotFound"
 
@@ -966,6 +968,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RuleJobLeaseEnvelope"
+        "400":
+          $ref: "#/components/responses/LeaseOwnerMissing"
         "404":
           $ref: "#/components/responses/JobNotFound"
 
@@ -1003,6 +1007,8 @@ paths:
                             $ref: "#/components/schemas/Job"
         "409":
           $ref: "#/components/responses/JobLeaseHeld"
+        "400":
+          $ref: "#/components/responses/LeaseOwnerMissing"
         "404":
           $ref: "#/components/responses/JobNotFound"
 
@@ -1040,6 +1046,8 @@ paths:
                             $ref: "#/components/schemas/Job"
         "409":
           $ref: "#/components/responses/JobLeaseHeld"
+        "400":
+          $ref: "#/components/responses/LeaseOwnerMissing"
         "404":
           $ref: "#/components/responses/JobNotFound"
 
@@ -1072,6 +1080,8 @@ paths:
                         properties:
                           job:
                             $ref: "#/components/schemas/Job"
+        "400":
+          $ref: "#/components/responses/LeaseOwnerMissing"
         "404":
           $ref: "#/components/responses/JobNotFound"
 
@@ -1343,12 +1353,30 @@ components:
             error:
               code: not_found
               message: Chat execution not found
+    LeaseOwnerMissing:
+      description: >-
+        리스를 쥔 실행기의 이름이 없다. 리스는 쥔 실행기를 이름으로 구분하므로 이름이 없으면
+        어느 실행기의 요청인지 가릴 수 없어 요청 자체가 성립하지 않는다.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            ok: false
+            error:
+              code: job.lease-owner-missing
+              message: Lease owner header is required
     JobNotFound:
       description: 잡 실행이 없다
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            ok: false
+            error:
+              code: not_found
+              message: Job execution not found
     EnvelopeUnissuable:
       description: >-
         봉투를 발급할 수 없다. 사용자 설정에 모델 자격이 없거나 워크플로가 태우지 않는 잡 종류다.
