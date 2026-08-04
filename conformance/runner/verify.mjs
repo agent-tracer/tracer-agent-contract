@@ -519,13 +519,13 @@ if (missingResultPlaces.length > 0) {
 for (const [kind, declared] of Object.entries(jobResults.byKind)) {
     if (!intakeCase.kinds.includes(kind)) throw new Error(`산출을 적은 ${kind} 를 접수가 받지 않는다`);
     if (!(declared.required?.length > 0)) throw new Error(`${kind} 의 산출이 실어야 할 칸을 적지 않는다`);
-    const agentId = kind.replace(".", "-");
-    const output = readAgentOutput(agentId).schema.properties ?? {};
-    const stray = (declared.fromAgentOutput ?? []).filter((field) => output[field] === undefined);
+    const fromOutput = declared.fromAgentOutput ?? [];
+    const output = fromOutput.length === 0 ? {} : readAgentOutput(kind.replace(".", "-")).schema.properties ?? {};
+    const stray = fromOutput.filter((field) => output[field] === undefined);
     if (stray.length > 0) {
         throw new Error(`${kind} 의 산출이 에이전트가 내지 않는 ${stray.join(", ")} 를 실으라고 적는다`);
     }
-    const unrequired = (declared.fromAgentOutput ?? []).filter((field) => !declared.required.includes(field));
+    const unrequired = fromOutput.filter((field) => !declared.required.includes(field));
     if (unrequired.length > 0) {
         throw new Error(`${kind} 의 산출이 ${unrequired.join(", ")} 를 실으면서 요구하지 않는다`);
     }

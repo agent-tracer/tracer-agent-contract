@@ -546,15 +546,18 @@ def main() -> None:
             raise SystemExit(f"산출을 적은 {kind} 를 접수가 받지 않는다")
         if not declared.get("required"):
             raise SystemExit(f"{kind} 의 산출이 실어야 할 칸을 적지 않는다")
-        output = read_agent_output(kind.replace(".", "-"))["schema"].get("properties", {})
-        stray = [field for field in declared.get("fromAgentOutput", []) if field not in output]
+        from_output = declared.get("fromAgentOutput", [])
+        output = (
+            read_agent_output(kind.replace(".", "-"))["schema"].get("properties", {})
+            if from_output
+            else {}
+        )
+        stray = [field for field in from_output if field not in output]
         if stray:
             raise SystemExit(
                 f"{kind} 의 산출이 에이전트가 내지 않는 {', '.join(stray)} 를 실으라고 적는다"
             )
-        unrequired = [
-            field for field in declared.get("fromAgentOutput", []) if field not in declared["required"]
-        ]
+        unrequired = [field for field in from_output if field not in declared["required"]]
         if unrequired:
             raise SystemExit(f"{kind} 의 산출이 {', '.join(unrequired)} 를 실으면서 요구하지 않는다")
     print(f"추적이 나르는 속성 {len(trace_attributes)}개를 계약이 갖는다")
