@@ -81,6 +81,26 @@ const AXIS_VALUES = ["ts", "python"];
 const THREAD_SIGNAL_ARGS = ["executionId"];
 const THREAD_ACTIVITIES = ["getNextChatExecution"];
 const TOOL_SURFACES = ["read", "agentRead", "memory", "confirm"];
+const CONFIRM_SURFACE = "confirm";
+// 프롬프트가 확인 도구 하나를 즉시 실행이라고 적으면 모델이 서지 않은 쓰기를 섰다고 답한다.
+const IMMEDIATE_PHRASES = ["runs immediately", "run immediately", "runs right away", "without confirmation"];
+
+/** 확인을 받아야 하는 도구를 즉시 실행이라고 적은 프롬프트 문장을 찾는다. */
+function confirmToolsCalledImmediate(agentId, confirmTools) {
+    const { fragments } = readAgentPrompt(agentId);
+    const lines = Object.values(fragments)
+        .map((fragment) => (Array.isArray(fragment.content) ? fragment.content.join(" ") : ""))
+        .filter(Boolean);
+    const found = [];
+    for (const sentence of lines.join(" ").split(/(?<=[.:])\s+/u)) {
+        const lowered = sentence.toLowerCase();
+        if (!IMMEDIATE_PHRASES.some((phrase) => lowered.includes(phrase))) continue;
+        for (const name of confirmTools) {
+            if (sentence.includes(name)) found.push(`${name}: ${sentence.trim()}`);
+        }
+    }
+    return found;
+}
 const PROVIDER_REQUEST_RULES = ["unit", "source", "absent", "notSession", "manyCalls"];
 const TTFT_RULES = ["unit", "source", "absent", "notDuration", "noEstimate"];
 const NON_AXIS_WORDS = ["claude-sdk", "typescript"];
@@ -251,6 +271,12 @@ if (surfaceMismatch.length > 0) {
             surfaceMismatch
                 .map((name) => `${name} 은 ${(toolSurfaces[name] ?? []).join(", ") || "없음"} 인데 케이스는 ${(declaredSurfaces[name] ?? []).join(", ") || "없음"} 다`)
                 .join(" · "),
+    );
+}
+const immediateConfirmTools = confirmToolsCalledImmediate("chat", toolSurfaces[CONFIRM_SURFACE] ?? []);
+if (immediateConfirmTools.length > 0) {
+    throw new Error(
+        `프롬프트가 확인을 받아야 하는 도구를 즉시 실행이라고 적는다 — ${immediateConfirmTools.join(" · ")}`,
     );
 }
 if (chatAxisIndex === null) {

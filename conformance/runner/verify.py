@@ -94,6 +94,9 @@ AXIS_VALUES = ["ts", "python"]
 THREAD_SIGNAL_ARGS = ["executionId"]
 THREAD_ACTIVITIES = ["getNextChatExecution"]
 TOOL_SURFACES = ["read", "agentRead", "memory", "confirm"]
+CONFIRM_SURFACE = "confirm"
+# 프롬프트가 확인 도구 하나를 즉시 실행이라고 적으면 모델이 서지 않은 쓰기를 섰다고 답한다.
+IMMEDIATE_PHRASES = ["runs immediately", "run immediately", "runs right away", "without confirmation"]
 PROVIDER_REQUEST_RULES = ["unit", "source", "absent", "notSession", "manyCalls"]
 TTFT_RULES = ["unit", "source", "absent", "notDuration", "noEstimate"]
 CREDENTIAL_CHECK_PLACES = ["meaning", "appliesTo", "rejection", "reason", "notEnvelope"]
@@ -137,6 +140,23 @@ RETIRED_ATTRIBUTES = [
     "agent_tracer.example.id",
     "agent_tracer.variant.id",
 ]
+
+
+def confirm_tools_called_immediate(agent_id: str, confirm_tools: list[str]) -> list[str]:
+    """확인을 받아야 하는 도구를 즉시 실행이라고 적은 프롬프트 문장을 찾는다."""
+    fragments = read_agent_prompt(agent_id)["fragments"]
+    lines: list[str] = []
+    for fragment in fragments.values():
+        content = fragment.get("content")
+        if isinstance(content, list):
+            lines.append(" ".join(str(line) for line in content))
+    found: list[str] = []
+    for sentence in re.split(r"(?<=[.:])\s+", " ".join(lines)):
+        lowered = sentence.lower()
+        if not any(phrase in lowered for phrase in IMMEDIATE_PHRASES):
+            continue
+        found.extend(f"{name}: {sentence.strip()}" for name in confirm_tools if name in sentence)
+    return found
 
 
 def main() -> None:
@@ -194,6 +214,9 @@ def main() -> None:
     thread_queue = read_chat_thread_queue()
     tool_surfaces = read_tool_surfaces()
     declared_surfaces = read_case("chat.tools")["tools"]
+    immediate_confirm_tools = confirm_tools_called_immediate(
+        "chat", tool_surfaces.get(CONFIRM_SURFACE, [])
+    )
     worker_metrics = read_worker_sdk_metrics()
     axis_label = read_axis_label_names()
 
@@ -293,6 +316,11 @@ def main() -> None:
             for name in surface_mismatch
         )
         raise SystemExit(f"도구의 표면과 적합성이 적은 목록이 다르다 — {detail}")
+    if immediate_confirm_tools:
+        raise SystemExit(
+            "프롬프트가 확인을 받아야 하는 도구를 즉시 실행이라고 적는다 — "
+            f"{' · '.join(immediate_confirm_tools)}"
+        )
     if chat_axis_index is None:
         raise SystemExit(
             "migration 이 대화 실행 원장의 대기 줄을 축으로 가르지 않는다 — requested_backend 색인이 없다"

@@ -33,11 +33,12 @@
             ]
         },
         "memoryRule": {
-            "version": "v0.0.1",
+            "version": "v0.0.2",
             "content": [
-                "remember_fact is the one write tool that runs immediately rather than as a proposal, so say plainly",
-                "that you have remembered something. Save only stable preferences or durable facts about how this user",
-                "works, never one-off details of the current task."
+                "remember_fact is a PROPOSAL like every other write tool: calling it queues the memory for the",
+                "user to confirm and it is not saved until they do, so say that you have proposed remembering it",
+                "and never say it is already saved. Propose only stable preferences or durable facts about how",
+                "this user works, never one-off details of the current task."
             ]
         },
         "languageDirective": {
