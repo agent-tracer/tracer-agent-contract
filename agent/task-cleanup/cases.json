@@ -212,7 +212,7 @@
                 }
             },
             {
-                "name": "같은 태스크를 두 번 제안하면 앞엣것만 남긴다",
+                "name": "같은 태스크를 두 번 제안하면 사유 없이 앞엣것만 남긴다",
                 "inspected": {
                     "task-1": [
                         "event-1"
@@ -233,17 +233,15 @@
                     }
                 ],
                 "expect": {
-                    "valid": false,
+                    "valid": true,
                     "validTaskIds": [
                         "task-1"
                     ],
-                    "errors": [
-                        "duplicate suggestion for task task-1"
-                    ]
+                    "errors": []
                 }
             },
             {
-                "name": "상한을 채운 뒤의 제안을 거부한다",
+                "name": "상한을 채운 뒤의 제안은 사유 없이 지운다",
                 "inspected": {
                     "task-1": [
                         "event-1"
@@ -270,14 +268,12 @@
                     }
                 ],
                 "expect": {
-                    "valid": false,
+                    "valid": true,
                     "validTaskIds": [
                         "task-1",
                         "task-2"
                     ],
-                    "errors": [
-                        "suggestion limit 2 exceeded"
-                    ]
+                    "errors": []
                 }
             },
             {
