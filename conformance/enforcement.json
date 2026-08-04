@@ -19,7 +19,8 @@
         "conformance/cases/chat.tools.json",
         "conformance/cases/job.intake.json",
         "conformance/cases/tracer.outputs.json",
-        "conformance/cases/recipe.prompt.json"
+        "conformance/cases/recipe.prompt.json",
+        "conformance/cases/cleanup.prompt.json"
       ]
     },
     "recorded": {

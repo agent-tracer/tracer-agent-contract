@@ -1,0 +1,120 @@
+{
+  "meaning": "조율자가 무엇을 조사할지 정할 때 읽는 사용자 프롬프트다. 조율자는 후보를 도구로 되읽지 않고 요청이 배치를 직접 싣는다. 이 목록이 축마다 다르면 한 축은 다른 축이 본 후보를 보지 못한다.",
+  "triage": {
+    "cases": [
+      {
+        "name": "후보가 없으면 목록을 싣지 않는다",
+        "input": {
+          "candidates": [],
+          "batchTruncated": false
+        },
+        "mustContain": [
+          "Candidates in this batch: 0"
+        ],
+        "mustNotContain": [
+          "The qualified candidates in this batch:"
+        ]
+      },
+      {
+        "name": "후보마다 상태와 이벤트 유무와 사유와 제목을 한 줄로 싣는다",
+        "input": {
+          "candidates": [
+            {
+              "id": "task-1",
+              "visibleTitle": "정리해줘",
+              "status": "running",
+              "lastEventAt": null,
+              "hasEvents": false,
+              "activeChildCount": 0,
+              "candidateReasons": [
+                "no-events",
+                "placeholder-title"
+              ]
+            },
+            {
+              "id": "task-2",
+              "visibleTitle": "배포 절차",
+              "status": "waiting",
+              "lastEventAt": "2026-07-01T00:00:00Z",
+              "hasEvents": true,
+              "activeChildCount": 0,
+              "candidateReasons": [
+                "stale"
+              ]
+            }
+          ],
+          "batchTruncated": false
+        },
+        "mustContain": [
+          "Candidates in this batch: 2",
+          "The qualified candidates in this batch:",
+          "- task-1 | running | events: no | last: none | reasons: no-events, placeholder-title | title: 정리해줘",
+          "- task-2 | waiting | events: yes | last: 2026-07-01T00:00:00Z | reasons: stale | title: 배포 절차"
+        ],
+        "mustNotContain": [
+          "More candidates exist than are listed here"
+        ]
+      },
+      {
+        "name": "상한을 넘으면 앞에서 자르고 남은 후보가 있음을 알린다",
+        "input": {
+          "triageCandidateListLimit": 1,
+          "candidates": [
+            {
+              "id": "task-1",
+              "visibleTitle": "첫째",
+              "status": "running",
+              "lastEventAt": null,
+              "hasEvents": false,
+              "activeChildCount": 0,
+              "candidateReasons": [
+                "no-events"
+              ]
+            },
+            {
+              "id": "task-2",
+              "visibleTitle": "둘째",
+              "status": "running",
+              "lastEventAt": null,
+              "hasEvents": false,
+              "activeChildCount": 0,
+              "candidateReasons": [
+                "no-events"
+              ]
+            }
+          ],
+          "batchTruncated": false
+        },
+        "mustContain": [
+          "- task-1 | running | events: no | last: none | reasons: no-events | title: 첫째",
+          "More candidates exist than are listed here; a future scan picks them up."
+        ],
+        "mustNotContain": [
+          "task-2"
+        ]
+      },
+      {
+        "name": "서버가 배치를 잘랐으면 상한 안이어도 남은 후보가 있음을 알린다",
+        "input": {
+          "candidates": [
+            {
+              "id": "task-1",
+              "visibleTitle": "첫째",
+              "status": "running",
+              "lastEventAt": null,
+              "hasEvents": false,
+              "activeChildCount": 0,
+              "candidateReasons": [
+                "no-events"
+              ]
+            }
+          ],
+          "batchTruncated": true
+        },
+        "mustContain": [
+          "More candidates exist than are listed here; a future scan picks them up."
+        ]
+      }
+    ]
+  }
+}
