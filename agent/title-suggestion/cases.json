@@ -7,12 +7,12 @@
                 "name": "제목이 이미 적절해 아무것도 제안하지 않은 빈 출력은 옳은 답이다",
                 "suggestions": [],
                 "expect": {
-                    "valid": true,
+                    "kept": [],
                     "errors": []
                 }
             },
             {
-                "name": "서로 다른 두 제안은 통과한다",
+                "name": "서로 다른 두 제안은 그대로 남는다",
                 "suggestions": [
                     {
                         "title": "Fix auth middleware token leak",
@@ -24,12 +24,15 @@
                     }
                 ],
                 "expect": {
-                    "valid": true,
+                    "kept": [
+                        "Fix auth middleware token leak",
+                        "Restore session after OAuth callback"
+                    ],
                     "errors": []
                 }
             },
             {
-                "name": "제안 세 개까지는 통과한다",
+                "name": "제안 세 개까지는 그대로 남는다",
                 "suggestions": [
                     {
                         "title": "Fix auth middleware token leak",
@@ -45,12 +48,16 @@
                     }
                 ],
                 "expect": {
-                    "valid": true,
+                    "kept": [
+                        "Fix auth middleware token leak",
+                        "Restore session after OAuth callback",
+                        "Harden redirect allowlist"
+                    ],
                     "errors": []
                 }
             },
             {
-                "name": "제안이 하나뿐이면 거부한다",
+                "name": "제안이 하나뿐이면 지울 것이 없어도 모자란 수를 돌려준다",
                 "suggestions": [
                     {
                         "title": "Fix auth middleware token leak",
@@ -58,14 +65,16 @@
                     }
                 ],
                 "expect": {
-                    "valid": false,
+                    "kept": [
+                        "Fix auth middleware token leak"
+                    ],
                     "errors": [
-                        "suggestions must be empty or contain 2-3 items"
+                        "only 1 usable suggestion(s) remain after dropping unusable ones; return 2-3 distinct titles that differ from the current one"
                     ]
                 }
             },
             {
-                "name": "현재 제목을 그대로 되풀이하면 거부한다",
+                "name": "현재 제목을 그대로 되풀이한 제안은 지운다",
                 "suggestions": [
                     {
                         "title": "Fix login redirect",
@@ -77,14 +86,16 @@
                     }
                 ],
                 "expect": {
-                    "valid": false,
+                    "kept": [
+                        "Restore session after OAuth callback"
+                    ],
                     "errors": [
-                        "suggestion 1 repeats the current title"
+                        "only 1 usable suggestion(s) remain after dropping unusable ones; return 2-3 distinct titles that differ from the current one"
                     ]
                 }
             },
             {
-                "name": "대소문자와 공백만 다른 현재 제목도 되풀이로 본다",
+                "name": "대소문자와 공백만 다른 현재 제목도 되풀이로 보고 지운다",
                 "suggestions": [
                     {
                         "title": "  FIX   LOGIN\tREDIRECT ",
@@ -96,14 +107,16 @@
                     }
                 ],
                 "expect": {
-                    "valid": false,
+                    "kept": [
+                        "Restore session after OAuth callback"
+                    ],
                     "errors": [
-                        "suggestion 1 repeats the current title"
+                        "only 1 usable suggestion(s) remain after dropping unusable ones; return 2-3 distinct titles that differ from the current one"
                     ]
                 }
             },
             {
-                "name": "전각 문자로 쓴 현재 제목도 되풀이로 본다",
+                "name": "전각 문자로 쓴 현재 제목도 되풀이로 보고 지운다",
                 "suggestions": [
                     {
                         "title": "Ｆｉｘ ｌｏｇｉｎ ｒｅｄｉｒｅｃｔ",
@@ -115,14 +128,16 @@
                     }
                 ],
                 "expect": {
-                    "valid": false,
+                    "kept": [
+                        "Restore session after OAuth callback"
+                    ],
                     "errors": [
-                        "suggestion 1 repeats the current title"
+                        "only 1 usable suggestion(s) remain after dropping unusable ones; return 2-3 distinct titles that differ from the current one"
                     ]
                 }
             },
             {
-                "name": "대소문자만 다른 두 제안은 서로 중복이다",
+                "name": "대소문자만 다른 두 제안은 서로 중복이라 뒤의 것을 지운다",
                 "suggestions": [
                     {
                         "title": "Fix auth middleware token leak",
@@ -130,13 +145,15 @@
                     },
                     {
                         "title": "FIX AUTH MIDDLEWARE TOKEN LEAK",
-                        "rationale": "같은 말을 대문자로 썼다"
+                        "rationale": "대소문자만 바꿨다"
                     }
                 ],
                 "expect": {
-                    "valid": false,
+                    "kept": [
+                        "Fix auth middleware token leak"
+                    ],
                     "errors": [
-                        "suggestion 2 duplicates another suggestion"
+                        "only 1 usable suggestion(s) remain after dropping unusable ones; return 2-3 distinct titles that differ from the current one"
                     ]
                 }
             },
@@ -145,24 +162,27 @@
                 "suggestions": [
                     {
                         "title": "Straße redirect audit",
-                        "rationale": "원문 표기를 남긴다"
+                        "rationale": "독일어 합자를 쓴다"
                     },
                     {
                         "title": "STRASSE REDIRECT AUDIT",
-                        "rationale": "확장 표기를 남긴다"
+                        "rationale": "합자를 펼쳐 쓴다"
                     }
                 ],
                 "expect": {
-                    "valid": true,
+                    "kept": [
+                        "Straße redirect audit",
+                        "STRASSE REDIRECT AUDIT"
+                    ],
                     "errors": []
                 }
             },
             {
-                "name": "untitled 자리표시자 제목을 거부한다",
+                "name": "untitled 자리표시자 제목은 지운다",
                 "suggestions": [
                     {
                         "title": "Untitled",
-                        "rationale": "아직 정하지 못했다"
+                        "rationale": "자리표시자를 그대로 낸다"
                     },
                     {
                         "title": "Restore session after OAuth callback",
@@ -170,14 +190,16 @@
                     }
                 ],
                 "expect": {
-                    "valid": false,
+                    "kept": [
+                        "Restore session after OAuth callback"
+                    ],
                     "errors": [
-                        "suggestion 1 is a placeholder title"
+                        "only 1 usable suggestion(s) remain after dropping unusable ones; return 2-3 distinct titles that differ from the current one"
                     ]
                 }
             },
             {
-                "name": "test 자리표시자 제목을 거부한다",
+                "name": "test 자리표시자 제목은 지운다",
                 "suggestions": [
                     {
                         "title": "Fix auth middleware token leak",
@@ -185,33 +207,34 @@
                     },
                     {
                         "title": "Test",
-                        "rationale": "시험 삼아 적었다"
+                        "rationale": "자리표시자를 그대로 낸다"
                     }
                 ],
                 "expect": {
-                    "valid": false,
+                    "kept": [
+                        "Fix auth middleware token leak"
+                    ],
                     "errors": [
-                        "suggestion 2 is a placeholder title"
+                        "only 1 usable suggestion(s) remain after dropping unusable ones; return 2-3 distinct titles that differ from the current one"
                     ]
                 }
             },
             {
-                "name": "번호만 붙인 task 제목을 구분자와 무관하게 거부한다",
+                "name": "번호만 붙인 task 제목을 구분자와 무관하게 지운다",
                 "suggestions": [
                     {
                         "title": "Task-42",
-                        "rationale": "번호만 남겼다"
+                        "rationale": "자동 생성된 자리표시자다"
                     },
                     {
                         "title": "task #7",
-                        "rationale": "번호만 남겼다"
+                        "rationale": "구분자만 다른 자리표시자다"
                     }
                 ],
                 "expect": {
-                    "valid": false,
+                    "kept": [],
                     "errors": [
-                        "suggestion 1 is a placeholder title",
-                        "suggestion 2 is a placeholder title"
+                        "only 0 usable suggestion(s) remain after dropping unusable ones; return 2-3 distinct titles that differ from the current one"
                     ]
                 }
             },
@@ -220,7 +243,7 @@
                 "suggestions": [
                     {
                         "title": "Task 42 retry backoff",
-                        "rationale": "번호 뒤에 내용이 있다"
+                        "rationale": "재시도 백오프를 다룬다"
                     },
                     {
                         "title": "Restore session after OAuth callback",
@@ -228,27 +251,30 @@
                     }
                 ],
                 "expect": {
-                    "valid": true,
+                    "kept": [
+                        "Task 42 retry backoff",
+                        "Restore session after OAuth callback"
+                    ],
                     "errors": []
                 }
             },
             {
-                "name": "개수와 되풀이와 자리표시자가 겹치면 사유를 모두 낸다",
+                "name": "지울 것을 다 지우고 하나도 남지 않으면 모자란 수가 0이다",
                 "suggestions": [
                     {
                         "title": "Untitled",
-                        "rationale": "아직 정하지 못했다"
+                        "rationale": "자리표시자를 그대로 낸다"
                     }
                 ],
                 "expect": {
-                    "valid": false,
+                    "kept": [],
                     "errors": [
-                        "suggestions must be empty or contain 2-3 items",
-                        "suggestion 1 is a placeholder title"
+                        "only 0 usable suggestion(s) remain after dropping unusable ones; return 2-3 distinct titles that differ from the current one"
                     ]
                 }
             }
-        ]
+        ],
+        "meaning": "쓸모없는 제목 후보는 코드가 지우고 모델에게는 모자란 수만 돌려준다. 두 구현체가 같은 후보 목록에서 같은 잔여 목록과 같은 사유를 내야 한다."
     },
     "contextExample": {
         "title": "Untitled",
