@@ -510,6 +510,26 @@ if (unguarded.length > 0 || overguarded.length > 0) {
             `${[...unguarded, ...overguarded].join(", ")}`,
     );
 }
+const jobResults = intakeCase.results;
+const RESULT_PLACES = ["meaning", "byKind"];
+const missingResultPlaces = RESULT_PLACES.filter((place) => jobResults?.[place] === undefined);
+if (missingResultPlaces.length > 0) {
+    throw new Error(`잡 산출 선언에 있어야 할 자리가 없다 — ${missingResultPlaces.join(", ")}`);
+}
+for (const [kind, declared] of Object.entries(jobResults.byKind)) {
+    if (!intakeCase.kinds.includes(kind)) throw new Error(`산출을 적은 ${kind} 를 접수가 받지 않는다`);
+    if (!(declared.required?.length > 0)) throw new Error(`${kind} 의 산출이 실어야 할 칸을 적지 않는다`);
+    const agentId = kind.replace(".", "-");
+    const output = readAgentOutput(agentId).schema.properties ?? {};
+    const stray = (declared.fromAgentOutput ?? []).filter((field) => output[field] === undefined);
+    if (stray.length > 0) {
+        throw new Error(`${kind} 의 산출이 에이전트가 내지 않는 ${stray.join(", ")} 를 실으라고 적는다`);
+    }
+    const unrequired = (declared.fromAgentOutput ?? []).filter((field) => !declared.required.includes(field));
+    if (unrequired.length > 0) {
+        throw new Error(`${kind} 의 산출이 ${unrequired.join(", ")} 를 실으면서 요구하지 않는다`);
+    }
+}
 console.log(`추적이 나르는 속성 ${traceAttributes.length}개를 계약이 갖는다`);
 const scopeToken = readScopeToken();
 const SCOPE_TOKEN_PLACES = ["meaning", "prefix", "prefixReason", "shape", "payload", "signature", "secret", "lifetime", "precedence"];
@@ -522,6 +542,7 @@ console.log(`공급자 요청 식별자의 값 규칙 ${PROVIDER_REQUEST_RULES.l
 console.log(`첫 토큰까지의 시간에 관한 규칙 ${TTFT_RULES.length}개를 계약이 갖는다`);
 console.log(`접수의 자격 검사에 관한 자리 ${CREDENTIAL_CHECK_PLACES.length}개를 계약이 갖는다`);
 console.log(`리스 소유자를 요구하는 창구 ${leasePaths.length}자리가 ${leaseOwner.rejection} 로 거절한다`);
+console.log(`잡 산출의 칸을 적은 종류 ${Object.keys(jobResults.byKind).length}개 — ${Object.keys(jobResults.byKind).join(", ")}`);
 console.log(`예산 페이싱에 관한 자리 ${PACING_PLACES.length}개를 계약이 갖는다`);
 console.log(`턴 원장의 정산 규칙 ${TURN_LEDGER_PLACES.length}개를 계약이 갖는다`);
 console.log(

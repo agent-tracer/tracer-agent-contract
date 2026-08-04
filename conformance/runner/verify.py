@@ -101,6 +101,7 @@ CONFIRM_SURFACE = "confirm"
 IMMEDIATE_PHRASES = ["runs immediately", "run immediately", "runs right away", "without confirmation"]
 PROVIDER_REQUEST_RULES = ["unit", "source", "absent", "notSession", "manyCalls"]
 TTFT_RULES = ["unit", "source", "absent", "notDuration", "noEstimate"]
+RESULT_PLACES = ["meaning", "byKind"]
 LEASE_OWNER_PLACES = ["meaning", "header", "rejection", "paths"]
 CREDENTIAL_CHECK_PLACES = ["meaning", "appliesTo", "rejection", "reason", "notEnvelope"]
 PACING_PLACES = ["meaning", "unit", "progressNotice", "landingDirective"]
@@ -536,6 +537,26 @@ def main() -> None:
             "리스 소유자를 요구하는 창구를 표면과 케이스가 다르게 적는다 — "
             f"{', '.join(unguarded + overguarded)}"
         )
+    job_results = intake.get("results", {})
+    missing_result_places = [place for place in RESULT_PLACES if place not in job_results]
+    if missing_result_places:
+        raise SystemExit(f"잡 산출 선언에 있어야 할 자리가 없다 — {', '.join(missing_result_places)}")
+    for kind, declared in job_results["byKind"].items():
+        if kind not in intake["kinds"]:
+            raise SystemExit(f"산출을 적은 {kind} 를 접수가 받지 않는다")
+        if not declared.get("required"):
+            raise SystemExit(f"{kind} 의 산출이 실어야 할 칸을 적지 않는다")
+        output = read_agent_output(kind.replace(".", "-"))["schema"].get("properties", {})
+        stray = [field for field in declared.get("fromAgentOutput", []) if field not in output]
+        if stray:
+            raise SystemExit(
+                f"{kind} 의 산출이 에이전트가 내지 않는 {', '.join(stray)} 를 실으라고 적는다"
+            )
+        unrequired = [
+            field for field in declared.get("fromAgentOutput", []) if field not in declared["required"]
+        ]
+        if unrequired:
+            raise SystemExit(f"{kind} 의 산출이 {', '.join(unrequired)} 를 실으면서 요구하지 않는다")
     print(f"추적이 나르는 속성 {len(trace_attributes)}개를 계약이 갖는다")
     scope_token = read_scope_token()
     missing_scope = [place for place in SCOPE_TOKEN_PLACES if place not in scope_token]
@@ -546,6 +567,7 @@ def main() -> None:
     print(f"첫 토큰까지의 시간에 관한 규칙 {len(TTFT_RULES)}개를 계약이 갖는다")
     print(f"접수의 자격 검사에 관한 자리 {len(CREDENTIAL_CHECK_PLACES)}개를 계약이 갖는다")
     print(f"리스 소유자를 요구하는 창구 {len(lease_paths)}자리가 {lease_owner['rejection']} 로 거절한다")
+    print(f"잡 산출의 칸을 적은 종류 {len(job_results['byKind'])}개 — {', '.join(job_results['byKind'])}")
     print(f"예산 페이싱에 관한 자리 {len(PACING_PLACES)}개를 계약이 갖는다")
     print(f"턴 원장의 정산 규칙 {len(TURN_LEDGER_PLACES)}개를 계약이 갖는다")
     print(
