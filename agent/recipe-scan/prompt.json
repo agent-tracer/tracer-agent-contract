@@ -14,25 +14,24 @@
       ]
     },
     "evidenceSourcing": {
-      "version": "v0.0.1",
+      "version": "v0.0.2",
       "content": [
         "You do NOT read the ledger yourself. Specialists already read the evidence in their own isolated",
         "contexts, and each reported a verdict plus verbatim excerpts; their evidence ledgers were merged into",
-        "one. Your only tool is ${checkCitationsTool}: before you emit final candidates, pass the IDs you intend",
-        "to cite and it names the ones the merged ledger cannot back. An ID no specialist surfaced is not",
-        "citable, so never guess IDs."
+        "one. You have no tools. Your request lists every identifier that merged ledger can back; an ID that is",
+        "not on that list is not citable, so never guess IDs."
       ],
       "placeholders": [
         "checkCitationsTool"
       ]
     },
     "citationDiscipline": {
-      "version": "v0.0.1",
+      "version": "v0.0.2",
       "content": [
         "Every ID you cite in your final output (taskIds, turnIds, eventIds, rule IDs, revises_recipe_id) is",
         "checked against the merged specialist ledger. A candidate citing an unbacked ID is rejected; you get",
         "exactly one repair attempt, and output that is still ungrounded after it is dropped, so nothing is",
-        "saved. Verify with ${checkCitationsTool} first.",
+        "saved. Cite only the identifiers your request lists as citable.",
         "A contributing task counts as supported only when a specialist actually read its events. A task a",
         "specialist merely named without reading is not enough."
       ],
@@ -140,12 +139,11 @@
       ]
     },
     "repairDirective": {
-      "version": "v0.0.1",
+      "version": "v0.0.2",
       "content": [
         "Change only what is necessary to satisfy these errors, using only identifiers the specialists",
         "surfaced. If a correction, pitfall, rule, or revision target cannot be grounded in the merged ledger,",
-        "remove it. Confirm with ${checkCitationsTool} before you resubmit. Then return the complete repaired",
-        "candidate list."
+        "remove it. Then return the complete repaired candidate list."
       ],
       "placeholders": [
         "checkCitationsTool"
@@ -192,12 +190,12 @@
       ]
     },
     "specialistReporting": {
-      "version": "v0.0.1",
+      "version": "v0.0.2",
       "content": [
         "Report a verdict that answers your question directly, and attach the excerpts the coordinator needs",
         "to write from — quote the evidence rather than summarising it away, because the coordinator cannot",
-        "see what you read. Every excerpt must name the event it came from. Verify with ${checkCitationsTool}",
-        "before you report: an ID the coordinator cannot cite is worse than no evidence at all."
+        "see what you read. Every excerpt must name the event it came from: an ID the coordinator cannot cite",
+        "is worse than no evidence at all."
       ],
       "placeholders": [
         "checkCitationsTool"
@@ -259,6 +257,12 @@
       "content": [
         "Your previous output:"
       ]
+    },
+    "citableIdentifiers": {
+      "version": "v0.0.1",
+      "content": [
+        "Citable identifiers (nothing outside this list may appear in your output):"
+      ]
     }
   },
   "templates": {
@@ -310,6 +314,12 @@
       "version": "v0.0.1",
       "slots": [
         "turnAllowance"
+      ]
+    },
+    "recipe-scan.investigator.user": {
+      "version": "v0.0.1",
+      "slots": [
+        "citableIdentifiers"
       ]
     }
   }

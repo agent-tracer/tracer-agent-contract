@@ -5,13 +5,28 @@
     "cases": [
       {
         "name": "앵커와 쓸 수 있는 턴을 함께 싣는다",
-        "input": { "taskId": "task-1", "availableTurns": 9, "userPrompt": null },
-        "mustContain": ["task-1", "Turns available: 9"]
+        "input": {
+          "taskId": "task-1",
+          "availableTurns": 9,
+          "userPrompt": null
+        },
+        "mustContain": [
+          "task-1",
+          "Turns available: 9"
+        ]
       },
       {
         "name": "사용자 지시가 있으면 그것도 싣는다",
-        "input": { "taskId": "task-1", "availableTurns": 9, "userPrompt": "배포 절차를 보고 싶다" },
-        "mustContain": ["task-1", "Turns available: 9", "배포 절차를 보고 싶다"]
+        "input": {
+          "taskId": "task-1",
+          "availableTurns": 9,
+          "userPrompt": "배포 절차를 보고 싶다"
+        },
+        "mustContain": [
+          "task-1",
+          "Turns available: 9",
+          "배포 절차를 보고 싶다"
+        ]
       }
     ]
   },
@@ -26,8 +41,14 @@
           "turns": 4,
           "siblings": []
         },
-        "mustContain": ["task-1", "이 태스크가 무엇을 했나", "Turns available: 4"],
-        "mustNotContain": ["Other specialists are handling"]
+        "mustContain": [
+          "task-1",
+          "이 태스크가 무엇을 했나",
+          "Turns available: 4"
+        ],
+        "mustNotContain": [
+          "Other specialists are handling"
+        ]
       },
       {
         "name": "다른 전문가가 맡은 축과 질문을 함께 싣는다",
@@ -36,8 +57,16 @@
           "question": "이 태스크가 무엇을 했나",
           "turns": 4,
           "siblings": [
-            { "probe": "rules", "weight": 3, "question": "어떤 규칙이 걸렸나" },
-            { "probe": "repetition", "weight": 2, "question": "다른 태스크에도 있었나" }
+            {
+              "probe": "rules",
+              "weight": 3,
+              "question": "어떤 규칙이 걸렸나"
+            },
+            {
+              "probe": "repetition",
+              "weight": 2,
+              "question": "다른 태스크에도 있었나"
+            }
           ]
         },
         "mustContain": [
@@ -56,7 +85,95 @@
           "turns": 4,
           "siblings": []
         },
-        "mustNotContain": ["Other specialists are handling", "rules", "repetition"]
+        "mustNotContain": [
+          "Other specialists are handling",
+          "rules",
+          "repetition"
+        ]
+      }
+    ]
+  },
+  "investigate": {
+    "meaning": "조율자가 종합할 때 읽는 사용자 프롬프트다. 조율자는 도구를 갖지 않으므로 인용할 수 있는 식별자를 요청이 직접 실어 준다. 이 목록이 축마다 다르면 한 축은 인용할 수 있는 것을 인용하지 못한다.",
+    "cases": [
+      {
+        "name": "장부가 비어 있으면 인용 목록을 싣지 않는다",
+        "input": {
+          "taskId": "task-1",
+          "provenance": {
+            "eventIdsByTask": {},
+            "turnIdsByTask": {},
+            "ruleIds": [],
+            "recipeRevs": {}
+          }
+        },
+        "mustNotContain": [
+          "Citable identifiers"
+        ]
+      },
+      {
+        "name": "태스크마다 이벤트와 턴을 갈라 싣고 규칙과 레시피를 뒤에 싣는다",
+        "input": {
+          "taskId": "task-1",
+          "provenance": {
+            "eventIdsByTask": {
+              "task-2": [
+                "e-3"
+              ],
+              "task-1": [
+                "e-2",
+                "e-1"
+              ]
+            },
+            "turnIdsByTask": {
+              "task-1": [
+                "t-1"
+              ]
+            },
+            "ruleIds": [
+              "rule-b",
+              "rule-a"
+            ],
+            "recipeRevs": {
+              "recipe-1": 3
+            }
+          }
+        },
+        "mustContain": [
+          "Citable identifiers (nothing outside this list may appear in your output):",
+          "- task-1 events: e-1, e-2",
+          "- task-1 turns: t-1",
+          "- task-2 events: e-3",
+          "- rules: rule-a, rule-b",
+          "- recipes: recipe-1@3"
+        ]
+      },
+      {
+        "name": "상한을 넘은 식별자는 앞에서 자르고 남은 수를 알린다",
+        "input": {
+          "taskId": "task-1",
+          "citableIdListLimit": 2,
+          "provenance": {
+            "eventIdsByTask": {
+              "task-1": [
+                "e-1",
+                "e-2",
+                "e-3",
+                "e-4"
+              ]
+            },
+            "turnIdsByTask": {},
+            "ruleIds": [],
+            "recipeRevs": {}
+          }
+        },
+        "mustContain": [
+          "- task-1 events: e-1, e-2 (+2 more)"
+        ],
+        "mustNotContain": [
+          "e-3",
+          "e-4"
+        ]
       }
     ]
   }

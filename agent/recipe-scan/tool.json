@@ -5,7 +5,8 @@
     "recipeCandidateLimit": 4,
     "maxRedispatchProbes": 3,
     "maxRedispatchRounds": 1,
-    "maxProbeWeight": 10
+    "maxProbeWeight": 10,
+    "citableIdListLimit": 40
   },
   "tools": {
     "get_task_summary": {
@@ -196,51 +197,6 @@
           "description": "Max recipes"
         }
       }
-    },
-    "check_citations": {
-      "description": "Check whether the IDs you plan to cite are backed by what your tools actually returned, before you write the final candidates. Pass the task plus the event, turn, and rule IDs you intend to use; the response names the ones that are not citable. A single unsupported ID gets the whole candidate list rejected, so verify here instead of spending your one repair on it.",
-      "args": {
-        "taskId": {
-          "type": "string",
-          "required": true,
-          "trim": true,
-          "minLength": 1,
-          "description": "The task the cited IDs belong to"
-        },
-        "eventIds": {
-          "type": "array",
-          "required": false,
-          "maxItems": 200,
-          "items": {
-            "type": "string",
-            "trim": true,
-            "minLength": 1
-          },
-          "description": "Event IDs you intend to cite"
-        },
-        "turnIds": {
-          "type": "array",
-          "required": false,
-          "maxItems": 200,
-          "items": {
-            "type": "string",
-            "trim": true,
-            "minLength": 1
-          },
-          "description": "Turn IDs you intend to cite"
-        },
-        "ruleIds": {
-          "type": "array",
-          "required": false,
-          "maxItems": 200,
-          "items": {
-            "type": "string",
-            "trim": true,
-            "minLength": 1
-          },
-          "description": "Rule IDs you intend to cite in governing_rules"
-        }
-      }
     }
   },
   "responses": {
@@ -298,25 +254,20 @@
     "surveyTools": [
       "get_task_summary"
     ],
-    "coordinatorTools": [
-      "check_citations"
-    ],
+    "coordinatorTools": [],
     "roles": {
       "timeline": [
         "get_task_summary",
         "get_task_events",
-        "search_events",
-        "check_citations"
+        "search_events"
       ],
       "rules": [
         "list_rules",
-        "search_recipes",
-        "check_citations"
+        "search_recipes"
       ],
       "repetition": [
         "search_events",
-        "find_similar_tasks",
-        "check_citations"
+        "find_similar_tasks"
       ]
     },
     "workerReport": {
