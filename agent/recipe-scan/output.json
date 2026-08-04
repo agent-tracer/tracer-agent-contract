@@ -399,7 +399,7 @@
                 "type": "object",
                 "required": [
                     "probe",
-                    "weight",
+                    "depth",
                     "question"
                 ],
                 "properties": {
@@ -411,16 +411,19 @@
                             "repetition"
                         ]
                     },
-                    "weight": {
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": 10
-                    },
                     "question": {
                         "type": "string",
                         "trim": true,
                         "minLength": 1,
                         "maxLength": 300
+                    },
+                    "depth": {
+                        "type": "string",
+                        "enum": [
+                            "shallow",
+                            "normal",
+                            "deep"
+                        ]
                     }
                 }
             }

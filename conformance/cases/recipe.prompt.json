@@ -59,12 +59,12 @@
           "siblings": [
             {
               "probe": "rules",
-              "weight": 3,
+              "depth": "normal",
               "question": "어떤 규칙이 걸렸나"
             },
             {
               "probe": "repetition",
-              "weight": 2,
+              "depth": "shallow",
               "question": "다른 태스크에도 있었나"
             }
           ]

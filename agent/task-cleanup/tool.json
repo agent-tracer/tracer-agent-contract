@@ -5,7 +5,6 @@
         "maxSuggestions": 50,
         "maxEvidenceEventIds": 100,
         "maxRedispatchRounds": 1,
-        "maxInspectWeight": 4,
         "triageCandidateListLimit": 100
     },
     "tools": {
@@ -93,9 +92,14 @@
         "redispatchRequest": {
             "required": [
                 "taskId",
-                "weight"
+                "depth"
             ],
             "maxTasks": 50
+        },
+        "inspectDepth": {
+            "shallow": 1,
+            "normal": 2,
+            "deep": 4
         }
     },
     "candidateBatch": {

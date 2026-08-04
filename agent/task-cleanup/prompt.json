@@ -92,12 +92,12 @@
             ]
         },
         "inspectWeighting": {
-            "version": "v0.0.1",
+            "version": "v0.0.2",
             "content": [
-                "Give each assignment a weight from 1 to ${maxInspectWeight} reflecting how much scrutiny it deserves:",
-                "a long-running one deserves more, and a hasEvents=false shell just 1, since its reviewer only has to",
-                "confirm the shell is empty. Weight sets each reviewer's share of the inspection budget; weights are",
-                "relative to each other, not a count you can run out of or ask more of than exists."
+                "Give each assignment a depth of shallow, normal, or deep reflecting how much scrutiny it deserves:",
+                "a long-running one deserves deep, and a hasEvents=false shell just shallow, since its reviewer only",
+                "has to confirm the shell is empty. Depth sets each reviewer's share of the inspection budget; depth",
+                "is relative to the other assignments, not a count you can run out of."
             ],
             "placeholders": [
                 "maxInspectWeight"

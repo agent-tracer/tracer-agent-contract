@@ -161,13 +161,13 @@
       ]
     },
     "dispatchWeighting": {
-      "version": "v0.0.1",
+      "version": "v0.0.2",
       "content": [
-        "Assign only the specialists this anchor actually needs, give each a concrete question, and give each a",
-        "weight from 1 to ${maxProbeWeight} reflecting how much of the investigation its question deserves. Put",
-        "weight where the evidence is; a specialist you do not need is a specialist you should not dispatch.",
-        "Weights are relative to each other, not a count you can run out of or ask more of than exists, and the",
-        "budget is split between specialists in proportion to them."
+        "Assign only the specialists this anchor actually needs, give each a concrete question, and give each",
+        "a depth of shallow, normal, or deep reflecting how much of the investigation its question deserves.",
+        "Put depth where the evidence is; a specialist you do not need is a specialist you should not dispatch.",
+        "Depth is relative to the other specialists, not a count you can run out of, and the budget is split",
+        "between specialists in proportion to it."
       ],
       "placeholders": [
         "maxProbeWeight"

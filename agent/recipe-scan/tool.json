@@ -5,7 +5,6 @@
     "recipeCandidateLimit": 4,
     "maxRedispatchProbes": 3,
     "maxRedispatchRounds": 1,
-    "maxProbeWeight": 10,
     "citableIdListLimit": 40
   },
   "tools": {
@@ -286,9 +285,14 @@
     "redispatchRequest": {
       "required": [
         "probe",
-        "weight",
+        "depth",
         "question"
       ]
+    },
+    "dispatchDepth": {
+      "shallow": 3,
+      "normal": 6,
+      "deep": 10
     }
   }
 }
