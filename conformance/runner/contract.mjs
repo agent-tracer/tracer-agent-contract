@@ -243,6 +243,19 @@ export function readAgentApiRoutes() {
     return routes.sort((left, right) => (routeKey(left) < routeKey(right) ? -1 : 1));
 }
 
+/** OpenAPI 가 선언한 스키마 하나가 요구하는 칸과 가진 칸을 낸다. */
+export function readSchemaFields(schemaName) {
+    const spec = readFileSync(join(ROOT, "http", "agent-api.openapi.yaml"), "utf8");
+    const block = new RegExp(`\\n {4}${schemaName}:\\n((?: {6}.*\\n| *\\n)*)`).exec(spec);
+    if (block === null) throw new Error(`${schemaName} 을 계약이 선언하지 않는다`);
+    const required = / {6}required: \[([^\]]*)\]/.exec(block[1]);
+    const properties = /\n {6}properties:\n((?: {8}.*\n| *\n)*)/.exec(block[1]);
+    return {
+        required: required === null ? [] : required[1].split(",").map((name) => name.trim()),
+        properties: properties === null ? [] : [...properties[1].matchAll(/^ {8}(\w+):/gm)].map((f) => f[1]),
+    };
+}
+
 /** 리스를 쥔 실행기의 이름을 요구하는 창구를 사전순으로 낸다. */
 export function readLeaseOwnerPaths() {
     const spec = readFileSync(join(ROOT, "http", "agent-api.openapi.yaml"), "utf8");

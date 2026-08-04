@@ -27,6 +27,7 @@ from contract import (
     read_job_ledger_axis_column,
     read_json,
     read_lease_owner_paths,
+    read_schema_fields,
     read_lease_owner_rejection_ref,
     read_openapi_enum,
     read_redaction,
@@ -101,6 +102,7 @@ CONFIRM_SURFACE = "confirm"
 IMMEDIATE_PHRASES = ["runs immediately", "run immediately", "runs right away", "without confirmation"]
 PROVIDER_REQUEST_RULES = ["unit", "source", "absent", "notSession", "manyCalls"]
 TTFT_RULES = ["unit", "source", "absent", "notDuration", "noEstimate"]
+LOCAL_EXECUTOR_PLACES = ["meaning", "settleWindows", "observation", "steps"]
 RESULT_PLACES = ["meaning", "byKind"]
 LEASE_OWNER_PLACES = ["meaning", "header", "rejection", "paths"]
 CREDENTIAL_CHECK_PLACES = ["meaning", "appliesTo", "rejection", "reason", "notEnvelope"]
@@ -560,6 +562,39 @@ def main() -> None:
         unrequired = [field for field in from_output if field not in declared["required"]]
         if unrequired:
             raise SystemExit(f"{kind} 의 산출이 {', '.join(unrequired)} 를 실으면서 요구하지 않는다")
+    local_executor = intake.get("localExecutor", {})
+    missing_local = [place for place in LOCAL_EXECUTOR_PLACES if place not in local_executor]
+    if missing_local:
+        raise SystemExit(f"로컬 실행기 검사에 있어야 할 자리가 없다 — {', '.join(missing_local)}")
+    unguarded_settle = [
+        path for path in local_executor["settleWindows"] if path not in lease_owner["paths"]
+    ]
+    if unguarded_settle:
+        raise SystemExit(f"종결 창구가 리스를 요구하지 않는다 — {', '.join(unguarded_settle)}")
+    for name, declared in (
+        ("observation", local_executor["observation"]),
+        ("steps", local_executor["steps"]),
+    ):
+        fields = read_schema_fields(declared["schema"])
+        if "required" in declared:
+            if declared["required"] != fields["required"]:
+                raise SystemExit(
+                    f"{name} 이 요구하는 칸을 표면과 케이스가 다르게 적는다 — "
+                    f"{', '.join(fields['required'])} 와 {', '.join(declared['required'])}"
+                )
+            known = [*declared["required"], *declared.get("optional", [])]
+            stray_fields = [field for field in fields["properties"] if field not in known]
+            missing_fields = [field for field in known if field not in fields["properties"]]
+            if stray_fields or missing_fields:
+                raise SystemExit(
+                    f"{name} 이 가진 칸을 표면과 케이스가 다르게 적는다 — "
+                    f"{', '.join(stray_fields + missing_fields)}"
+                )
+        for body in ("RuleJobReportBody", "RuleJobFailureBody"):
+            if declared["field"] not in read_schema_fields(body)["required"]:
+                raise SystemExit(
+                    f"{body} 가 {declared['field']} 를 요구하지 않아 관측이 원장에 닿지 않는다"
+                )
     print(f"추적이 나르는 속성 {len(trace_attributes)}개를 계약이 갖는다")
     scope_token = read_scope_token()
     missing_scope = [place for place in SCOPE_TOKEN_PLACES if place not in scope_token]
@@ -571,6 +606,7 @@ def main() -> None:
     print(f"접수의 자격 검사에 관한 자리 {len(CREDENTIAL_CHECK_PLACES)}개를 계약이 갖는다")
     print(f"리스 소유자를 요구하는 창구 {len(lease_paths)}자리가 {lease_owner['rejection']} 로 거절한다")
     print(f"잡 산출의 칸을 적은 종류 {len(job_results['byKind'])}개 — {', '.join(job_results['byKind'])}")
+    print(f"로컬 실행기의 관측 {len(local_executor['observation']['required'])}칸이 종결 창구 {len(local_executor['settleWindows'])}자리를 지나 원장에 닿는다")
     print(f"예산 페이싱에 관한 자리 {len(PACING_PLACES)}개를 계약이 갖는다")
     print(f"턴 원장의 정산 규칙 {len(TURN_LEDGER_PLACES)}개를 계약이 갖는다")
     print(

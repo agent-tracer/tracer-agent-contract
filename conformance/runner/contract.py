@@ -264,6 +264,22 @@ def read_agent_api_routes() -> list[dict[str, str]]:
     return sorted(routes, key=route_key)
 
 
+def read_schema_fields(schema_name: str) -> dict[str, list[str]]:
+    """OpenAPI 가 선언한 스키마 하나가 요구하는 칸과 가진 칸을 낸다."""
+    spec = (ROOT / "http" / "agent-api.openapi.yaml").read_text(encoding="utf-8")
+    block = re.search(rf"\n {{4}}{schema_name}:\n((?: {{6}}.*\n| *\n)*)", spec)
+    if block is None:
+        raise AssertionError(f"{schema_name} 을 계약이 선언하지 않는다")
+    required = re.search(r" {6}required: \[([^\]]*)\]", block.group(1))
+    properties = re.search(r"\n {6}properties:\n((?: {8}.*\n| *\n)*)", block.group(1))
+    return {
+        "required": [] if required is None else [n.strip() for n in required.group(1).split(",")],
+        "properties": []
+        if properties is None
+        else re.findall(r"^ {8}(\w+):", properties.group(1), re.MULTILINE),
+    }
+
+
 def read_lease_owner_paths() -> list[str]:
     """리스를 쥔 실행기의 이름을 요구하는 창구를 사전순으로 낸다."""
     spec = (ROOT / "http" / "agent-api.openapi.yaml").read_text(encoding="utf-8")

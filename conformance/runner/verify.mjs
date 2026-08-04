@@ -20,6 +20,7 @@ import {
     readJobLedgerAxisColumn,
     readJson,
     readLeaseOwnerPaths,
+    readSchemaFields,
     readLeaseOwnerRejectionRef,
     readText,
     readToolBindingPaths,
@@ -530,6 +531,41 @@ for (const [kind, declared] of Object.entries(jobResults.byKind)) {
         throw new Error(`${kind} 의 산출이 ${unrequired.join(", ")} 를 실으면서 요구하지 않는다`);
     }
 }
+const localExecutor = intakeCase.localExecutor;
+const LOCAL_EXECUTOR_PLACES = ["meaning", "settleWindows", "observation", "steps"];
+const missingLocalExecutor = LOCAL_EXECUTOR_PLACES.filter((place) => localExecutor?.[place] === undefined);
+if (missingLocalExecutor.length > 0) {
+    throw new Error(`로컬 실행기 검사에 있어야 할 자리가 없다 — ${missingLocalExecutor.join(", ")}`);
+}
+const unguardedSettle = localExecutor.settleWindows.filter((path) => !leaseOwner.paths.includes(path));
+if (unguardedSettle.length > 0) {
+    throw new Error(`종결 창구가 리스를 요구하지 않는다 — ${unguardedSettle.join(", ")}`);
+}
+for (const [name, declared] of [["observation", localExecutor.observation], ["steps", localExecutor.steps]]) {
+    const fields = readSchemaFields(declared.schema);
+    if (declared.required !== undefined) {
+        if (declared.required.join(",") !== fields.required.join(",")) {
+            throw new Error(
+                `${name} 이 요구하는 칸을 표면과 케이스가 다르게 적는다 — ` +
+                    `${fields.required.join(", ")} 와 ${declared.required.join(", ")}`,
+            );
+        }
+        const known = [...declared.required, ...(declared.optional ?? [])];
+        const strayFields = fields.properties.filter((field) => !known.includes(field));
+        const missingFields = known.filter((field) => !fields.properties.includes(field));
+        if (strayFields.length > 0 || missingFields.length > 0) {
+            throw new Error(
+                `${name} 이 가진 칸을 표면과 케이스가 다르게 적는다 — ` +
+                    `${[...strayFields, ...missingFields].join(", ")}`,
+            );
+        }
+    }
+    for (const body of ["RuleJobReportBody", "RuleJobFailureBody"]) {
+        if (!readSchemaFields(body).required.includes(declared.field)) {
+            throw new Error(`${body} 가 ${declared.field} 를 요구하지 않아 관측이 원장에 닿지 않는다`);
+        }
+    }
+}
 console.log(`추적이 나르는 속성 ${traceAttributes.length}개를 계약이 갖는다`);
 const scopeToken = readScopeToken();
 const SCOPE_TOKEN_PLACES = ["meaning", "prefix", "prefixReason", "shape", "payload", "signature", "secret", "lifetime", "precedence"];
@@ -543,6 +579,7 @@ console.log(`첫 토큰까지의 시간에 관한 규칙 ${TTFT_RULES.length}개
 console.log(`접수의 자격 검사에 관한 자리 ${CREDENTIAL_CHECK_PLACES.length}개를 계약이 갖는다`);
 console.log(`리스 소유자를 요구하는 창구 ${leasePaths.length}자리가 ${leaseOwner.rejection} 로 거절한다`);
 console.log(`잡 산출의 칸을 적은 종류 ${Object.keys(jobResults.byKind).length}개 — ${Object.keys(jobResults.byKind).join(", ")}`);
+console.log(`로컬 실행기의 관측 ${localExecutor.observation.required.length}칸이 종결 창구 ${localExecutor.settleWindows.length}자리를 지나 원장에 닿는다`);
 console.log(`예산 페이싱에 관한 자리 ${PACING_PLACES.length}개를 계약이 갖는다`);
 console.log(`턴 원장의 정산 규칙 ${TURN_LEDGER_PLACES.length}개를 계약이 갖는다`);
 console.log(
