@@ -383,7 +383,7 @@
         },
         "enqueue_job": {
             "surface": "confirm",
-            "description": "PROPOSAL (requires user confirmation, and running it starts a real, metered agent run that costs money): launch an AI job. kind is one of title.suggestion (auto-title a task), recipe.scan (distill a recipe from a task), task.cleanup (suggest cleanup across tasks), or rule.generation (draft verification rules for a task). input is a JSON object with the fields that kind needs: title.suggestion takes {\"taskId\":\"...\"}; recipe.scan takes {\"taskId\":\"...\"} plus optional userPrompt, language, and trigger (dashboard/session); task.cleanup takes {} or {\"filters\":{\"maxSuggestions\":N}}; rule.generation requires {\"taskId\":\"...\",\"anchorEventId\":\"...\"} and may also include focus (recent), maxRules, and intent describing what to verify. Queued until the user approves — never claim the job has started yet.",
+            "description": "PROPOSAL (requires user confirmation, and running it starts a real, metered agent run that costs money): launch an AI job. kind is one of title.suggestion (auto-title a task), recipe.scan (distill a recipe from a task), task.cleanup (suggest cleanup across tasks). input is a JSON object with the fields that kind needs: title.suggestion takes {\"taskId\":\"...\"}; recipe.scan takes {\"taskId\":\"...\"} plus optional userPrompt, language, and trigger (dashboard/session); task.cleanup takes {} or {\"filters\":{\"maxSuggestions\":N}}. Queued until the user approves — never claim the job has started yet.",
             "args": {
                 "kind": {
                     "type": "enum",
@@ -391,10 +391,9 @@
                     "values": [
                         "title.suggestion",
                         "recipe.scan",
-                        "task.cleanup",
-                        "rule.generation"
+                        "task.cleanup"
                     ],
-                    "description": "Which job to launch: title.suggestion, recipe.scan, task.cleanup, or rule.generation."
+                    "description": "Which job to launch: title.suggestion, recipe.scan, or task.cleanup."
                 },
                 "input": {
                     "type": "object",

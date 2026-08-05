@@ -14,11 +14,6 @@
             "agent": "task-cleanup",
             "executor": "temporal",
             "deadlineMs": 600000
-        },
-        "rule.generation": {
-            "agent": "rule-generation",
-            "executor": "local",
-            "deadlineMeaning": "로컬 실행기가 가져가므로 실행 봉투를 받지 않고 데드라인도 갖지 않는다"
         }
     },
     "statuses": {
@@ -39,11 +34,6 @@
             "running"
         ],
         "meaning": "canceled를 종료 상태에 두어야 종결 가드가 취소된 잡을 덮어쓰지 않는다"
-    },
-    "lease": {
-        "ttlMs": 90000,
-        "heartbeatMs": 30000,
-        "meaning": "로컬 실행기가 잡을 쥐고 있음을 알리는 리스의 수명이며 하트비트가 이보다 잦아야 한다"
     },
     "steps": {
         "roles": [
@@ -137,13 +127,6 @@
         },
         "roleMeaning": "orchestration은 모델도 도구도 아닌, 실행을 엮는 층이 낸 단계이며 nodeName과 eventKind가 그 자리에서만 실린다",
         "emptyStep": "content이 공백뿐이고 toolCalls도 비면 궤적에 아무 의미도 싣지 못하므로 적지 않는다"
-    },
-    "ruleGeneration": {
-        "focus": [
-            "recent"
-        ],
-        "intentMaxLength": 500,
-        "intentNormalization": "앞뒤 공백을 지우고 빈 문자열이면 의도가 없는 것으로 보며 상한을 넘으면 자른다"
     },
     "recipeScan": {
         "triggers": [

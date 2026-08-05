@@ -12,7 +12,7 @@
 | wire와 이벤트 | `wire/envelope.json`, `headers.json`, `topics.json`, `job.kinds.json` |
 | 실행 원장 | `db/migrations/*.sql`, `db/schema.md` |
 | 워크플로 | `workflow/queues.yaml` |
-| 에이전트 규격 | `agent/{chat,recipe-scan,rule-generation,task-cleanup,title-suggestion}/` |
+| 에이전트 규격 | `agent/{chat,recipe-scan,task-cleanup,title-suggestion}/` |
 | 두 구현체가 함께 밟는 절차 | `agent/shared/*.json` |
 | 추적 API 질의 조건 | `tracer/query-conditions.md` |
 | 적합성 케이스 | `conformance/cases/*.json` |
@@ -74,7 +74,7 @@ git submodule update --init --recursive
 ```text
 tracer-agent-contract/
 ├── agent/
-│   ├── chat/ recipe-scan/ rule-generation/ task-cleanup/ title-suggestion/
+│   ├── chat/ recipe-scan/ task-cleanup/ title-suggestion/
 │   └── shared/                  공통 오류·어휘·프롬프트 계약
 ├── conformance/
 │   ├── cases/                   봉투·대화·잡·차이 케이스

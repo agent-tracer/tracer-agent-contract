@@ -1,585 +1,524 @@
 {
-  "name": "job.intake",
-  "meaning": "브라우저가 구현체마다 본문을 가르지 않도록 잡 접수와 조회와 취소 표면을 대조한다.",
-  "path": "/api/agent/jobs",
-  "cancelPath": "/api/agent/jobs/{id}/cancel",
-  "acceptedStatus": 202,
-  "userHeader": {
-    "name": "x-monitor-user",
-    "defaultValue": "local"
-  },
-  "kinds": [
-    "title.suggestion",
-    "recipe.scan",
-    "task.cleanup",
-    "rule.generation"
-  ],
-  "body": {
-    "fields": [
-      "kind",
-      "input",
-      "idempotencyKey"
+    "name": "job.intake",
+    "meaning": "브라우저가 구현체마다 본문을 가르지 않도록 잡 접수와 조회와 취소 표면을 대조한다.",
+    "path": "/api/agent/jobs",
+    "cancelPath": "/api/agent/jobs/{id}/cancel",
+    "acceptedStatus": 202,
+    "userHeader": {
+        "name": "x-monitor-user",
+        "defaultValue": "local"
+    },
+    "kinds": [
+        "title.suggestion",
+        "recipe.scan",
+        "task.cleanup"
     ],
-    "constraints": {
-      "kind": {
-        "required": true,
-        "enum": [
-          "title.suggestion",
-          "recipe.scan",
-          "task.cleanup",
-          "rule.generation"
-        ]
-      },
-      "input": {
-        "required": false,
-        "type": "object",
-        "default": {}
-      },
-      "idempotencyKey": {
-        "required": false,
-        "minLength": 1,
-        "maxLength": 200
-      }
-    }
-  },
-  "inputs": {
-    "title.suggestion": {
-      "required": [
-        "taskId"
-      ],
-      "optional": [],
-      "constraints": {
-        "taskId": {
-          "minLength": 1,
-          "maxLength": 64
-        }
-      }
-    },
-    "recipe.scan": {
-      "required": [
-        "taskId"
-      ],
-      "optional": [
-        "userPrompt",
-        "language",
-        "trigger"
-      ],
-      "constraints": {
-        "taskId": {
-          "minLength": 1,
-          "maxLength": 64
-        },
-        "userPrompt": {
-          "minLength": 1,
-          "maxLength": 4000
-        },
-        "language": {
-          "minLength": 1,
-          "maxLength": 16
-        },
-        "trigger": {
-          "enum": [
-            "dashboard",
-            "session"
-          ]
-        }
-      }
-    },
-    "task.cleanup": {
-      "required": [],
-      "optional": [
-        "filters.maxSuggestions"
-      ],
-      "constraints": {
-        "filters.maxSuggestions": {
-          "minimum": 1,
-          "maximum": 50
-        }
-      }
-    },
-    "rule.generation": {
-      "required": [
-        "taskId",
-        "anchorEventId"
-      ],
-      "optional": [
-        "focus",
-        "maxRules",
-        "intent"
-      ],
-      "constraints": {
-        "taskId": {
-          "minLength": 1,
-          "maxLength": 64
-        },
-        "anchorEventId": {
-          "minLength": 1,
-          "maxLength": 64
-        },
-        "focus": {
-          "enum": [
-            "recent"
-          ]
-        },
-        "maxRules": {
-          "minimum": 1,
-          "maximum": 20
-        },
-        "intent": {
-          "minLength": 1,
-          "maxLength": 500
-        }
-      }
-    }
-  },
-  "cases": [
-    {
-      "name": "태스크에 매인 잡을 접수한다",
-      "body": {
-        "kind": "title.suggestion",
-        "input": {
-          "taskId": "t1"
-        }
-      },
-      "accepted": true
-    },
-    {
-      "name": "레시피 스캔의 선택 입력을 함께 접수한다",
-      "body": {
-        "kind": "recipe.scan",
-        "input": {
-          "taskId": "t1",
-          "language": "ko",
-          "trigger": "dashboard"
-        },
-        "idempotencyKey": "k1"
-      },
-      "accepted": true
-    },
-    {
-      "name": "정리 제안은 도메인 입력 없이 접수한다",
-      "body": {
-        "kind": "task.cleanup",
-        "input": {}
-      },
-      "accepted": true
-    },
-    {
-      "name": "필수 입력이 빠지면 거절한다",
-      "body": {
-        "kind": "title.suggestion",
-        "input": {}
-      },
-      "accepted": false
-    },
-    {
-      "name": "상한을 넘는 제안 수를 거절한다",
-      "body": {
-        "kind": "task.cleanup",
-        "input": {
-          "filters": {
-            "maxSuggestions": 51
-          }
-        }
-      },
-      "accepted": false
-    }
-  ],
-  "rejections": [
-    {
-      "name": "본문이 스키마를 만족하지 않는다",
-      "status": 400,
-      "code": "validation_error",
-      "message": "Invalid request"
-    },
-    {
-      "name": "같은 멱등키에 다른 입력을 실었다",
-      "status": 409,
-      "code": "job.idempotency-conflict",
-      "message": "Idempotency key was already used with different job input"
-    },
-    {
-      "name": "규칙 생성의 근거 이벤트가 그 태스크의 것이 아니다",
-      "status": 400,
-      "code": "job.invalid-rule-anchor",
-      "message": "Rule generation anchor event does not belong to the task"
-    },
-    {
-      "name": "실행할 모델 자격이 그 사용자에게 없다",
-      "status": 400,
-      "code": "job.llm-key-missing",
-      "message": "Model credential is not configured"
-    },
-    {
-      "name": "리스를 쥔 실행기의 이름이 없다",
-      "status": 400,
-      "code": "job.lease-owner-missing",
-      "message": "Lease owner header is required"
-    }
-  ],
-  "credentialCheck": {
-    "meaning": "워크플로가 태우는 잡은 접수가 모델 자격을 먼저 보고 없으면 거절한다. 자격이 어디서 오는지는 배포가 정하며 계약은 없을 때의 결말만 갖는다.",
-    "appliesTo": "워크플로가 태우는 종류. 실행기가 자기 자격으로 도는 종류는 접수가 보지 않는다",
-    "rejection": "job.llm-key-missing",
-    "reason": "접수가 보지 않으면 대기 행이 선 뒤 워커에서 실패해 사용자가 사유를 늦게 받고 원장에 끝내 돌지 못한 행이 남는다",
-    "notEnvelope": "봉투 발급이 닿지 않아 생기는 거절은 이 자리가 아니다. 그 실패는 실행 시도가 받으며 접수의 결말과 코드를 나누지 않는다"
-  },
-  "response": {
-    "meaning": "접수와 조회와 취소가 모두 원장 행 하나를 같은 칸으로 낸다. 봉투를 벗긴 data를 대조하며 jobFields라 적은 자리는 그 칸 목록을, jobFields[]는 그 배열을, jobFields?는 그 모양이거나 비어 있음을 요구한다.",
-    "axis": "backend는 이 잡을 받은 접수구의 축이며 접수 본문은 그것을 싣지 않는다. 값의 목록은 OpenAPI의 AgentAxis가 소유하고 두 구현체가 그것을 읽는다",
-    "jobFields": [
-      "id",
-      "userId",
-      "kind",
-      "executor",
-      "backend",
-      "status",
-      "attempts",
-      "taskId",
-      "input",
-      "result",
-      "usage",
-      "error",
-      "createdAt",
-      "updatedAt",
-      "startedAt",
-      "completedAt"
-    ],
-    "usage": {
-      "meaning": "usage 전체의 모양은 job.usage.shape가 갖는다. 여기는 화면이 그대로 보여주는 model 칸 하나의 값을 못 박는다",
-      "model": {
-        "value": "이 시도를 태운 모델의 별칭이며 실행 봉투가 건넨 식별자를 그대로 적는다",
-        "example": "claude-haiku-4-5",
-        "forbidden": "판까지 붙은 식별자 — claude-haiku-4-5-20251001",
-        "fallback": "물러선 모델이 태웠으면 그 모델의 별칭을 적는다",
-        "rateKey": "modelRates의 키와 같은 값이므로 한 기록 안에서 model과 costUsd가 같은 모델을 가리킨다",
-        "onFailure": "공급자가 답하기 전에 실패해도 봉투가 건넨 값을 알기 때문에 이 칸은 비지 않는다",
-        "actualModel": "공급자가 실제로 답한 판까지 붙은 식별자는 실행 관측 기록의 자기 칸이 갖는다. usage는 그것을 싣지 않는다"
-      },
-      "failed": {
-        "shape": "attempts",
+    "body": {
         "fields": [
-          "attempt",
-          "status",
-          "subtype",
-          "model",
-          "costUsd",
-          "durationMs",
-          "usage",
-          "errorMessage",
-          "providerRequestId"
+            "kind",
+            "input",
+            "idempotencyKey"
         ],
-        "meaning": "끝내지 못한 잡은 시도마다의 기록을 attempts 배열 하나로 싣는다"
-      }
-    },
-    "enqueue": {
-      "status": 202,
-      "data": {
-        "job": "jobFields"
-      }
-    },
-    "get": {
-      "path": "/api/agent/jobs/{id}",
-      "status": 200,
-      "data": {
-        "job": "jobFields"
-      }
-    },
-    "pending": {
-      "meaning": "종류를 골라 대기 잡만 내며 status를 실으려면 pending이어야 한다",
-      "path": "/api/agent/jobs",
-      "status": 200,
-      "query": {
-        "kind": {
-          "required": true,
-          "enum": "ledgerKinds"
-        },
-        "status": {
-          "required": false,
-          "enum": [
-            "pending"
-          ]
+        "constraints": {
+            "kind": {
+                "required": true,
+                "enum": [
+                    "title.suggestion",
+                    "recipe.scan",
+                    "task.cleanup"
+                ]
+            },
+            "input": {
+                "required": false,
+                "type": "object",
+                "default": {}
+            },
+            "idempotencyKey": {
+                "required": false,
+                "minLength": 1,
+                "maxLength": 200
+            }
         }
-      },
-      "order": "createdAt 오름차순",
-      "data": {
-        "items": "jobFields[]"
-      }
     },
-    "history": {
-      "meaning": "이력을 한 페이지씩 내고 상한과 건너뛰기를 뺀 전체 개수를 함께 싣는다",
-      "path": "/api/agent/jobs/history",
-      "status": 200,
-      "query": {
-        "kind": {
-          "required": false,
-          "enum": "ledgerKinds"
+    "inputs": {
+        "title.suggestion": {
+            "required": [
+                "taskId"
+            ],
+            "optional": [],
+            "constraints": {
+                "taskId": {
+                    "minLength": 1,
+                    "maxLength": 64
+                }
+            }
         },
-        "status": {
-          "required": false,
-          "enum": [
-            "pending",
-            "running",
-            "completed",
-            "failed",
-            "canceled"
-          ]
+        "recipe.scan": {
+            "required": [
+                "taskId"
+            ],
+            "optional": [
+                "userPrompt",
+                "language",
+                "trigger"
+            ],
+            "constraints": {
+                "taskId": {
+                    "minLength": 1,
+                    "maxLength": 64
+                },
+                "userPrompt": {
+                    "minLength": 1,
+                    "maxLength": 4000
+                },
+                "language": {
+                    "minLength": 1,
+                    "maxLength": 16
+                },
+                "trigger": {
+                    "enum": [
+                        "dashboard",
+                        "session"
+                    ]
+                }
+            }
         },
-        "limit": {
-          "required": false,
-          "minimum": 1,
-          "maximum": 100,
-          "default": 50
-        },
-        "offset": {
-          "required": false,
-          "minimum": 0,
-          "default": 0
+        "task.cleanup": {
+            "required": [],
+            "optional": [
+                "filters.maxSuggestions"
+            ],
+            "constraints": {
+                "filters.maxSuggestions": {
+                    "minimum": 1,
+                    "maximum": 50
+                }
+            }
         }
-      },
-      "order": "createdAt 내림차순",
-      "data": {
-        "items": "jobFields[]",
-        "total": "integer"
-      }
     },
-    "latest": {
-      "meaning": "사용자와 종류와 태스크 조합의 가장 최근 잡이며 없으면 job이 비어 있다",
-      "path": "/api/agent/jobs/latest",
-      "status": 200,
-      "query": {
-        "kind": {
-          "required": true,
-          "enum": "ledgerKinds"
-        },
-        "taskId": {
-          "required": false,
-          "minLength": 1
-        }
-      },
-      "data": {
-        "job": "jobFields?"
-      }
-    },
-    "cancel": {
-      "status": 200,
-      "data": {
-        "job": "jobFields"
-      }
-    },
-    "steps": {
-      "path": "/api/agent/jobs/{id}/steps",
-      "status": 200,
-      "order": [
-        "attempt",
-        "seq"
-      ],
-      "required": [
-        "seq",
-        "attempt",
-        "role",
-        "content",
-        "truncated",
-        "toolCalls"
-      ],
-      "optional": [
-        "toolName",
-        "toolCallId",
-        "inputTokens",
-        "outputTokens",
-        "cacheReadTokens",
-        "cacheCreationTokens",
-        "stopReason",
-        "nodeName",
-        "eventKind",
-        "durationMs"
-      ],
-      "omitsNull": true
-    },
-    "notFound": {
-      "status": 404,
-      "meaning": "남의 잡은 존재 여부도 드러내지 않으므로 같은 404를 낸다"
-    },
-    "ledgerKinds": [
-      "title.suggestion",
-      "recipe.scan",
-      "task.cleanup",
-      "rule.generation"
-    ],
-    "envelopeRejection": {
-      "status": 400,
-      "meaning": "봉투를 발급할 수 없다. 자격이 없거나 워크플로가 태우지 않는 종류다",
-      "chat": {
-        "path": "/internal/chat/executions/{executionId}/envelope",
-        "code": "chat.llm-key-missing"
-      },
-      "jobs": {
-        "path": "/internal/jobs/{kind}/envelope",
-        "code": "job.llm-key-missing"
-      }
-    }
-  },
-  "kindsMeaning": "접수가 받는 잡 종류의 정본이며 두 구현체가 이 목록을 읽어 자기 접수 집합과 대조한다",
-  "idempotency": {
-    "meaning": "같은 멱등키의 두 접수가 같은 입력인지 가르는 해시이며 두 구현체가 같은 바이트를 먹는다.",
-    "source": "접수가 검증하고 다듬은 도메인 입력이며 요청 본문 그대로가 아니다",
-    "keys": {
-      "title.suggestion": [
-        "taskId"
-      ],
-      "recipe.scan": [
-        "taskId",
-        "userPrompt",
-        "language",
-        "trigger"
-      ],
-      "task.cleanup": [
-        "filters.maxSuggestions"
-      ],
-      "rule.generation": [
-        "taskId",
-        "anchorEventId",
-        "focus",
-        "maxRules",
-        "intent"
-      ]
-    },
-    "encoding": "키 순서를 이대로 두고 점이 든 경로는 그 문자열을 그대로 키로 적으며, 구분자 사이 공백 없이 JSON으로 적고 비ASCII를 이스케이프하지 않으며 주어지지 않은 값은 null로 적는다",
-    "digest": "sha256",
     "cases": [
-      {
-        "name": "고르지 않은 칸을 null로 채운다",
-        "kind": "title.suggestion",
-        "input": {
-          "taskId": "t1"
+        {
+            "name": "태스크에 매인 잡을 접수한다",
+            "body": {
+                "kind": "title.suggestion",
+                "input": {
+                    "taskId": "t1"
+                }
+            },
+            "accepted": true
         },
-        "canonical": "{\"taskId\":\"t1\"}",
-        "hash": "1a7bcd7030a7d77b7a78efe30a3e4efd23d6600cbbbe726639e2d25a1253a01b"
-      },
-      {
-        "name": "다듬은 값을 적는다",
-        "kind": "title.suggestion",
-        "input": {
-          "taskId": " t1 "
+        {
+            "name": "레시피 스캔의 선택 입력을 함께 접수한다",
+            "body": {
+                "kind": "recipe.scan",
+                "input": {
+                    "taskId": "t1",
+                    "language": "ko",
+                    "trigger": "dashboard"
+                },
+                "idempotencyKey": "k1"
+            },
+            "accepted": true
         },
-        "canonical": "{\"taskId\":\"t1\"}",
-        "hash": "1a7bcd7030a7d77b7a78efe30a3e4efd23d6600cbbbe726639e2d25a1253a01b"
-      },
-      {
-        "name": "고른 값을 그대로 싣는다",
-        "kind": "recipe.scan",
-        "input": {
-          "taskId": "t1",
-          "language": "ko",
-          "trigger": "dashboard"
+        {
+            "name": "정리 제안은 도메인 입력 없이 접수한다",
+            "body": {
+                "kind": "task.cleanup",
+                "input": {}
+            },
+            "accepted": true
         },
-        "canonical": "{\"taskId\":\"t1\",\"userPrompt\":null,\"language\":\"ko\",\"trigger\":\"dashboard\"}",
-        "hash": "d8ba3bf6af2556b8e77f522416051b272d2a4d907dc53d136cd0ede8c7743c44"
-      },
-      {
-        "name": "중첩된 칸을 경로로 읽는다",
-        "kind": "task.cleanup",
-        "input": {
-          "filters": {
-            "maxSuggestions": 5
-          }
+        {
+            "name": "필수 입력이 빠지면 거절한다",
+            "body": {
+                "kind": "title.suggestion",
+                "input": {}
+            },
+            "accepted": false
         },
-        "canonical": "{\"filters.maxSuggestions\":5}",
-        "hash": "768ce00cc8eb11508d4cc2d6d23aed41c111f6aedbb6531dd37a93e3f26b912a"
-      },
-      {
-        "name": "비ASCII를 이스케이프하지 않는다",
-        "kind": "rule.generation",
-        "input": {
-          "taskId": "t1",
-          "anchorEventId": "ev-1",
-          "intent": "테스트를 먼저 쓴다"
-        },
-        "canonical": "{\"taskId\":\"t1\",\"anchorEventId\":\"ev-1\",\"focus\":null,\"maxRules\":null,\"intent\":\"테스트를 먼저 쓴다\"}",
-        "hash": "c6a338d146c18563adf2c5a1ca42b4e454f096e41c3e055713c5900bae0bd9b9"
-      }
-    ]
-  },
-  "leaseOwner": {
-    "meaning": "리스를 쥔 실행기만 잡을 움직이므로 이름이 없는 요청은 어느 창구에서든 같은 낱말로 거절한다. 축마다 낱말이 다르면 실행기가 축을 보고 거절을 가려야 한다.",
-    "header": "x-monitor-lease-owner",
-    "rejection": "job.lease-owner-missing",
-    "paths": [
-      "/api/agent/jobs/{id}/start",
-      "/api/agent/jobs/{id}/lease",
-      "/api/agent/jobs/{id}/release",
-      "/api/agent/jobs/{id}/results",
-      "/api/agent/jobs/{id}/fail"
-    ]
-  },
-  "results": {
-    "meaning": "종결이 잡의 산출 자리에 싣는 값이며 화면이 축을 보지 않고 같은 칸을 읽어야 한다. 세어 낸 수가 아니라 에이전트가 낸 산출을 그대로 실어 화면이 근거까지 볼 수 있게 한다.",
-    "byKind": {
-      "title.suggestion": {
-        "required": [
-          "suggestions"
-        ],
-        "fromAgentOutput": [
-          "suggestions"
-        ],
-        "meaning": "제목 후보는 에이전트의 구조화 출력이 그대로 산출이 되며 화면이 이 목록에서 건수를 센다."
-      },
-      "recipe.scan": {
-        "required": [
-          "recipes",
-          "provenance"
-        ],
-        "fromAgentOutput": [
-          "recipes"
-        ],
-        "meaning": "recipes 는 에이전트의 구조화 출력을 그대로 싣는다. provenance 는 그 후보가 인용할 수 있었던 장부이며 산출에서 되짚을 수 없으므로 따로 싣는다."
-      },
-      "task.cleanup": {
-        "required": [
-          "suggestions",
-          "tasksScanned"
-        ],
-        "fromAgentOutput": [
-          "suggestions"
-        ],
-        "meaning": "suggestions 는 에이전트의 구조화 출력을 그대로 싣는다. tasksScanned 는 후보를 가리기 전에 훑은 태스크 수이며 산출에서 되짚을 수 없으므로 따로 싣는다."
-      },
-      "rule.generation": {
-        "required": [
-          "rules"
-        ],
-        "meaning": "로컬 실행기가 산출 창구에 실어 보낸 본문이 그대로 산출이 되므로 대조할 에이전트 구조화 출력이 없다."
-      }
-    }
-  },
-  "localExecutor": {
-    "meaning": "로컬 실행기는 잡을 워크플로 밖에서 태우므로 종결 창구가 원장에 닿는 유일한 통로다. 관측과 궤적을 이 왕복에 싣지 않으면 그 잡의 비용과 단계가 영원히 비어 화면이 축마다 다른 것을 보여 준다.",
-    "settleWindows": [
-      "/api/agent/jobs/{id}/results",
-      "/api/agent/jobs/{id}/fail"
+        {
+            "name": "상한을 넘는 제안 수를 거절한다",
+            "body": {
+                "kind": "task.cleanup",
+                "input": {
+                    "filters": {
+                        "maxSuggestions": 51
+                    }
+                }
+            },
+            "accepted": false
+        }
     ],
-    "observation": {
-      "field": "usage",
-      "schema": "RuleJobUsage",
-      "meaning": "워크플로 축이 원장의 usage 에 적는 키와 같은 이름을 쓴다. 이름이 갈리면 화면이 축을 보고 값을 가려 읽어야 한다.",
-      "required": [
-        "model",
-        "durationMs",
-        "costUsd",
-        "numTurns"
-      ],
-      "optional": [
-        "inputTokens",
-        "outputTokens",
-        "cacheReadTokens",
-        "cacheCreationTokens"
-      ]
+    "rejections": [
+        {
+            "name": "본문이 스키마를 만족하지 않는다",
+            "status": 400,
+            "code": "validation_error",
+            "message": "Invalid request"
+        },
+        {
+            "name": "같은 멱등키에 다른 입력을 실었다",
+            "status": 409,
+            "code": "job.idempotency-conflict",
+            "message": "Idempotency key was already used with different job input"
+        },
+        {
+            "name": "규칙 생성의 근거 이벤트가 그 태스크의 것이 아니다",
+            "status": 400,
+            "code": "job.invalid-rule-anchor",
+            "message": "Rule generation anchor event does not belong to the task"
+        },
+        {
+            "name": "실행할 모델 자격이 그 사용자에게 없다",
+            "status": 400,
+            "code": "job.llm-key-missing",
+            "message": "Model credential is not configured"
+        },
+        {
+            "name": "리스를 쥔 실행기의 이름이 없다",
+            "status": 400,
+            "code": "job.lease-owner-missing",
+            "message": "Lease owner header is required"
+        }
+    ],
+    "credentialCheck": {
+        "meaning": "워크플로가 태우는 잡은 접수가 모델 자격을 먼저 보고 없으면 거절한다. 자격이 어디서 오는지는 배포가 정하며 계약은 없을 때의 결말만 갖는다.",
+        "appliesTo": "워크플로가 태우는 종류. 실행기가 자기 자격으로 도는 종류는 접수가 보지 않는다",
+        "rejection": "job.llm-key-missing",
+        "reason": "접수가 보지 않으면 대기 행이 선 뒤 워커에서 실패해 사용자가 사유를 늦게 받고 원장에 끝내 돌지 못한 행이 남는다",
+        "notEnvelope": "봉투 발급이 닿지 않아 생기는 거절은 이 자리가 아니다. 그 실패는 실행 시도가 받으며 접수의 결말과 코드를 나누지 않는다"
     },
-    "steps": {
-      "field": "steps",
-      "schema": "RuleJobStep",
-      "meaning": "시도 회차는 원장이 세므로 실행기가 싣지 않으며 창구가 그 잡의 회차로 적는다.",
-      "attemptFrom": "ledger"
+    "response": {
+        "meaning": "접수와 조회와 취소가 모두 원장 행 하나를 같은 칸으로 낸다. 봉투를 벗긴 data를 대조하며 jobFields라 적은 자리는 그 칸 목록을, jobFields[]는 그 배열을, jobFields?는 그 모양이거나 비어 있음을 요구한다.",
+        "axis": "backend는 이 잡을 받은 접수구의 축이며 접수 본문은 그것을 싣지 않는다. 값의 목록은 OpenAPI의 AgentAxis가 소유하고 두 구현체가 그것을 읽는다",
+        "jobFields": [
+            "id",
+            "userId",
+            "kind",
+            "executor",
+            "backend",
+            "status",
+            "attempts",
+            "taskId",
+            "input",
+            "result",
+            "usage",
+            "error",
+            "createdAt",
+            "updatedAt",
+            "startedAt",
+            "completedAt"
+        ],
+        "usage": {
+            "meaning": "usage 전체의 모양은 job.usage.shape가 갖는다. 여기는 화면이 그대로 보여주는 model 칸 하나의 값을 못 박는다",
+            "model": {
+                "value": "이 시도를 태운 모델의 별칭이며 실행 봉투가 건넨 식별자를 그대로 적는다",
+                "example": "claude-haiku-4-5",
+                "forbidden": "판까지 붙은 식별자 — claude-haiku-4-5-20251001",
+                "fallback": "물러선 모델이 태웠으면 그 모델의 별칭을 적는다",
+                "rateKey": "modelRates의 키와 같은 값이므로 한 기록 안에서 model과 costUsd가 같은 모델을 가리킨다",
+                "onFailure": "공급자가 답하기 전에 실패해도 봉투가 건넨 값을 알기 때문에 이 칸은 비지 않는다",
+                "actualModel": "공급자가 실제로 답한 판까지 붙은 식별자는 실행 관측 기록의 자기 칸이 갖는다. usage는 그것을 싣지 않는다"
+            },
+            "failed": {
+                "shape": "attempts",
+                "fields": [
+                    "attempt",
+                    "status",
+                    "subtype",
+                    "model",
+                    "costUsd",
+                    "durationMs",
+                    "usage",
+                    "errorMessage",
+                    "providerRequestId"
+                ],
+                "meaning": "끝내지 못한 잡은 시도마다의 기록을 attempts 배열 하나로 싣는다"
+            }
+        },
+        "enqueue": {
+            "status": 202,
+            "data": {
+                "job": "jobFields"
+            }
+        },
+        "get": {
+            "path": "/api/agent/jobs/{id}",
+            "status": 200,
+            "data": {
+                "job": "jobFields"
+            }
+        },
+        "pending": {
+            "meaning": "종류를 골라 대기 잡만 내며 status를 실으려면 pending이어야 한다",
+            "path": "/api/agent/jobs",
+            "status": 200,
+            "query": {
+                "kind": {
+                    "required": true,
+                    "enum": "ledgerKinds"
+                },
+                "status": {
+                    "required": false,
+                    "enum": [
+                        "pending"
+                    ]
+                }
+            },
+            "order": "createdAt 오름차순",
+            "data": {
+                "items": "jobFields[]"
+            }
+        },
+        "history": {
+            "meaning": "이력을 한 페이지씩 내고 상한과 건너뛰기를 뺀 전체 개수를 함께 싣는다",
+            "path": "/api/agent/jobs/history",
+            "status": 200,
+            "query": {
+                "kind": {
+                    "required": false,
+                    "enum": "ledgerKinds"
+                },
+                "status": {
+                    "required": false,
+                    "enum": [
+                        "pending",
+                        "running",
+                        "completed",
+                        "failed",
+                        "canceled"
+                    ]
+                },
+                "limit": {
+                    "required": false,
+                    "minimum": 1,
+                    "maximum": 100,
+                    "default": 50
+                },
+                "offset": {
+                    "required": false,
+                    "minimum": 0,
+                    "default": 0
+                }
+            },
+            "order": "createdAt 내림차순",
+            "data": {
+                "items": "jobFields[]",
+                "total": "integer"
+            }
+        },
+        "latest": {
+            "meaning": "사용자와 종류와 태스크 조합의 가장 최근 잡이며 없으면 job이 비어 있다",
+            "path": "/api/agent/jobs/latest",
+            "status": 200,
+            "query": {
+                "kind": {
+                    "required": true,
+                    "enum": "ledgerKinds"
+                },
+                "taskId": {
+                    "required": false,
+                    "minLength": 1
+                }
+            },
+            "data": {
+                "job": "jobFields?"
+            }
+        },
+        "cancel": {
+            "status": 200,
+            "data": {
+                "job": "jobFields"
+            }
+        },
+        "steps": {
+            "path": "/api/agent/jobs/{id}/steps",
+            "status": 200,
+            "order": [
+                "attempt",
+                "seq"
+            ],
+            "required": [
+                "seq",
+                "attempt",
+                "role",
+                "content",
+                "truncated",
+                "toolCalls"
+            ],
+            "optional": [
+                "toolName",
+                "toolCallId",
+                "inputTokens",
+                "outputTokens",
+                "cacheReadTokens",
+                "cacheCreationTokens",
+                "stopReason",
+                "nodeName",
+                "eventKind",
+                "durationMs"
+            ],
+            "omitsNull": true
+        },
+        "notFound": {
+            "status": 404,
+            "meaning": "남의 잡은 존재 여부도 드러내지 않으므로 같은 404를 낸다"
+        },
+        "ledgerKinds": [
+            "title.suggestion",
+            "recipe.scan",
+            "task.cleanup"
+        ],
+        "envelopeRejection": {
+            "status": 400,
+            "meaning": "봉투를 발급할 수 없다. 자격이 없거나 워크플로가 태우지 않는 종류다",
+            "chat": {
+                "path": "/internal/chat/executions/{executionId}/envelope",
+                "code": "chat.llm-key-missing"
+            },
+            "jobs": {
+                "path": "/internal/jobs/{kind}/envelope",
+                "code": "job.llm-key-missing"
+            }
+        }
+    },
+    "kindsMeaning": "접수가 받는 잡 종류의 정본이며 두 구현체가 이 목록을 읽어 자기 접수 집합과 대조한다",
+    "idempotency": {
+        "meaning": "같은 멱등키의 두 접수가 같은 입력인지 가르는 해시이며 두 구현체가 같은 바이트를 먹는다.",
+        "source": "접수가 검증하고 다듬은 도메인 입력이며 요청 본문 그대로가 아니다",
+        "keys": {
+            "title.suggestion": [
+                "taskId"
+            ],
+            "recipe.scan": [
+                "taskId",
+                "userPrompt",
+                "language",
+                "trigger"
+            ],
+            "task.cleanup": [
+                "filters.maxSuggestions"
+            ]
+        },
+        "encoding": "키 순서를 이대로 두고 점이 든 경로는 그 문자열을 그대로 키로 적으며, 구분자 사이 공백 없이 JSON으로 적고 비ASCII를 이스케이프하지 않으며 주어지지 않은 값은 null로 적는다",
+        "digest": "sha256",
+        "cases": [
+            {
+                "name": "고르지 않은 칸을 null로 채운다",
+                "kind": "title.suggestion",
+                "input": {
+                    "taskId": "t1"
+                },
+                "canonical": "{\"taskId\":\"t1\"}",
+                "hash": "1a7bcd7030a7d77b7a78efe30a3e4efd23d6600cbbbe726639e2d25a1253a01b"
+            },
+            {
+                "name": "다듬은 값을 적는다",
+                "kind": "title.suggestion",
+                "input": {
+                    "taskId": " t1 "
+                },
+                "canonical": "{\"taskId\":\"t1\"}",
+                "hash": "1a7bcd7030a7d77b7a78efe30a3e4efd23d6600cbbbe726639e2d25a1253a01b"
+            },
+            {
+                "name": "고른 값을 그대로 싣는다",
+                "kind": "recipe.scan",
+                "input": {
+                    "taskId": "t1",
+                    "language": "ko",
+                    "trigger": "dashboard"
+                },
+                "canonical": "{\"taskId\":\"t1\",\"userPrompt\":null,\"language\":\"ko\",\"trigger\":\"dashboard\"}",
+                "hash": "d8ba3bf6af2556b8e77f522416051b272d2a4d907dc53d136cd0ede8c7743c44"
+            },
+            {
+                "name": "중첩된 칸을 경로로 읽는다",
+                "kind": "task.cleanup",
+                "input": {
+                    "filters": {
+                        "maxSuggestions": 5
+                    }
+                },
+                "canonical": "{\"filters.maxSuggestions\":5}",
+                "hash": "768ce00cc8eb11508d4cc2d6d23aed41c111f6aedbb6531dd37a93e3f26b912a"
+            }
+        ]
+    },
+    "leaseOwner": {
+        "meaning": "리스를 쥔 실행기만 잡을 움직이므로 이름이 없는 요청은 어느 창구에서든 같은 낱말로 거절한다. 축마다 낱말이 다르면 실행기가 축을 보고 거절을 가려야 한다.",
+        "header": "x-monitor-lease-owner",
+        "rejection": "job.lease-owner-missing",
+        "paths": [
+            "/api/agent/jobs/{id}/start",
+            "/api/agent/jobs/{id}/lease",
+            "/api/agent/jobs/{id}/release",
+            "/api/agent/jobs/{id}/results",
+            "/api/agent/jobs/{id}/fail"
+        ]
+    },
+    "results": {
+        "meaning": "종결이 잡의 산출 자리에 싣는 값이며 화면이 축을 보지 않고 같은 칸을 읽어야 한다. 세어 낸 수가 아니라 에이전트가 낸 산출을 그대로 실어 화면이 근거까지 볼 수 있게 한다.",
+        "byKind": {
+            "title.suggestion": {
+                "required": [
+                    "suggestions"
+                ],
+                "fromAgentOutput": [
+                    "suggestions"
+                ],
+                "meaning": "제목 후보는 에이전트의 구조화 출력이 그대로 산출이 되며 화면이 이 목록에서 건수를 센다."
+            },
+            "recipe.scan": {
+                "required": [
+                    "recipes",
+                    "provenance"
+                ],
+                "fromAgentOutput": [
+                    "recipes"
+                ],
+                "meaning": "recipes 는 에이전트의 구조화 출력을 그대로 싣는다. provenance 는 그 후보가 인용할 수 있었던 장부이며 산출에서 되짚을 수 없으므로 따로 싣는다."
+            },
+            "task.cleanup": {
+                "required": [
+                    "suggestions",
+                    "tasksScanned"
+                ],
+                "fromAgentOutput": [
+                    "suggestions"
+                ],
+                "meaning": "suggestions 는 에이전트의 구조화 출력을 그대로 싣는다. tasksScanned 는 후보를 가리기 전에 훑은 태스크 수이며 산출에서 되짚을 수 없으므로 따로 싣는다."
+            }
+        }
+    },
+    "localExecutor": {
+        "meaning": "로컬 실행기는 잡을 워크플로 밖에서 태우므로 종결 창구가 원장에 닿는 유일한 통로다. 관측과 궤적을 이 왕복에 싣지 않으면 그 잡의 비용과 단계가 영원히 비어 화면이 축마다 다른 것을 보여 준다.",
+        "settleWindows": [
+            "/api/agent/jobs/{id}/results",
+            "/api/agent/jobs/{id}/fail"
+        ],
+        "observation": {
+            "field": "usage",
+            "schema": "RuleJobUsage",
+            "meaning": "워크플로 축이 원장의 usage 에 적는 키와 같은 이름을 쓴다. 이름이 갈리면 화면이 축을 보고 값을 가려 읽어야 한다.",
+            "required": [
+                "model",
+                "durationMs",
+                "costUsd",
+                "numTurns"
+            ],
+            "optional": [
+                "inputTokens",
+                "outputTokens",
+                "cacheReadTokens",
+                "cacheCreationTokens"
+            ]
+        },
+        "steps": {
+            "field": "steps",
+            "schema": "RuleJobStep",
+            "meaning": "시도 회차는 원장이 세므로 실행기가 싣지 않으며 창구가 그 잡의 회차로 적는다.",
+            "attemptFrom": "ledger"
+        }
     }
-  }
 }
