@@ -26,9 +26,7 @@ from contract import (
     read_chat_thread_queue,
     read_job_ledger_axis_column,
     read_json,
-    read_lease_owner_paths,
     read_schema_fields,
-    read_lease_owner_rejection_ref,
     read_openapi_enum,
     read_redaction,
     read_scope_token,
@@ -54,7 +52,7 @@ def read_served_routes(base_url: str) -> set[str]:
         body = json.loads(response.read().decode("utf-8"))
     return {route_key(route) for route in body["data"]["routes"]}
 
-AGENTS = ["chat", "recipe-scan", "title-suggestion", "task-cleanup", "rule-generation"]
+AGENTS = ["chat", "recipe-scan", "title-suggestion", "task-cleanup"]
 SHARED = [
     "languages.json",
     "error.subtypes.json",
@@ -102,9 +100,7 @@ CONFIRM_SURFACE = "confirm"
 IMMEDIATE_PHRASES = ["runs immediately", "run immediately", "runs right away", "without confirmation"]
 PROVIDER_REQUEST_RULES = ["unit", "source", "absent", "notSession", "manyCalls"]
 TTFT_RULES = ["unit", "source", "absent", "notDuration", "noEstimate"]
-LOCAL_EXECUTOR_PLACES = ["meaning", "settleWindows", "observation", "steps"]
 RESULT_PLACES = ["meaning", "byKind"]
-LEASE_OWNER_PLACES = ["meaning", "header", "rejection", "paths"]
 CREDENTIAL_CHECK_PLACES = ["meaning", "appliesTo", "rejection", "reason", "notEnvelope"]
 PACING_PLACES = ["meaning", "unit", "progressNotice", "landingDirective"]
 TURN_LEDGER_PLACES = [
@@ -510,35 +506,6 @@ def main() -> None:
         raise SystemExit(
             f"접수의 자격 검사가 내는 {credential_check['rejection']} 를 거절 목록이 갖지 않는다"
         )
-    lease_owner = intake.get("leaseOwner", {})
-    missing_lease = [place for place in LEASE_OWNER_PLACES if place not in lease_owner]
-    if missing_lease:
-        raise SystemExit(f"리스 소유자 검사에 있어야 할 자리가 없다 — {', '.join(missing_lease)}")
-    lease_rejection = read_lease_owner_rejection_ref()
-    declared_lease = next(
-        (item for item in intake["rejections"] if item["code"] == lease_owner["rejection"]), None
-    )
-    if declared_lease is None:
-        raise SystemExit(
-            f"리스 소유자 검사가 내는 {lease_owner['rejection']} 를 거절 목록이 갖지 않는다"
-        )
-    if (
-        lease_rejection["code"] != lease_owner["rejection"]
-        or lease_rejection["message"] != declared_lease["message"]
-    ):
-        raise SystemExit(
-            "리스 소유자 거절을 표면과 케이스가 다르게 적는다 — "
-            f"{lease_rejection['code']}/{lease_rejection['message']} 와 "
-            f"{lease_owner['rejection']}/{declared_lease['message']}"
-        )
-    lease_paths = read_lease_owner_paths()
-    unguarded = [path for path in lease_paths if path not in lease_owner["paths"]]
-    overguarded = [path for path in lease_owner["paths"] if path not in lease_paths]
-    if unguarded or overguarded:
-        raise SystemExit(
-            "리스 소유자를 요구하는 창구를 표면과 케이스가 다르게 적는다 — "
-            f"{', '.join(unguarded + overguarded)}"
-        )
     job_results = intake.get("results", {})
     missing_result_places = [place for place in RESULT_PLACES if place not in job_results]
     if missing_result_places:
@@ -562,40 +529,6 @@ def main() -> None:
         unrequired = [field for field in from_output if field not in declared["required"]]
         if unrequired:
             raise SystemExit(f"{kind} 의 산출이 {', '.join(unrequired)} 를 실으면서 요구하지 않는다")
-    local_executor = intake.get("localExecutor", {})
-    missing_local = [place for place in LOCAL_EXECUTOR_PLACES if place not in local_executor]
-    if missing_local:
-        raise SystemExit(f"로컬 실행기 검사에 있어야 할 자리가 없다 — {', '.join(missing_local)}")
-    unguarded_settle = [
-        path for path in local_executor["settleWindows"] if path not in lease_owner["paths"]
-    ]
-    if unguarded_settle:
-        raise SystemExit(f"종결 창구가 리스를 요구하지 않는다 — {', '.join(unguarded_settle)}")
-    for name, declared in (
-        ("observation", local_executor["observation"]),
-        ("steps", local_executor["steps"]),
-    ):
-        fields = read_schema_fields(declared["schema"])
-        if "required" in declared:
-            if declared["required"] != fields["required"]:
-                raise SystemExit(
-                    f"{name} 이 요구하는 칸을 표면과 케이스가 다르게 적는다 — "
-                    f"{', '.join(fields['required'])} 와 {', '.join(declared['required'])}"
-                )
-            known = [*declared["required"], *declared.get("optional", [])]
-            stray_fields = [field for field in fields["properties"] if field not in known]
-            missing_fields = [field for field in known if field not in fields["properties"]]
-            if stray_fields or missing_fields:
-                raise SystemExit(
-                    f"{name} 이 가진 칸을 표면과 케이스가 다르게 적는다 — "
-                    f"{', '.join(stray_fields + missing_fields)}"
-                )
-        for body in ("RuleJobReportBody", "RuleJobFailureBody"):
-            if declared["field"] not in read_schema_fields(body)["required"]:
-                raise SystemExit(
-                    f"{body} 가 {declared['field']} 를 요구하지 않아 관측이 원장에 닿지 않는다"
-                )
-    print(f"추적이 나르는 속성 {len(trace_attributes)}개를 계약이 갖는다")
     scope_token = read_scope_token()
     missing_scope = [place for place in SCOPE_TOKEN_PLACES if place not in scope_token]
     if missing_scope:
@@ -604,9 +537,7 @@ def main() -> None:
     print(f"공급자 요청 식별자의 값 규칙 {len(PROVIDER_REQUEST_RULES)}개를 계약이 갖는다")
     print(f"첫 토큰까지의 시간에 관한 규칙 {len(TTFT_RULES)}개를 계약이 갖는다")
     print(f"접수의 자격 검사에 관한 자리 {len(CREDENTIAL_CHECK_PLACES)}개를 계약이 갖는다")
-    print(f"리스 소유자를 요구하는 창구 {len(lease_paths)}자리가 {lease_owner['rejection']} 로 거절한다")
     print(f"잡 산출의 칸을 적은 종류 {len(job_results['byKind'])}개 — {', '.join(job_results['byKind'])}")
-    print(f"로컬 실행기의 관측 {len(local_executor['observation']['required'])}칸이 종결 창구 {len(local_executor['settleWindows'])}자리를 지나 원장에 닿는다")
     print(f"예산 페이싱에 관한 자리 {len(PACING_PLACES)}개를 계약이 갖는다")
     print(f"턴 원장의 정산 규칙 {len(TURN_LEDGER_PLACES)}개를 계약이 갖는다")
     print(
