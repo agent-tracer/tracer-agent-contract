@@ -19,7 +19,6 @@ import {
     readChatThreadQueue,
     readJobLedgerAxisColumn,
     readJson,
-    readSchemaFields,
     readText,
     readToolBindingPaths,
     readToolSurfaces,

@@ -26,7 +26,6 @@ from contract import (
     read_chat_thread_queue,
     read_job_ledger_axis_column,
     read_json,
-    read_schema_fields,
     read_openapi_enum,
     read_redaction,
     read_scope_token,
