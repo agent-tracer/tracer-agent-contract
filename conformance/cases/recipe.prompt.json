@@ -176,5 +176,27 @@
         ]
       }
     ]
+  },
+  "investigateSystem": {
+    "meaning": "조율자가 후보를 쓸 때 읽는 시스템 프롬프트다. 낼 수 있는 칸의 설명이 여기 실리지 않으면 모델은 그 칸을 비운 채 내고, 스키마만 넓힌 계약은 아무것도 바꾸지 못한다.",
+    "cases": [
+      {
+        "name": "새로 더한 칸의 설명과 그 근거 요구를 함께 싣는다",
+        "input": {
+          "recipeCandidateLimit": 4,
+          "maxRedispatchProbes": 3,
+          "maxRedispatchRounds": 1
+        },
+        "mustContain": [
+          "the conditions under which this recipe applies",
+          "what had to be in place before this work could start.",
+          "what actually existed once the work finished",
+          "list of {symptom, action, evidence, stepOrder?}",
+          "the eventIds that actually show that step being carried out",
+          "Optionally add why (what the file contributes to this workflow) and loadWhen",
+          "Do NOT invent a use_when, an output, or a recovery the trajectory did not show"
+        ]
+      }
+    ]
   }
 }

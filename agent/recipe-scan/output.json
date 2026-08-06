@@ -77,6 +77,18 @@
                         "minLength": 1,
                         "maxLength": 400
                     },
+                    "use_when": {
+                        "type": "array",
+                        "maxItems": 6,
+                        "default": [],
+                        "description": "이 레시피가 적용되는 조건이며 궤적이 실제로 보여 준 상황만 적는다",
+                        "items": {
+                            "type": "string",
+                            "trim": true,
+                            "minLength": 1,
+                            "maxLength": 200
+                        }
+                    },
                     "summary_md": {
                         "type": "string",
                         "trim": true,
@@ -88,6 +100,30 @@
                         "trim": true,
                         "minLength": 1,
                         "maxLength": 2000
+                    },
+                    "inputs": {
+                        "type": "array",
+                        "maxItems": 6,
+                        "default": [],
+                        "description": "작업을 시작하기 위해 있어야 하는 것",
+                        "items": {
+                            "type": "string",
+                            "trim": true,
+                            "minLength": 1,
+                            "maxLength": 200
+                        }
+                    },
+                    "outputs": {
+                        "type": "array",
+                        "maxItems": 6,
+                        "default": [],
+                        "description": "작업이 끝났을 때 있어야 하는 산출물이며 관측된 파일 변경이나 명령 결과에 근거한다",
+                        "items": {
+                            "type": "string",
+                            "trim": true,
+                            "minLength": 1,
+                            "maxLength": 200
+                        }
                     },
                     "corrections": {
                         "type": "array",
@@ -103,6 +139,14 @@
                         "default": [],
                         "items": {
                             "$ref": "#/$defs/pitfall"
+                        }
+                    },
+                    "recovery": {
+                        "type": "array",
+                        "maxItems": 10,
+                        "default": [],
+                        "items": {
+                            "$ref": "#/$defs/recovery"
                         }
                     },
                     "governing_rules": {
@@ -216,6 +260,47 @@
                     }
                 }
             },
+            "recovery": {
+                "type": "object",
+                "required": [
+                    "symptom",
+                    "action",
+                    "evidence"
+                ],
+                "description": "correction 이 이미 symptom→action 쌍이므로 같은 근거 요구를 그대로 물려받는다",
+                "properties": {
+                    "symptom": {
+                        "type": "string",
+                        "trim": true,
+                        "minLength": 1,
+                        "maxLength": 500
+                    },
+                    "action": {
+                        "type": "string",
+                        "trim": true,
+                        "minLength": 1,
+                        "maxLength": 500
+                    },
+                    "evidence": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 50,
+                        "items": {
+                            "type": "string",
+                            "trim": true,
+                            "minLength": 1
+                        }
+                    },
+                    "stepOrder": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 1,
+                        "maximum": 50
+                    }
+                }
+            },
             "steps": {
                 "type": "array",
                 "maxItems": 20,
@@ -251,6 +336,17 @@
                         ],
                         "trim": true,
                         "maxLength": 300
+                    },
+                    "evidence": {
+                        "type": "array",
+                        "maxItems": 50,
+                        "default": [],
+                        "description": "단계 단위 근거이며 provenance 검증이 이 목록을 원장과 대조한다",
+                        "items": {
+                            "type": "string",
+                            "trim": true,
+                            "minLength": 1
+                        }
                     },
                     "verify": {
                         "oneOf": [
@@ -359,6 +455,22 @@
                             "write",
                             "both"
                         ]
+                    },
+                    "why": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "trim": true,
+                        "maxLength": 200
+                    },
+                    "loadWhen": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "trim": true,
+                        "maxLength": 200
                     }
                 }
             },

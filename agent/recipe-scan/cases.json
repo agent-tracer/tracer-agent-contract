@@ -33,8 +33,12 @@
       "description": "Use when a persisted field requires a coordinated migration.",
       "summary_md": "- Define the schema change",
       "request": "The user asked to add a migration.",
+      "use_when": [],
+      "inputs": [],
+      "outputs": [],
       "corrections": [],
       "pitfalls": [],
+      "recovery": [],
       "governing_rules": [],
       "steps": [],
       "touched_files": [],
@@ -315,6 +319,162 @@
         }
       },
       {
+        "name": "복구 근거가 어느 태스크에서도 관측되지 않으면 거부한다",
+        "candidates": [
+          {
+            "recovery": [
+              {
+                "symptom": "The rollback left the previous schema in place.",
+                "action": "Corrected the down path and reran the isolated migration check.",
+                "evidence": [
+                  "event-9"
+                ]
+              }
+            ]
+          }
+        ],
+        "expect": {
+          "valid": false,
+          "errors": [
+            "Recipe 1: Recovery 1 cites unsupported event IDs: event-9."
+          ]
+        }
+      },
+      {
+        "name": "복구 근거를 관측했고 단계에 이어 붙이면 통과한다",
+        "candidates": [
+          {
+            "steps": [
+              {
+                "order": 1,
+                "action": "Add and register the migration."
+              }
+            ],
+            "recovery": [
+              {
+                "symptom": "The rollback left the previous schema in place.",
+                "action": "Corrected the down path and reran the isolated migration check.",
+                "evidence": [
+                  "event-3"
+                ],
+                "stepOrder": 1
+              }
+            ]
+          }
+        ],
+        "expect": {
+          "valid": true,
+          "errors": []
+        }
+      },
+      {
+        "name": "단계 근거가 관측되지 않으면 거부한다",
+        "candidates": [
+          {
+            "steps": [
+              {
+                "order": 1,
+                "action": "Read the affected entity and the latest migrations.",
+                "evidence": [
+                  "event-1"
+                ]
+              },
+              {
+                "order": 2,
+                "action": "Add and register the migration.",
+                "evidence": [
+                  "event-9"
+                ]
+              }
+            ]
+          }
+        ],
+        "expect": {
+          "valid": false,
+          "errors": [
+            "Recipe 1: Step 2 cites unsupported event IDs: event-9."
+          ]
+        }
+      },
+      {
+        "name": "단계 근거는 비어 있어도 통과한다",
+        "candidates": [
+          {
+            "steps": [
+              {
+                "order": 1,
+                "action": "Read the affected entity and the latest migrations.",
+                "evidence": []
+              },
+              {
+                "order": 2,
+                "action": "Add and register the migration."
+              }
+            ]
+          }
+        ],
+        "expect": {
+          "valid": true,
+          "errors": []
+        }
+      },
+      {
+        "name": "파일에 why 와 loadWhen 이 없어도 통과한다",
+        "candidates": [
+          {
+            "touched_files": [
+              {
+                "path": "src/migrations/add-graph-fields.ts",
+                "role": "write"
+              }
+            ]
+          }
+        ],
+        "expect": {
+          "valid": true,
+          "errors": []
+        }
+      },
+      {
+        "name": "파일에 why 와 loadWhen 을 적어도 통과한다",
+        "candidates": [
+          {
+            "touched_files": [
+              {
+                "path": "docs/database-conventions.md",
+                "role": "read",
+                "why": "local migration naming rules",
+                "loadWhen": "before writing the migration"
+              }
+            ]
+          }
+        ],
+        "expect": {
+          "valid": true,
+          "errors": []
+        }
+      },
+      {
+        "name": "적용 조건과 입출력은 인용할 식별자가 없으므로 그대로 통과한다",
+        "candidates": [
+          {
+            "use_when": [
+              "a persisted entity changes its stored shape"
+            ],
+            "inputs": [
+              "the entity change the request asks for"
+            ],
+            "outputs": [
+              "a forward migration and its rollback"
+            ]
+          }
+        ],
+        "expect": {
+          "valid": true,
+          "errors": []
+        }
+      },
+      {
         "name": "관측하지 않은 규칙을 인용하면 정렬된 목록으로 거부한다",
         "candidates": [
           {
@@ -405,7 +565,141 @@
           "errors": []
         }
       }
-    ]
+    ],
+    "candidateSchema": {
+      "meaning": "새로 더한 칸이 후보를 읽어 들이는 자리에서 무엇을 받고 무엇을 거절하는지 본다. 인용 검증은 후보를 읽은 뒤에 도는 검사이므로 여기서 거절된 후보는 사유 목록이 아니라 후보 자체가 서지 못한 것으로 끝난다. candidateDefaults 에 override 를 얹어 읽는 방식은 위 cases 와 같다.",
+      "cases": [
+        {
+          "name": "복구 항목의 근거가 비면 후보를 읽지 못한다",
+          "candidate": {
+            "recovery": [
+              {
+                "symptom": "The rollback left the previous schema in place.",
+                "action": "Corrected the down path and reran the isolated migration check.",
+                "evidence": []
+              }
+            ]
+          },
+          "expect": {
+            "accepted": false,
+            "field": "recovery"
+          }
+        },
+        {
+          "name": "복구 항목은 근거를 하나라도 실으면 읽힌다",
+          "candidate": {
+            "recovery": [
+              {
+                "symptom": "The rollback left the previous schema in place.",
+                "action": "Corrected the down path and reran the isolated migration check.",
+                "evidence": [
+                  "event-1"
+                ],
+                "stepOrder": 1
+              }
+            ]
+          },
+          "expect": {
+            "accepted": true
+          }
+        },
+        {
+          "name": "복구 항목은 symptom 과 action 과 evidence 를 다 갖춰야 읽힌다",
+          "candidate": {
+            "recovery": [
+              {
+                "symptom": "The rollback left the previous schema in place.",
+                "evidence": [
+                  "event-1"
+                ]
+              }
+            ]
+          },
+          "expect": {
+            "accepted": false,
+            "field": "recovery"
+          }
+        },
+        {
+          "name": "복구 항목의 단계 연결은 비워 둘 수 있다",
+          "candidate": {
+            "recovery": [
+              {
+                "symptom": "The rollback left the previous schema in place.",
+                "action": "Corrected the down path and reran the isolated migration check.",
+                "evidence": [
+                  "event-1"
+                ]
+              }
+            ]
+          },
+          "expect": {
+            "accepted": true
+          }
+        },
+        {
+          "name": "단계의 근거는 비어 있어도 읽힌다",
+          "candidate": {
+            "steps": [
+              {
+                "order": 1,
+                "action": "Add and register the migration.",
+                "evidence": []
+              }
+            ]
+          },
+          "expect": {
+            "accepted": true
+          }
+        },
+        {
+          "name": "단계가 근거 칸을 아예 적지 않아도 읽힌다",
+          "candidate": {
+            "steps": [
+              {
+                "order": 1,
+                "action": "Add and register the migration."
+              }
+            ]
+          },
+          "expect": {
+            "accepted": true
+          }
+        },
+        {
+          "name": "파일에 why 와 loadWhen 이 없어도 읽힌다",
+          "candidate": {
+            "touched_files": [
+              {
+                "path": "src/migrations/add-graph-fields.ts",
+                "role": "write"
+              }
+            ]
+          },
+          "expect": {
+            "accepted": true
+          }
+        },
+        {
+          "name": "적용 조건은 여섯 개를 넘으면 읽지 못한다",
+          "candidate": {
+            "use_when": [
+              "condition 1",
+              "condition 2",
+              "condition 3",
+              "condition 4",
+              "condition 5",
+              "condition 6",
+              "condition 7"
+            ]
+          },
+          "expect": {
+            "accepted": false,
+            "field": "use_when"
+          }
+        }
+      ]
+    }
   },
   "executionBudget": {
     "meaning": "agent/shared/execution.budget.json 의 규칙을 recipe-scan 의 구체적인 수로 판정하는 케이스다. 계약이 강제하지 않는 것은 검사되지 않으므로 이 케이스가 그 넷을 두 축에 요구한다.",
@@ -621,6 +915,76 @@
           "node.failed"
         ]
       }
+    },
+    "emptyResultReason": {
+      "meaning": "agent/shared/execution.budget.json 의 orchestratorFailureDemotion.emptyResultReason 어휘를 recipe-scan 의 실행 모양으로 판정한다. 빈 결과로 끝난 실행이 셋 가운데 무엇을 남기는지 두 축이 같게 적어야 저장할 패턴이 없던 실행과 생성이 무너진 실행이 원장에서 갈린다.",
+      "values": [
+        "no-pattern",
+        "insufficient-evidence",
+        "generation-degraded"
+      ],
+      "default": "no-pattern",
+      "cases": [
+        {
+          "name": "조사 계획이 비어 전문가를 하나도 부르지 않으면 no-pattern 이다",
+          "input": {
+            "surveyProbes": 0
+          },
+          "expect": {
+            "executionOutcome": "success",
+            "emptyResultReason": "no-pattern"
+          }
+        },
+        {
+          "name": "조사는 돌았으나 후보가 하나도 서지 않으면 no-pattern 이다",
+          "input": {
+            "surveyProbes": 2,
+            "probeExhausted": false,
+            "candidates": 0
+          },
+          "expect": {
+            "executionOutcome": "success",
+            "emptyResultReason": "no-pattern"
+          }
+        },
+        {
+          "name": "전문가가 예산을 소진하고 질문을 닫지 못한 채 후보가 없으면 insufficient-evidence 다",
+          "input": {
+            "surveyProbes": 2,
+            "probeExhausted": true,
+            "candidates": 0
+          },
+          "expect": {
+            "executionOutcome": "success",
+            "emptyResultReason": "insufficient-evidence"
+          }
+        },
+        {
+          "name": "계획 호출이 실패해 빈 계획으로 강등하면 generation-degraded 다",
+          "input": {
+            "surveyCallFails": true
+          },
+          "expect": {
+            "executionOutcome": "success",
+            "orchestrationEvents": [
+              "node.failed"
+            ],
+            "emptyResultReason": "generation-degraded"
+          }
+        },
+        {
+          "name": "repair 까지 쓰고도 후보가 검증을 통과하지 못하면 generation-degraded 다",
+          "input": {
+            "surveyProbes": 2,
+            "candidates": 1,
+            "repairExhausted": true
+          },
+          "expect": {
+            "executionOutcome": "success",
+            "emptyResultReason": "generation-degraded"
+          }
+        }
+      ]
     }
   },
   "resultExample": {
@@ -631,6 +995,15 @@
         "description": "Use when a persisted field requires a coordinated migration and application cutover.",
         "summary_md": "- Define the schema change\n- Register the migration\n- Verify both application boundaries",
         "request": "The user asked to add graph trajectory fields and preserve existing job history.",
+        "use_when": [
+          "a persisted entity changes its stored shape"
+        ],
+        "inputs": [
+          "the entity change the request asks for"
+        ],
+        "outputs": [
+          "a forward migration and its rollback"
+        ],
         "corrections": [
           {
             "whatAgentDid": "Initially treated graph events as ordinary messages.",
@@ -649,6 +1022,16 @@
             ]
           }
         ],
+        "recovery": [
+          {
+            "symptom": "The rollback left the previous schema in place.",
+            "action": "Corrected the down path and reran the isolated migration check.",
+            "evidence": [
+              "event-2"
+            ],
+            "stepOrder": 1
+          }
+        ],
         "governing_rules": [
           "rule-1"
         ],
@@ -658,6 +1041,9 @@
             "order": 1,
             "action": "Add and register the migration.",
             "rationale": "The application never synchronizes schema at startup.",
+            "evidence": [
+              "event-1"
+            ],
             "verify": {
               "kind": "command",
               "commandMatches": [
@@ -669,7 +1055,9 @@
         "touched_files": [
           {
             "path": "src/migrations/add-graph-fields.ts",
-            "role": "write"
+            "role": "write",
+            "why": "the migration this recipe adds",
+            "loadWhen": "before writing the migration"
           }
         ],
         "contributing_slices": [
