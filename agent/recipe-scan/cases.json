@@ -1,1131 +1,1131 @@
 {
-    "agent": "recipe-scan",
-    "cases": {
-        "anchorTaskId": "task-1",
-        "provenance": {
-            "eventIdsByTask": {
-                "task-1": [
-                    "event-1",
-                    "event-2"
-                ],
-                "task-2": [
-                    "event-3"
-                ]
-            },
-            "turnIdsByTask": {
-                "task-1": [
-                    "turn-1"
-                ],
-                "task-2": [
-                    "turn-2"
-                ]
-            },
-            "ruleIds": [
-                "rule-1"
-            ],
-            "recipeRevs": {
-                "recipe-1": 3
-            }
-        },
-        "candidateDefaults": {
-            "title": "Add a safe migration",
-            "intent": "Apply a schema change without hiding deployment prerequisites.",
-            "description": "Use when a persisted field requires a coordinated migration.",
-            "summary_md": "- Define the schema change",
-            "request": "The user asked to add a migration.",
-            "use_when": [],
-            "inputs": [],
-            "outputs": [],
-            "corrections": [],
-            "pitfalls": [],
-            "recovery": [],
-            "governing_rules": [],
-            "steps": [],
-            "touched_files": [],
-            "contributing_slices": [
-                {
-                    "taskId": "task-1",
-                    "turnIds": [
-                        "turn-1"
-                    ],
-                    "eventIds": [
-                        "event-1"
-                    ]
-                }
-            ],
-            "rationale": "The evidence demonstrates a reusable sequence."
-        },
-        "cases": [
-            {
-                "name": "근거가 없어 후보를 내지 않은 빈 출력은 옳은 답이다",
-                "candidates": [],
-                "expect": {
-                    "valid": true,
-                    "errors": []
-                }
-            },
-            {
-                "name": "관측한 근거만 인용한 후보는 통과한다",
-                "candidates": [
-                    {}
-                ],
-                "expect": {
-                    "valid": true,
-                    "errors": []
-                }
-            },
-            {
-                "name": "후보 상한을 넘으면 다른 검사를 보지 않고 그 사유만 낸다",
-                "candidates": [
-                    {},
-                    {},
-                    {},
-                    {},
-                    {}
-                ],
-                "expect": {
-                    "valid": false,
-                    "errors": [
-                        "At most 4 recipe candidates may be returned."
-                    ]
-                }
-            },
-            {
-                "name": "앵커 태스크를 인용하지 않은 후보는 거부한다",
-                "candidates": [
-                    {
-                        "contributing_slices": [
-                            {
-                                "taskId": "task-2",
-                                "turnIds": [],
-                                "eventIds": [
-                                    "event-3"
-                                ]
-                            }
-                        ]
-                    }
-                ],
-                "expect": {
-                    "valid": false,
-                    "errors": [
-                        "Recipe 1: contributing_slices must include anchor task task-1."
-                    ]
-                }
-            },
-            {
-                "name": "앵커 슬라이스가 이벤트를 하나도 인용하지 않으면 거부한다",
-                "candidates": [
-                    {
-                        "contributing_slices": [
-                            {
-                                "taskId": "task-1",
-                                "turnIds": [],
-                                "eventIds": []
-                            }
-                        ]
-                    }
-                ],
-                "expect": {
-                    "valid": false,
-                    "errors": [
-                        "Recipe 1: The anchor contributing slice must cite at least one anchor event ID.",
-                        "Recipe 1: At least one representative event ID must be cited in contributing_slices."
-                    ]
-                }
-            },
-            {
-                "name": "이벤트를 읽은 적 없는 태스크는 기여 슬라이스로 인정하지 않는다",
-                "candidates": [
-                    {
-                        "contributing_slices": [
-                            {
-                                "taskId": "task-1",
-                                "turnIds": [
-                                    "turn-1"
-                                ],
-                                "eventIds": [
-                                    "event-1"
-                                ]
-                            },
-                            {
-                                "taskId": "task-9",
-                                "turnIds": [],
-                                "eventIds": []
-                            }
-                        ]
-                    }
-                ],
-                "expect": {
-                    "valid": false,
-                    "errors": [
-                        "Recipe 1: Unsupported contributing task ID: task-9."
-                    ]
-                }
-            },
-            {
-                "name": "도구가 준 적 없는 eventId를 인용하면 정렬된 목록으로 거부한다",
-                "candidates": [
-                    {
-                        "contributing_slices": [
-                            {
-                                "taskId": "task-1",
-                                "turnIds": [],
-                                "eventIds": [
-                                    "event-9",
-                                    "event-8"
-                                ]
-                            }
-                        ]
-                    }
-                ],
-                "expect": {
-                    "valid": false,
-                    "errors": [
-                        "Recipe 1: Unsupported event IDs for task task-1: event-8, event-9."
-                    ]
-                }
-            },
-            {
-                "name": "같은 미관측 eventId를 두 번 인용해도 한 번만 센다",
-                "candidates": [
-                    {
-                        "contributing_slices": [
-                            {
-                                "taskId": "task-1",
-                                "turnIds": [],
-                                "eventIds": [
-                                    "event-9",
-                                    "event-9"
-                                ]
-                            }
-                        ]
-                    }
-                ],
-                "expect": {
-                    "valid": false,
-                    "errors": [
-                        "Recipe 1: Unsupported event IDs for task task-1: event-9."
-                    ]
-                }
-            },
-            {
-                "name": "다른 태스크에서 본 이벤트를 이 태스크 슬라이스에 인용하면 거부한다",
-                "candidates": [
-                    {
-                        "contributing_slices": [
-                            {
-                                "taskId": "task-1",
-                                "turnIds": [],
-                                "eventIds": [
-                                    "event-3"
-                                ]
-                            }
-                        ]
-                    }
-                ],
-                "expect": {
-                    "valid": false,
-                    "errors": [
-                        "Recipe 1: Unsupported event IDs for task task-1: event-3."
-                    ]
-                }
-            },
-            {
-                "name": "도구가 준 적 없는 turnId를 인용하면 거부한다",
-                "candidates": [
-                    {
-                        "contributing_slices": [
-                            {
-                                "taskId": "task-1",
-                                "turnIds": [
-                                    "turn-9"
-                                ],
-                                "eventIds": [
-                                    "event-1"
-                                ]
-                            }
-                        ]
-                    }
-                ],
-                "expect": {
-                    "valid": false,
-                    "errors": [
-                        "Recipe 1: Unsupported turn IDs for task task-1: turn-9."
-                    ]
-                }
-            },
-            {
-                "name": "정정 근거가 어느 태스크에서도 관측되지 않으면 거부한다",
-                "candidates": [
-                    {
-                        "corrections": [
-                            {
-                                "whatAgentDid": "Treated the change as a plain edit.",
-                                "howCorrected": "Registered a migration instead.",
-                                "evidence": [
-                                    "event-9"
-                                ]
-                            }
-                        ]
-                    }
-                ],
-                "expect": {
-                    "valid": false,
-                    "errors": [
-                        "Recipe 1: Correction 1 cites unsupported event IDs: event-9."
-                    ]
-                }
-            },
-            {
-                "name": "정정 근거는 태스크를 가로질러도 관측했으면 통과한다",
-                "candidates": [
-                    {
-                        "corrections": [
-                            {
-                                "whatAgentDid": "Treated the change as a plain edit.",
-                                "howCorrected": "Registered a migration instead.",
-                                "evidence": [
-                                    "event-3"
-                                ]
-                            }
-                        ]
-                    }
-                ],
-                "expect": {
-                    "valid": true,
-                    "errors": []
-                }
-            },
-            {
-                "name": "함정 근거가 어느 태스크에서도 관측되지 않으면 거부한다",
-                "candidates": [
-                    {
-                        "pitfalls": [
-                            {
-                                "pitfall": "Retry attempts reuse sequence numbers.",
-                                "whyNonObvious": "Single-attempt tests never collide.",
-                                "evidence": [
-                                    "event-9"
-                                ]
-                            }
-                        ]
-                    }
-                ],
-                "expect": {
-                    "valid": false,
-                    "errors": [
-                        "Recipe 1: Pitfall 1 cites unsupported event IDs: event-9."
-                    ]
-                }
-            },
-            {
-                "name": "복구 근거가 어느 태스크에서도 관측되지 않으면 거부한다",
-                "candidates": [
-                    {
-                        "recovery": [
-                            {
-                                "symptom": "The rollback left the previous schema in place.",
-                                "action": "Corrected the down path and reran the isolated migration check.",
-                                "evidence": [
-                                    "event-9"
-                                ]
-                            }
-                        ]
-                    }
-                ],
-                "expect": {
-                    "valid": false,
-                    "errors": [
-                        "Recipe 1: Recovery 1 cites unsupported event IDs: event-9."
-                    ]
-                }
-            },
-            {
-                "name": "복구 근거를 관측했고 단계에 이어 붙이면 통과한다",
-                "candidates": [
-                    {
-                        "steps": [
-                            {
-                                "order": 1,
-                                "action": "Add and register the migration."
-                            }
-                        ],
-                        "recovery": [
-                            {
-                                "symptom": "The rollback left the previous schema in place.",
-                                "action": "Corrected the down path and reran the isolated migration check.",
-                                "evidence": [
-                                    "event-3"
-                                ],
-                                "stepOrder": 1
-                            }
-                        ]
-                    }
-                ],
-                "expect": {
-                    "valid": true,
-                    "errors": []
-                }
-            },
-            {
-                "name": "단계 근거가 관측되지 않으면 거부한다",
-                "candidates": [
-                    {
-                        "steps": [
-                            {
-                                "order": 1,
-                                "action": "Read the affected entity and the latest migrations.",
-                                "evidence": [
-                                    "event-1"
-                                ]
-                            },
-                            {
-                                "order": 2,
-                                "action": "Add and register the migration.",
-                                "evidence": [
-                                    "event-9"
-                                ]
-                            }
-                        ]
-                    }
-                ],
-                "expect": {
-                    "valid": false,
-                    "errors": [
-                        "Recipe 1: Step 2 cites unsupported event IDs: event-9."
-                    ]
-                }
-            },
-            {
-                "name": "단계 근거는 비어 있어도 통과한다",
-                "candidates": [
-                    {
-                        "steps": [
-                            {
-                                "order": 1,
-                                "action": "Read the affected entity and the latest migrations.",
-                                "evidence": []
-                            },
-                            {
-                                "order": 2,
-                                "action": "Add and register the migration."
-                            }
-                        ]
-                    }
-                ],
-                "expect": {
-                    "valid": true,
-                    "errors": []
-                }
-            },
-            {
-                "name": "파일에 why 와 loadWhen 이 없어도 통과한다",
-                "candidates": [
-                    {
-                        "touched_files": [
-                            {
-                                "path": "src/migrations/add-graph-fields.ts",
-                                "role": "write"
-                            }
-                        ]
-                    }
-                ],
-                "expect": {
-                    "valid": true,
-                    "errors": []
-                }
-            },
-            {
-                "name": "파일에 why 와 loadWhen 을 적어도 통과한다",
-                "candidates": [
-                    {
-                        "touched_files": [
-                            {
-                                "path": "docs/database-conventions.md",
-                                "role": "read",
-                                "why": "local migration naming rules",
-                                "loadWhen": "before writing the migration"
-                            }
-                        ]
-                    }
-                ],
-                "expect": {
-                    "valid": true,
-                    "errors": []
-                }
-            },
-            {
-                "name": "적용 조건과 입출력은 인용할 식별자가 없으므로 그대로 통과한다",
-                "candidates": [
-                    {
-                        "use_when": [
-                            "a persisted entity changes its stored shape"
-                        ],
-                        "inputs": [
-                            "the entity change the request asks for"
-                        ],
-                        "outputs": [
-                            "a forward migration and its rollback"
-                        ]
-                    }
-                ],
-                "expect": {
-                    "valid": true,
-                    "errors": []
-                }
-            },
-            {
-                "name": "관측하지 않은 규칙을 인용하면 정렬된 목록으로 거부한다",
-                "candidates": [
-                    {
-                        "governing_rules": [
-                            "rule-z",
-                            "rule-a"
-                        ]
-                    }
-                ],
-                "expect": {
-                    "valid": false,
-                    "errors": [
-                        "Recipe 1: Unsupported governing rule IDs: rule-a, rule-z."
-                    ]
-                }
-            },
-            {
-                "name": "관측한 규칙을 인용하면 통과한다",
-                "candidates": [
-                    {
-                        "governing_rules": [
-                            "rule-1"
-                        ]
-                    }
-                ],
-                "expect": {
-                    "valid": true,
-                    "errors": []
-                }
-            },
-            {
-                "name": "개정 번호를 본 적 없는 레시피를 수정 대상으로 삼으면 거부한다",
-                "candidates": [
-                    {
-                        "revises_recipe_id": "recipe-9"
-                    }
-                ],
-                "expect": {
-                    "valid": false,
-                    "errors": [
-                        "Recipe 1: Unsupported revises_recipe_id: recipe-9."
-                    ]
-                }
-            },
-            {
-                "name": "개정 번호까지 본 레시피는 수정 대상으로 통과한다",
-                "candidates": [
-                    {
-                        "revises_recipe_id": "recipe-1"
-                    }
-                ],
-                "expect": {
-                    "valid": true,
-                    "errors": []
-                }
-            },
-            {
-                "name": "같은 turn을 두 후보가 나눠 가지면 뒤엣것을 거부한다",
-                "candidates": [
-                    {},
-                    {}
-                ],
-                "expect": {
-                    "valid": false,
-                    "errors": [
-                        "Recipe 2: turn turn-1 was already claimed by recipe 1."
-                    ]
-                }
-            },
-            {
-                "name": "서로 다른 근거를 쓰면 두 후보가 함께 통과한다",
-                "candidates": [
-                    {},
-                    {
-                        "contributing_slices": [
-                            {
-                                "taskId": "task-1",
-                                "turnIds": [],
-                                "eventIds": [
-                                    "event-2"
-                                ]
-                            }
-                        ]
-                    }
-                ],
-                "expect": {
-                    "valid": true,
-                    "errors": []
-                }
-            }
+  "agent": "recipe-scan",
+  "cases": {
+    "anchorTaskId": "task-1",
+    "provenance": {
+      "eventIdsByTask": {
+        "task-1": [
+          "event-1",
+          "event-2"
         ],
-        "candidateSchema": {
-            "meaning": "새로 더한 칸이 후보를 읽어 들이는 자리에서 무엇을 받고 무엇을 거절하는지 본다. 인용 검증은 후보를 읽은 뒤에 실행하는 검사이므로 여기서 거절된 후보는 사유 목록이 아니라 후보 자체가 서지 못한 것으로 끝난다. candidateDefaults 에 override 를 얹어 읽는 방식은 위 cases 와 같다.",
-            "cases": [
-                {
-                    "name": "복구 항목의 근거가 비면 후보를 읽지 못한다",
-                    "candidate": {
-                        "recovery": [
-                            {
-                                "symptom": "The rollback left the previous schema in place.",
-                                "action": "Corrected the down path and reran the isolated migration check.",
-                                "evidence": []
-                            }
-                        ]
-                    },
-                    "expect": {
-                        "accepted": false,
-                        "field": "recovery"
-                    }
-                },
-                {
-                    "name": "복구 항목은 근거를 하나라도 실으면 읽힌다",
-                    "candidate": {
-                        "recovery": [
-                            {
-                                "symptom": "The rollback left the previous schema in place.",
-                                "action": "Corrected the down path and reran the isolated migration check.",
-                                "evidence": [
-                                    "event-1"
-                                ],
-                                "stepOrder": 1
-                            }
-                        ]
-                    },
-                    "expect": {
-                        "accepted": true
-                    }
-                },
-                {
-                    "name": "복구 항목은 symptom 과 action 과 evidence 를 다 갖춰야 읽힌다",
-                    "candidate": {
-                        "recovery": [
-                            {
-                                "symptom": "The rollback left the previous schema in place.",
-                                "evidence": [
-                                    "event-1"
-                                ]
-                            }
-                        ]
-                    },
-                    "expect": {
-                        "accepted": false,
-                        "field": "recovery"
-                    }
-                },
-                {
-                    "name": "복구 항목의 단계 연결은 비워 둘 수 있다",
-                    "candidate": {
-                        "recovery": [
-                            {
-                                "symptom": "The rollback left the previous schema in place.",
-                                "action": "Corrected the down path and reran the isolated migration check.",
-                                "evidence": [
-                                    "event-1"
-                                ]
-                            }
-                        ]
-                    },
-                    "expect": {
-                        "accepted": true
-                    }
-                },
-                {
-                    "name": "단계의 근거는 비어 있어도 읽힌다",
-                    "candidate": {
-                        "steps": [
-                            {
-                                "order": 1,
-                                "action": "Add and register the migration.",
-                                "evidence": []
-                            }
-                        ]
-                    },
-                    "expect": {
-                        "accepted": true
-                    }
-                },
-                {
-                    "name": "단계가 근거 칸을 아예 적지 않아도 읽힌다",
-                    "candidate": {
-                        "steps": [
-                            {
-                                "order": 1,
-                                "action": "Add and register the migration."
-                            }
-                        ]
-                    },
-                    "expect": {
-                        "accepted": true
-                    }
-                },
-                {
-                    "name": "파일에 why 와 loadWhen 이 없어도 읽힌다",
-                    "candidate": {
-                        "touched_files": [
-                            {
-                                "path": "src/migrations/add-graph-fields.ts",
-                                "role": "write"
-                            }
-                        ]
-                    },
-                    "expect": {
-                        "accepted": true
-                    }
-                },
-                {
-                    "name": "적용 조건은 여섯 개를 넘으면 읽지 못한다",
-                    "candidate": {
-                        "use_when": [
-                            "condition 1",
-                            "condition 2",
-                            "condition 3",
-                            "condition 4",
-                            "condition 5",
-                            "condition 6",
-                            "condition 7"
-                        ]
-                    },
-                    "expect": {
-                        "accepted": false,
-                        "field": "use_when"
-                    }
-                }
-            ]
-        }
+        "task-2": [
+          "event-3"
+        ]
+      },
+      "turnIdsByTask": {
+        "task-1": [
+          "turn-1"
+        ],
+        "task-2": [
+          "turn-2"
+        ]
+      },
+      "ruleIds": [
+        "rule-1"
+      ],
+      "recipeRevs": {
+        "recipe-1": 3
+      }
     },
-    "executionBudget": {
-        "meaning": "agent/shared/execution.budget.json 의 규칙을 recipe-scan 의 구체적인 수로 판정하는 케이스다. 계약이 강제하지 않는 것은 검사되지 않으므로 이 케이스가 그 넷을 두 축에 요구한다.",
-        "weightAllocation": {
-            "meaning": "leaseMany(requestedTurns, availableTurns) 하나가 같은 입력에서 두 축이 같은 grantedTurns 와 grantedUsd 를 내는지 본다. grantedUsd 는 availableUsd 를 grantedTurns 비율로 나눈 값이다.",
-            "cases": [
-                {
-                    "name": "요청 합이 가용 이하면 요청대로 준다",
-                    "requestedTurns": [
-                        1,
-                        1,
-                        1
-                    ],
-                    "availableTurns": 3,
-                    "availableUsd": 0.3,
-                    "expect": {
-                        "grantedTurns": [
-                            1,
-                            1,
-                            1
-                        ],
-                        "grantedUsd": [
-                            0.1,
-                            0.1,
-                            0.1
-                        ]
-                    }
-                },
-                {
-                    "name": "내림에서 남는 턴을 weight 가 큰 순서로 하나씩 돌려준다",
-                    "requestedTurns": [
-                        5,
-                        3,
-                        2
-                    ],
-                    "availableTurns": 6,
-                    "availableUsd": 0.6,
-                    "expect": {
-                        "grantedTurns": [
-                            3,
-                            2,
-                            1
-                        ],
-                        "grantedUsd": [
-                            0.3,
-                            0.2,
-                            0.1
-                        ]
-                    }
-                },
-                {
-                    "name": "요청 하나가 도드라져도 바닥과 비례와 나머지 순서로 다시 모인다",
-                    "requestedTurns": [
-                        10,
-                        1,
-                        1
-                    ],
-                    "availableTurns": 5,
-                    "availableUsd": 0.5,
-                    "expect": {
-                        "grantedTurns": [
-                            3,
-                            1,
-                            1
-                        ],
-                        "grantedUsd": [
-                            0.3,
-                            0.1,
-                            0.1
-                        ]
-                    }
-                },
-                {
-                    "name": "항목이 하나면 가용을 그대로 받는다",
-                    "requestedTurns": [
-                        1
-                    ],
-                    "availableTurns": 1,
-                    "availableUsd": 0.2,
-                    "expect": {
-                        "grantedTurns": [
-                            1
-                        ],
-                        "grantedUsd": [
-                            0.2
-                        ]
-                    }
-                },
-                {
-                    "name": "요청이 없으면 아무것도 배분하지 않는다",
-                    "requestedTurns": [],
-                    "availableTurns": 4,
-                    "availableUsd": 0.4,
-                    "expect": {
-                        "grantedTurns": [],
-                        "grantedUsd": []
-                    }
-                },
-                {
-                    "name": "가용이 항목 수보다 적으면 weight 가 큰 순서로 1턴씩만 주고 나머지는 0이다",
-                    "requestedTurns": [
-                        5,
-                        3,
-                        2
-                    ],
-                    "availableTurns": 2,
-                    "availableUsd": 0.2,
-                    "expect": {
-                        "grantedTurns": [
-                            1,
-                            1,
-                            0
-                        ],
-                        "grantedUsd": [
-                            0.1,
-                            0.1,
-                            0
-                        ]
-                    }
-                }
-            ]
-        },
-        "reservation": {
-            "meaning": "repair → survey → synthesisFloor 순서로 예약을 뜨면서 그때그때의 잔량에 비율을 곱한다. 순서를 바꾸면 같은 비율이 다른 액수가 되므로 이 순서 자체가 판정 대상이다.",
-            "startingRemainingTurns": 15,
-            "startingRemainingBudgetUsd": 2.0,
-            "expect": {
-                "repair": {
-                    "grantedTurns": 2,
-                    "grantedUsd": 0.4
-                },
-                "survey": {
-                    "grantedTurns": 3,
-                    "grantedUsd": 0.16
-                },
-                "synthesisFloor": {
-                    "grantedTurns": 3,
-                    "grantedUsd": 0
-                },
-                "remainingAfterAll": {
-                    "turns": 7,
-                    "budgetUsd": 1.44
-                }
-            }
-        },
-        "settlementWithoutReport": {
-            "meaning": "공급자가 실제 사용량을 보고하지 않은 정산은 뗀 몫 전부를 쓴 것으로 본다. 예약 몫을 정산에서 두 번 빼지 않는다.",
-            "startingRemainingTurns": 10,
-            "startingRemainingBudgetUsd": 1.0,
-            "reserve": {
-                "turns": 2,
-                "budgetShare": 0.2
-            },
-            "afterReserve": {
-                "remainingTurns": 8,
-                "remainingBudgetUsd": 0.8
-            },
-            "settle": {
-                "costUsd": null,
-                "numTurns": null
-            },
-            "expect": {
-                "remainingTurns": 8,
-                "remainingBudgetUsd": 0.8
-            }
-        },
-        "outputExclusivity": {
-            "meaning": "recipes 와 redispatch 를 함께 실은 산출을 두 축이 같은 방식으로 거절하는지 본다.",
-            "cases": [
-                {
-                    "name": "recipes 만 채우면 통과한다",
-                    "recipesNonEmpty": true,
-                    "redispatchNonEmpty": false,
-                    "expect": {
-                        "valid": true
-                    }
-                },
-                {
-                    "name": "redispatch 만 채우면 통과한다",
-                    "recipesNonEmpty": false,
-                    "redispatchNonEmpty": true,
-                    "expect": {
-                        "valid": true
-                    }
-                },
-                {
-                    "name": "둘 다 비어 있으면 후보 없이 통과한다",
-                    "recipesNonEmpty": false,
-                    "redispatchNonEmpty": false,
-                    "expect": {
-                        "valid": true
-                    }
-                },
-                {
-                    "name": "recipes 와 redispatch 를 함께 채우면 거절한다",
-                    "recipesNonEmpty": true,
-                    "redispatchNonEmpty": true,
-                    "expect": {
-                        "valid": false
-                    }
-                }
-            ]
-        },
-        "orchestratorFailure": {
-            "meaning": "계획 호출이 실패한 실행에서 두 축이 같은 결과 모양을 내는지 본다.",
-            "input": {
-                "surveyCallFails": true
-            },
-            "expect": {
-                "candidates": [],
-                "executionOutcome": "success",
-                "orchestrationEvents": [
-                    "node.failed"
+    "candidateDefaults": {
+      "title": "Add a safe migration",
+      "intent": "Apply a schema change without hiding deployment prerequisites.",
+      "description": "Use when a persisted field requires a coordinated migration.",
+      "summary_md": "- Define the schema change",
+      "request": "The user asked to add a migration.",
+      "use_when": [],
+      "inputs": [],
+      "outputs": [],
+      "corrections": [],
+      "pitfalls": [],
+      "recovery": [],
+      "governing_rules": [],
+      "steps": [],
+      "touched_files": [],
+      "contributing_slices": [
+        {
+          "taskId": "task-1",
+          "turnIds": [
+            "turn-1"
+          ],
+          "eventIds": [
+            "event-1"
+          ]
+        }
+      ],
+      "rationale": "The evidence demonstrates a reusable sequence."
+    },
+    "cases": [
+      {
+        "name": "근거가 없어 후보를 내지 않은 빈 출력은 옳은 답이다",
+        "candidates": [],
+        "expect": {
+          "valid": true,
+          "errors": []
+        }
+      },
+      {
+        "name": "관측한 근거만 인용한 후보는 통과한다",
+        "candidates": [
+          {}
+        ],
+        "expect": {
+          "valid": true,
+          "errors": []
+        }
+      },
+      {
+        "name": "후보 상한을 넘으면 다른 검사를 보지 않고 그 사유만 낸다",
+        "candidates": [
+          {},
+          {},
+          {},
+          {},
+          {}
+        ],
+        "expect": {
+          "valid": false,
+          "errors": [
+            "At most 4 recipe candidates may be returned."
+          ]
+        }
+      },
+      {
+        "name": "앵커 태스크를 인용하지 않은 후보는 거부한다",
+        "candidates": [
+          {
+            "contributing_slices": [
+              {
+                "taskId": "task-2",
+                "turnIds": [],
+                "eventIds": [
+                  "event-3"
                 ]
-            }
-        },
-        "emptyResultReason": {
-            "meaning": "agent/shared/execution.budget.json 의 orchestratorFailureDemotion.emptyResultReason 어휘를 recipe-scan 의 실행 모양으로 판정한다. 빈 결과로 끝난 실행이 셋 가운데 무엇을 남기는지 두 축이 같게 적어야 저장할 패턴이 없던 실행과 생성이 실패한 실행을 원장에서 구분한다.",
-            "values": [
-                "no-pattern",
-                "insufficient-evidence",
-                "generation-degraded"
-            ],
-            "default": "no-pattern",
-            "cases": [
-                {
-                    "name": "조사 계획이 비어 전문가를 하나도 부르지 않으면 no-pattern 이다",
-                    "input": {
-                        "surveyProbes": 0
-                    },
-                    "expect": {
-                        "executionOutcome": "success",
-                        "emptyResultReason": "no-pattern"
-                    }
-                },
-                {
-                    "name": "조사는 실행됐으나 후보가 하나도 서지 않으면 no-pattern 이다",
-                    "input": {
-                        "surveyProbes": 2,
-                        "probeExhausted": false,
-                        "candidates": 0
-                    },
-                    "expect": {
-                        "executionOutcome": "success",
-                        "emptyResultReason": "no-pattern"
-                    }
-                },
-                {
-                    "name": "전문가가 예산을 소진하고 질문을 닫지 못한 채 후보가 없으면 insufficient-evidence 다",
-                    "input": {
-                        "surveyProbes": 2,
-                        "probeExhausted": true,
-                        "candidates": 0
-                    },
-                    "expect": {
-                        "executionOutcome": "success",
-                        "emptyResultReason": "insufficient-evidence"
-                    }
-                },
-                {
-                    "name": "계획 호출이 실패해 빈 계획으로 낮추면 generation-degraded 다",
-                    "input": {
-                        "surveyCallFails": true
-                    },
-                    "expect": {
-                        "executionOutcome": "success",
-                        "orchestrationEvents": [
-                            "node.failed"
-                        ],
-                        "emptyResultReason": "generation-degraded"
-                    }
-                },
-                {
-                    "name": "repair 까지 쓰고도 후보가 검증을 통과하지 못하면 generation-degraded 다",
-                    "input": {
-                        "surveyProbes": 2,
-                        "candidates": 1,
-                        "repairExhausted": true
-                    },
-                    "expect": {
-                        "executionOutcome": "success",
-                        "emptyResultReason": "generation-degraded"
-                    }
-                }
+              }
             ]
+          }
+        ],
+        "expect": {
+          "valid": false,
+          "errors": [
+            "Recipe 1: contributing_slices must include anchor task task-1."
+          ]
         }
-    },
-    "resultExample": {
-        "recipes": [
-            {
-                "title": "Add a safe migration",
-                "intent": "Apply a schema change without hiding deployment prerequisites.",
-                "description": "Use when a persisted field requires a coordinated migration and application cutover.",
-                "summary_md": "- Define the schema change\n- Register the migration\n- Verify both application boundaries",
-                "request": "The user asked to add graph trajectory fields and preserve existing job history.",
-                "use_when": [
-                    "a persisted entity changes its stored shape"
+      },
+      {
+        "name": "앵커 슬라이스가 이벤트를 하나도 인용하지 않으면 거부한다",
+        "candidates": [
+          {
+            "contributing_slices": [
+              {
+                "taskId": "task-1",
+                "turnIds": [],
+                "eventIds": []
+              }
+            ]
+          }
+        ],
+        "expect": {
+          "valid": false,
+          "errors": [
+            "Recipe 1: The anchor contributing slice must cite at least one anchor event ID.",
+            "Recipe 1: At least one representative event ID must be cited in contributing_slices."
+          ]
+        }
+      },
+      {
+        "name": "이벤트를 읽은 적 없는 태스크는 기여 슬라이스로 인정하지 않는다",
+        "candidates": [
+          {
+            "contributing_slices": [
+              {
+                "taskId": "task-1",
+                "turnIds": [
+                  "turn-1"
                 ],
-                "inputs": [
-                    "the entity change the request asks for"
+                "eventIds": [
+                  "event-1"
+                ]
+              },
+              {
+                "taskId": "task-9",
+                "turnIds": [],
+                "eventIds": []
+              }
+            ]
+          }
+        ],
+        "expect": {
+          "valid": false,
+          "errors": [
+            "Recipe 1: Unsupported contributing task ID: task-9."
+          ]
+        }
+      },
+      {
+        "name": "도구가 준 적 없는 eventId를 인용하면 정렬된 목록으로 거부한다",
+        "candidates": [
+          {
+            "contributing_slices": [
+              {
+                "taskId": "task-1",
+                "turnIds": [],
+                "eventIds": [
+                  "event-9",
+                  "event-8"
+                ]
+              }
+            ]
+          }
+        ],
+        "expect": {
+          "valid": false,
+          "errors": [
+            "Recipe 1: Unsupported event IDs for task task-1: event-8, event-9."
+          ]
+        }
+      },
+      {
+        "name": "같은 미관측 eventId를 두 번 인용해도 한 번만 센다",
+        "candidates": [
+          {
+            "contributing_slices": [
+              {
+                "taskId": "task-1",
+                "turnIds": [],
+                "eventIds": [
+                  "event-9",
+                  "event-9"
+                ]
+              }
+            ]
+          }
+        ],
+        "expect": {
+          "valid": false,
+          "errors": [
+            "Recipe 1: Unsupported event IDs for task task-1: event-9."
+          ]
+        }
+      },
+      {
+        "name": "다른 태스크에서 본 이벤트를 이 태스크 슬라이스에 인용하면 거부한다",
+        "candidates": [
+          {
+            "contributing_slices": [
+              {
+                "taskId": "task-1",
+                "turnIds": [],
+                "eventIds": [
+                  "event-3"
+                ]
+              }
+            ]
+          }
+        ],
+        "expect": {
+          "valid": false,
+          "errors": [
+            "Recipe 1: Unsupported event IDs for task task-1: event-3."
+          ]
+        }
+      },
+      {
+        "name": "도구가 준 적 없는 turnId를 인용하면 거부한다",
+        "candidates": [
+          {
+            "contributing_slices": [
+              {
+                "taskId": "task-1",
+                "turnIds": [
+                  "turn-9"
                 ],
-                "outputs": [
-                    "a forward migration and its rollback"
+                "eventIds": [
+                  "event-1"
+                ]
+              }
+            ]
+          }
+        ],
+        "expect": {
+          "valid": false,
+          "errors": [
+            "Recipe 1: Unsupported turn IDs for task task-1: turn-9."
+          ]
+        }
+      },
+      {
+        "name": "정정 근거가 어느 태스크에서도 관측되지 않으면 거부한다",
+        "candidates": [
+          {
+            "corrections": [
+              {
+                "whatAgentDid": "Treated the change as a plain edit.",
+                "howCorrected": "Registered a migration instead.",
+                "evidence": [
+                  "event-9"
+                ]
+              }
+            ]
+          }
+        ],
+        "expect": {
+          "valid": false,
+          "errors": [
+            "Recipe 1: Correction 1 cites unsupported event IDs: event-9."
+          ]
+        }
+      },
+      {
+        "name": "정정 근거는 태스크를 가로질러도 관측했으면 통과한다",
+        "candidates": [
+          {
+            "corrections": [
+              {
+                "whatAgentDid": "Treated the change as a plain edit.",
+                "howCorrected": "Registered a migration instead.",
+                "evidence": [
+                  "event-3"
+                ]
+              }
+            ]
+          }
+        ],
+        "expect": {
+          "valid": true,
+          "errors": []
+        }
+      },
+      {
+        "name": "함정 근거가 어느 태스크에서도 관측되지 않으면 거부한다",
+        "candidates": [
+          {
+            "pitfalls": [
+              {
+                "pitfall": "Retry attempts reuse sequence numbers.",
+                "whyNonObvious": "Single-attempt tests never collide.",
+                "evidence": [
+                  "event-9"
+                ]
+              }
+            ]
+          }
+        ],
+        "expect": {
+          "valid": false,
+          "errors": [
+            "Recipe 1: Pitfall 1 cites unsupported event IDs: event-9."
+          ]
+        }
+      },
+      {
+        "name": "복구 근거가 어느 태스크에서도 관측되지 않으면 거부한다",
+        "candidates": [
+          {
+            "recovery": [
+              {
+                "symptom": "The rollback left the previous schema in place.",
+                "action": "Corrected the down path and reran the isolated migration check.",
+                "evidence": [
+                  "event-9"
+                ]
+              }
+            ]
+          }
+        ],
+        "expect": {
+          "valid": false,
+          "errors": [
+            "Recipe 1: Recovery 1 cites unsupported event IDs: event-9."
+          ]
+        }
+      },
+      {
+        "name": "복구 근거를 관측했고 단계에 이어 붙이면 통과한다",
+        "candidates": [
+          {
+            "steps": [
+              {
+                "order": 1,
+                "action": "Add and register the migration."
+              }
+            ],
+            "recovery": [
+              {
+                "symptom": "The rollback left the previous schema in place.",
+                "action": "Corrected the down path and reran the isolated migration check.",
+                "evidence": [
+                  "event-3"
                 ],
-                "corrections": [
-                    {
-                        "whatAgentDid": "Initially treated graph events as ordinary messages.",
-                        "howCorrected": "Added explicit node and event metadata to the stored trajectory contract.",
-                        "evidence": [
-                            "event-1"
-                        ]
-                    }
+                "stepOrder": 1
+              }
+            ]
+          }
+        ],
+        "expect": {
+          "valid": true,
+          "errors": []
+        }
+      },
+      {
+        "name": "단계 근거가 관측되지 않으면 거부한다",
+        "candidates": [
+          {
+            "steps": [
+              {
+                "order": 1,
+                "action": "Read the affected entity and the latest migrations.",
+                "evidence": [
+                  "event-1"
+                ]
+              },
+              {
+                "order": 2,
+                "action": "Add and register the migration.",
+                "evidence": [
+                  "event-9"
+                ]
+              }
+            ]
+          }
+        ],
+        "expect": {
+          "valid": false,
+          "errors": [
+            "Recipe 1: Step 2 cites unsupported event IDs: event-9."
+          ]
+        }
+      },
+      {
+        "name": "단계 근거는 비어 있어도 통과한다",
+        "candidates": [
+          {
+            "steps": [
+              {
+                "order": 1,
+                "action": "Read the affected entity and the latest migrations.",
+                "evidence": []
+              },
+              {
+                "order": 2,
+                "action": "Add and register the migration."
+              }
+            ]
+          }
+        ],
+        "expect": {
+          "valid": true,
+          "errors": []
+        }
+      },
+      {
+        "name": "파일에 why 와 loadWhen 이 없어도 통과한다",
+        "candidates": [
+          {
+            "touched_files": [
+              {
+                "path": "src/migrations/add-graph-fields.ts",
+                "role": "write"
+              }
+            ]
+          }
+        ],
+        "expect": {
+          "valid": true,
+          "errors": []
+        }
+      },
+      {
+        "name": "파일에 why 와 loadWhen 을 적어도 통과한다",
+        "candidates": [
+          {
+            "touched_files": [
+              {
+                "path": "docs/database-conventions.md",
+                "role": "read",
+                "why": "local migration naming rules",
+                "loadWhen": "before writing the migration"
+              }
+            ]
+          }
+        ],
+        "expect": {
+          "valid": true,
+          "errors": []
+        }
+      },
+      {
+        "name": "적용 조건과 입출력은 인용할 식별자가 없으므로 그대로 통과한다",
+        "candidates": [
+          {
+            "use_when": [
+              "a persisted entity changes its stored shape"
+            ],
+            "inputs": [
+              "the entity change the request asks for"
+            ],
+            "outputs": [
+              "a forward migration and its rollback"
+            ]
+          }
+        ],
+        "expect": {
+          "valid": true,
+          "errors": []
+        }
+      },
+      {
+        "name": "관측하지 않은 규칙을 인용하면 정렬된 목록으로 거부한다",
+        "candidates": [
+          {
+            "governing_rules": [
+              "rule-z",
+              "rule-a"
+            ]
+          }
+        ],
+        "expect": {
+          "valid": false,
+          "errors": [
+            "Recipe 1: Unsupported governing rule IDs: rule-a, rule-z."
+          ]
+        }
+      },
+      {
+        "name": "관측한 규칙을 인용하면 통과한다",
+        "candidates": [
+          {
+            "governing_rules": [
+              "rule-1"
+            ]
+          }
+        ],
+        "expect": {
+          "valid": true,
+          "errors": []
+        }
+      },
+      {
+        "name": "개정 번호를 본 적 없는 레시피를 수정 대상으로 삼으면 거부한다",
+        "candidates": [
+          {
+            "revises_recipe_id": "recipe-9"
+          }
+        ],
+        "expect": {
+          "valid": false,
+          "errors": [
+            "Recipe 1: Unsupported revises_recipe_id: recipe-9."
+          ]
+        }
+      },
+      {
+        "name": "개정 번호까지 본 레시피는 수정 대상으로 통과한다",
+        "candidates": [
+          {
+            "revises_recipe_id": "recipe-1"
+          }
+        ],
+        "expect": {
+          "valid": true,
+          "errors": []
+        }
+      },
+      {
+        "name": "같은 turn을 두 후보가 나눠 가지면 뒤엣것을 거부한다",
+        "candidates": [
+          {},
+          {}
+        ],
+        "expect": {
+          "valid": false,
+          "errors": [
+            "Recipe 2: turn turn-1 was already claimed by recipe 1."
+          ]
+        }
+      },
+      {
+        "name": "서로 다른 근거를 쓰면 두 후보가 함께 통과한다",
+        "candidates": [
+          {},
+          {
+            "contributing_slices": [
+              {
+                "taskId": "task-1",
+                "turnIds": [],
+                "eventIds": [
+                  "event-2"
+                ]
+              }
+            ]
+          }
+        ],
+        "expect": {
+          "valid": true,
+          "errors": []
+        }
+      }
+    ],
+    "candidateSchema": {
+      "meaning": "새로 더한 칸이 후보를 읽어 들이는 자리에서 무엇을 받고 무엇을 거절하는지 본다. 인용 검증은 후보를 읽은 뒤에 실행하는 검사이므로 여기서 거절된 후보는 사유 목록이 아니라 후보 자체가 서지 못한 것으로 끝난다. candidateDefaults 에 override 를 얹어 읽는 방식은 위 cases 와 같다.",
+      "cases": [
+        {
+          "name": "복구 항목의 근거가 비면 후보를 읽지 못한다",
+          "candidate": {
+            "recovery": [
+              {
+                "symptom": "The rollback left the previous schema in place.",
+                "action": "Corrected the down path and reran the isolated migration check.",
+                "evidence": []
+              }
+            ]
+          },
+          "expect": {
+            "accepted": false,
+            "field": "recovery"
+          }
+        },
+        {
+          "name": "복구 항목은 근거를 하나라도 실으면 읽힌다",
+          "candidate": {
+            "recovery": [
+              {
+                "symptom": "The rollback left the previous schema in place.",
+                "action": "Corrected the down path and reran the isolated migration check.",
+                "evidence": [
+                  "event-1"
                 ],
-                "pitfalls": [
-                    {
-                        "pitfall": "Retry attempts reuse sequence numbers.",
-                        "whyNonObvious": "A UI key based only on sequence looks unique in single-attempt tests.",
-                        "evidence": [
-                            "event-2"
-                        ]
-                    }
-                ],
-                "recovery": [
-                    {
-                        "symptom": "The rollback left the previous schema in place.",
-                        "action": "Corrected the down path and reran the isolated migration check.",
-                        "evidence": [
-                            "event-2"
-                        ],
-                        "stepOrder": 1
-                    }
-                ],
-                "governing_rules": [
-                    "rule-1"
-                ],
-                "revises_recipe_id": "recipe-1",
-                "steps": [
-                    {
-                        "order": 1,
-                        "action": "Add and register the migration.",
-                        "rationale": "The application never synchronizes schema at startup.",
-                        "evidence": [
-                            "event-1"
-                        ],
-                        "verify": {
-                            "kind": "command",
-                            "commandMatches": [
-                                "migration:generate"
-                            ]
-                        }
-                    }
-                ],
-                "touched_files": [
-                    {
-                        "path": "src/migrations/add-graph-fields.ts",
-                        "role": "write",
-                        "why": "the migration this recipe adds",
-                        "loadWhen": "before writing the migration"
-                    }
-                ],
-                "contributing_slices": [
-                    {
-                        "taskId": "task-1",
-                        "turnIds": [
-                            "turn-1"
-                        ],
-                        "eventIds": [
-                            "event-1",
-                            "event-2"
-                        ]
-                    }
-                ],
-                "rationale": "The evidence demonstrates a reusable schema-and-consumer cutover sequence."
-            }
-        ]
-    },
-    "language": {
-        "fragment": "languageDirective",
-        "scope": "레시피의 산문 칸",
-        "cases": [
-            {
-                "input": {
-                    "language": "auto"
-                },
-                "expect": {
-                    "variant": "auto"
-                }
-            },
-            {
-                "input": {
-                    "language": "ko"
-                },
-                "expect": {
-                    "variant": "ko"
-                }
-            },
-            {
-                "input": {
-                    "language": "en"
-                },
-                "expect": {
-                    "variant": "en"
-                }
-            },
-            {
-                "input": {
-                    "language": "ja"
-                },
-                "expect": {
-                    "variant": "ja"
-                }
-            },
-            {
-                "input": {
-                    "language": "zh"
-                },
-                "expect": {
-                    "variant": "zh"
-                }
-            },
-            {
-                "input": {},
-                "expect": {
-                    "variant": "auto"
-                }
-            }
-        ]
+                "stepOrder": 1
+              }
+            ]
+          },
+          "expect": {
+            "accepted": true
+          }
+        },
+        {
+          "name": "복구 항목은 symptom 과 action 과 evidence 를 다 갖춰야 읽힌다",
+          "candidate": {
+            "recovery": [
+              {
+                "symptom": "The rollback left the previous schema in place.",
+                "evidence": [
+                  "event-1"
+                ]
+              }
+            ]
+          },
+          "expect": {
+            "accepted": false,
+            "field": "recovery"
+          }
+        },
+        {
+          "name": "복구 항목의 단계 연결은 비워 둘 수 있다",
+          "candidate": {
+            "recovery": [
+              {
+                "symptom": "The rollback left the previous schema in place.",
+                "action": "Corrected the down path and reran the isolated migration check.",
+                "evidence": [
+                  "event-1"
+                ]
+              }
+            ]
+          },
+          "expect": {
+            "accepted": true
+          }
+        },
+        {
+          "name": "단계의 근거는 비어 있어도 읽힌다",
+          "candidate": {
+            "steps": [
+              {
+                "order": 1,
+                "action": "Add and register the migration.",
+                "evidence": []
+              }
+            ]
+          },
+          "expect": {
+            "accepted": true
+          }
+        },
+        {
+          "name": "단계가 근거 칸을 아예 적지 않아도 읽힌다",
+          "candidate": {
+            "steps": [
+              {
+                "order": 1,
+                "action": "Add and register the migration."
+              }
+            ]
+          },
+          "expect": {
+            "accepted": true
+          }
+        },
+        {
+          "name": "파일에 why 와 loadWhen 이 없어도 읽힌다",
+          "candidate": {
+            "touched_files": [
+              {
+                "path": "src/migrations/add-graph-fields.ts",
+                "role": "write"
+              }
+            ]
+          },
+          "expect": {
+            "accepted": true
+          }
+        },
+        {
+          "name": "적용 조건은 여섯 개를 넘으면 읽지 못한다",
+          "candidate": {
+            "use_when": [
+              "condition 1",
+              "condition 2",
+              "condition 3",
+              "condition 4",
+              "condition 5",
+              "condition 6",
+              "condition 7"
+            ]
+          },
+          "expect": {
+            "accepted": false,
+            "field": "use_when"
+          }
+        }
+      ]
     }
+  },
+  "executionBudget": {
+    "meaning": "agent/shared/execution.budget.json 의 규칙을 recipe-scan 의 구체적인 수로 판정하는 케이스다. 계약이 강제하지 않는 것은 검사되지 않으므로 이 케이스가 그 넷을 두 축에 요구한다.",
+    "weightAllocation": {
+      "meaning": "leaseMany(requestedTurns, availableTurns) 하나가 같은 입력에서 두 축이 같은 grantedTurns 와 grantedUsd 를 내는지 본다. grantedUsd 는 availableUsd 를 grantedTurns 비율로 나눈 값이다.",
+      "cases": [
+        {
+          "name": "요청 합이 가용 이하면 요청대로 준다",
+          "requestedTurns": [
+            1,
+            1,
+            1
+          ],
+          "availableTurns": 3,
+          "availableUsd": 0.3,
+          "expect": {
+            "grantedTurns": [
+              1,
+              1,
+              1
+            ],
+            "grantedUsd": [
+              0.1,
+              0.1,
+              0.1
+            ]
+          }
+        },
+        {
+          "name": "내림에서 남는 턴을 weight 가 큰 순서로 하나씩 돌려준다",
+          "requestedTurns": [
+            5,
+            3,
+            2
+          ],
+          "availableTurns": 6,
+          "availableUsd": 0.6,
+          "expect": {
+            "grantedTurns": [
+              3,
+              2,
+              1
+            ],
+            "grantedUsd": [
+              0.3,
+              0.2,
+              0.1
+            ]
+          }
+        },
+        {
+          "name": "요청 하나가 도드라져도 바닥과 비례와 나머지 순서로 다시 모인다",
+          "requestedTurns": [
+            10,
+            1,
+            1
+          ],
+          "availableTurns": 5,
+          "availableUsd": 0.5,
+          "expect": {
+            "grantedTurns": [
+              3,
+              1,
+              1
+            ],
+            "grantedUsd": [
+              0.3,
+              0.1,
+              0.1
+            ]
+          }
+        },
+        {
+          "name": "항목이 하나면 가용을 그대로 받는다",
+          "requestedTurns": [
+            1
+          ],
+          "availableTurns": 1,
+          "availableUsd": 0.2,
+          "expect": {
+            "grantedTurns": [
+              1
+            ],
+            "grantedUsd": [
+              0.2
+            ]
+          }
+        },
+        {
+          "name": "요청이 없으면 아무것도 배분하지 않는다",
+          "requestedTurns": [],
+          "availableTurns": 4,
+          "availableUsd": 0.4,
+          "expect": {
+            "grantedTurns": [],
+            "grantedUsd": []
+          }
+        },
+        {
+          "name": "가용이 항목 수보다 적으면 weight 가 큰 순서로 1턴씩만 주고 나머지는 0이다",
+          "requestedTurns": [
+            5,
+            3,
+            2
+          ],
+          "availableTurns": 2,
+          "availableUsd": 0.2,
+          "expect": {
+            "grantedTurns": [
+              1,
+              1,
+              0
+            ],
+            "grantedUsd": [
+              0.1,
+              0.1,
+              0
+            ]
+          }
+        }
+      ]
+    },
+    "reservation": {
+      "meaning": "repair → survey → synthesisFloor 순서로 예약을 뜨면서 그때그때의 잔량에 비율을 곱한다. 순서를 바꾸면 같은 비율이 다른 액수가 되므로 이 순서 자체가 판정 대상이다.",
+      "startingRemainingTurns": 15,
+      "startingRemainingBudgetUsd": 2.0,
+      "expect": {
+        "repair": {
+          "grantedTurns": 2,
+          "grantedUsd": 0.4
+        },
+        "survey": {
+          "grantedTurns": 3,
+          "grantedUsd": 0.16
+        },
+        "synthesisFloor": {
+          "grantedTurns": 3,
+          "grantedUsd": 0
+        },
+        "remainingAfterAll": {
+          "turns": 7,
+          "budgetUsd": 1.44
+        }
+      }
+    },
+    "settlementWithoutReport": {
+      "meaning": "공급자가 실제 사용량을 보고하지 않은 정산은 뗀 몫 전부를 쓴 것으로 본다. 예약 몫을 정산에서 두 번 빼지 않는다.",
+      "startingRemainingTurns": 10,
+      "startingRemainingBudgetUsd": 1.0,
+      "reserve": {
+        "turns": 2,
+        "budgetShare": 0.2
+      },
+      "afterReserve": {
+        "remainingTurns": 8,
+        "remainingBudgetUsd": 0.8
+      },
+      "settle": {
+        "costUsd": null,
+        "numTurns": null
+      },
+      "expect": {
+        "remainingTurns": 8,
+        "remainingBudgetUsd": 0.8
+      }
+    },
+    "outputExclusivity": {
+      "meaning": "recipes 와 redispatch 를 함께 실은 산출을 두 축이 같은 방식으로 거절하는지 본다.",
+      "cases": [
+        {
+          "name": "recipes 만 채우면 통과한다",
+          "recipesNonEmpty": true,
+          "redispatchNonEmpty": false,
+          "expect": {
+            "valid": true
+          }
+        },
+        {
+          "name": "redispatch 만 채우면 통과한다",
+          "recipesNonEmpty": false,
+          "redispatchNonEmpty": true,
+          "expect": {
+            "valid": true
+          }
+        },
+        {
+          "name": "둘 다 비어 있으면 후보 없이 통과한다",
+          "recipesNonEmpty": false,
+          "redispatchNonEmpty": false,
+          "expect": {
+            "valid": true
+          }
+        },
+        {
+          "name": "recipes 와 redispatch 를 함께 채우면 거절한다",
+          "recipesNonEmpty": true,
+          "redispatchNonEmpty": true,
+          "expect": {
+            "valid": false
+          }
+        }
+      ]
+    },
+    "orchestratorFailure": {
+      "meaning": "계획 호출이 실패한 실행에서 두 축이 같은 결과 모양을 내는지 본다.",
+      "input": {
+        "surveyCallFails": true
+      },
+      "expect": {
+        "candidates": [],
+        "executionOutcome": "success",
+        "orchestrationEvents": [
+          "node.failed"
+        ]
+      }
+    },
+    "emptyResultReason": {
+      "meaning": "agent/shared/execution.budget.json 의 orchestratorFailureDemotion.emptyResultReason 어휘를 recipe-scan 의 실행 모양으로 판정한다. 빈 결과로 끝난 실행이 셋 가운데 무엇을 남기는지 두 축이 같게 적어야 저장할 패턴이 없던 실행과 생성이 실패한 실행을 원장에서 구분한다.",
+      "values": [
+        "no-pattern",
+        "insufficient-evidence",
+        "generation-degraded"
+      ],
+      "default": "no-pattern",
+      "cases": [
+        {
+          "name": "조사 계획이 비어 전문가를 하나도 부르지 않으면 no-pattern 이다",
+          "input": {
+            "surveyProbes": 0
+          },
+          "expect": {
+            "executionOutcome": "success",
+            "emptyResultReason": "no-pattern"
+          }
+        },
+        {
+          "name": "조사는 실행됐으나 후보가 하나도 서지 않으면 no-pattern 이다",
+          "input": {
+            "surveyProbes": 2,
+            "probeExhausted": false,
+            "candidates": 0
+          },
+          "expect": {
+            "executionOutcome": "success",
+            "emptyResultReason": "no-pattern"
+          }
+        },
+        {
+          "name": "전문가가 예산을 소진하고 질문을 닫지 못한 채 후보가 없으면 insufficient-evidence 다",
+          "input": {
+            "surveyProbes": 2,
+            "probeExhausted": true,
+            "candidates": 0
+          },
+          "expect": {
+            "executionOutcome": "success",
+            "emptyResultReason": "insufficient-evidence"
+          }
+        },
+        {
+          "name": "계획 호출이 실패해 빈 계획으로 낮추면 generation-degraded 다",
+          "input": {
+            "surveyCallFails": true
+          },
+          "expect": {
+            "executionOutcome": "success",
+            "orchestrationEvents": [
+              "node.failed"
+            ],
+            "emptyResultReason": "generation-degraded"
+          }
+        },
+        {
+          "name": "repair 까지 쓰고도 후보가 검증을 통과하지 못하면 generation-degraded 다",
+          "input": {
+            "surveyProbes": 2,
+            "candidates": 1,
+            "repairExhausted": true
+          },
+          "expect": {
+            "executionOutcome": "success",
+            "emptyResultReason": "generation-degraded"
+          }
+        }
+      ]
+    }
+  },
+  "resultExample": {
+    "recipes": [
+      {
+        "title": "Add a safe migration",
+        "intent": "Apply a schema change without hiding deployment prerequisites.",
+        "description": "Use when a persisted field requires a coordinated migration and application cutover.",
+        "summary_md": "- Define the schema change\n- Register the migration\n- Verify both application boundaries",
+        "request": "The user asked to add graph trajectory fields and preserve existing job history.",
+        "use_when": [
+          "a persisted entity changes its stored shape"
+        ],
+        "inputs": [
+          "the entity change the request asks for"
+        ],
+        "outputs": [
+          "a forward migration and its rollback"
+        ],
+        "corrections": [
+          {
+            "whatAgentDid": "Initially treated graph events as ordinary messages.",
+            "howCorrected": "Added explicit node and event metadata to the stored trajectory contract.",
+            "evidence": [
+              "event-1"
+            ]
+          }
+        ],
+        "pitfalls": [
+          {
+            "pitfall": "Retry attempts reuse sequence numbers.",
+            "whyNonObvious": "A UI key based only on sequence looks unique in single-attempt tests.",
+            "evidence": [
+              "event-2"
+            ]
+          }
+        ],
+        "recovery": [
+          {
+            "symptom": "The rollback left the previous schema in place.",
+            "action": "Corrected the down path and reran the isolated migration check.",
+            "evidence": [
+              "event-2"
+            ],
+            "stepOrder": 1
+          }
+        ],
+        "governing_rules": [
+          "rule-1"
+        ],
+        "revises_recipe_id": "recipe-1",
+        "steps": [
+          {
+            "order": 1,
+            "action": "Add and register the migration.",
+            "rationale": "The application never synchronizes schema at startup.",
+            "evidence": [
+              "event-1"
+            ],
+            "verify": {
+              "kind": "command",
+              "commandMatches": [
+                "migration:generate"
+              ]
+            }
+          }
+        ],
+        "touched_files": [
+          {
+            "path": "src/migrations/add-graph-fields.ts",
+            "role": "write",
+            "why": "the migration this recipe adds",
+            "loadWhen": "before writing the migration"
+          }
+        ],
+        "contributing_slices": [
+          {
+            "taskId": "task-1",
+            "turnIds": [
+              "turn-1"
+            ],
+            "eventIds": [
+              "event-1",
+              "event-2"
+            ]
+          }
+        ],
+        "rationale": "The evidence demonstrates a reusable schema-and-consumer cutover sequence."
+      }
+    ]
+  },
+  "language": {
+    "fragment": "languageDirective",
+    "scope": "레시피의 산문 칸",
+    "cases": [
+      {
+        "input": {
+          "language": "auto"
+        },
+        "expect": {
+          "variant": "auto"
+        }
+      },
+      {
+        "input": {
+          "language": "ko"
+        },
+        "expect": {
+          "variant": "ko"
+        }
+      },
+      {
+        "input": {
+          "language": "en"
+        },
+        "expect": {
+          "variant": "en"
+        }
+      },
+      {
+        "input": {
+          "language": "ja"
+        },
+        "expect": {
+          "variant": "ja"
+        }
+      },
+      {
+        "input": {
+          "language": "zh"
+        },
+        "expect": {
+          "variant": "zh"
+        }
+      },
+      {
+        "input": {},
+        "expect": {
+          "variant": "auto"
+        }
+      }
+    ]
+  }
 }
