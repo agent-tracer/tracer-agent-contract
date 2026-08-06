@@ -1057,6 +1057,12 @@ components:
           oneOf:
             - $ref: "#/components/schemas/RecipeVerify"
             - type: "null"
+        evidence:
+          type: array
+          maxItems: 50
+          default: []
+          items: { type: string, minLength: 1 }
+          description: 이 단계를 보여 준 이벤트 식별자이며 관측되지 않은 단계는 비운다
 
     RecipeTouchedFile:
       type: object
@@ -1065,6 +1071,32 @@ components:
         path: { type: string, minLength: 1 }
         role:
           $ref: "#/components/schemas/RecipeFileRole"
+        why:
+          type: [string, "null"]
+          maxLength: 200
+          description: 이 파일을 읽거나 쓰는 이유다
+        loadWhen:
+          type: [string, "null"]
+          maxLength: 200
+          description: 이 파일을 여는 시점이며 절차의 어느 단계에서 필요한지를 적는다
+
+    RecipeRecovery:
+      type: object
+      required: [symptom, action, evidence]
+      description: 증상과 조치의 쌍이며 지적과 같은 근거를 요구한다
+      properties:
+        symptom: { type: string, minLength: 1, maxLength: 500 }
+        action: { type: string, minLength: 1, maxLength: 500 }
+        evidence:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: { type: string, minLength: 1 }
+        stepOrder:
+          type: [integer, "null"]
+          minimum: 1
+          maximum: 50
+          description: 이 복구가 걸리는 단계이며 비면 절차 전체에 걸린다
 
     RecipeSlice:
       type: object
@@ -1096,6 +1128,28 @@ components:
         summaryMd: { type: string, minLength: 1, maxLength: 4000 }
         request: { type: string, minLength: 1, maxLength: 2000 }
         rationale: { type: string, minLength: 1, maxLength: 500 }
+        useWhen:
+          type: array
+          maxItems: 6
+          default: []
+          items: { type: string, minLength: 1, maxLength: 200 }
+          description: 이 레시피가 걸리는 조건이며 검색이 이 칸을 읽어 고르기 전에 보여 준다
+        inputs:
+          type: array
+          maxItems: 6
+          default: []
+          items: { type: string, minLength: 1, maxLength: 200 }
+        outputs:
+          type: array
+          maxItems: 6
+          default: []
+          items: { type: string, minLength: 1, maxLength: 200 }
+        recovery:
+          type: array
+          maxItems: 10
+          default: []
+          items:
+            $ref: "#/components/schemas/RecipeRecovery"
         corrections:
           type: array
           maxItems: 20

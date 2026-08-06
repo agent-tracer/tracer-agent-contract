@@ -29,6 +29,10 @@
                 "touchedFiles",
                 "contributingSlices",
                 "rationale",
+                "useWhen",
+                "inputs",
+                "outputs",
+                "recovery",
                 "language",
                 "rev",
                 "parentRecipeId",
@@ -72,6 +76,10 @@
                 "contributingSlices"
             ],
             "optional": [
+                "useWhen",
+                "inputs",
+                "outputs",
+                "recovery",
                 "corrections",
                 "pitfalls",
                 "governingRules",
@@ -87,18 +95,62 @@
                 "eventIds"
             ],
             "constraints": {
-                "title": { "minLength": 1, "maxLength": 120 },
-                "intent": { "minLength": 1, "maxLength": 200 },
-                "description": { "minLength": 1, "maxLength": 400 },
-                "summaryMd": { "minLength": 1, "maxLength": 4000 },
-                "request": { "minLength": 1, "maxLength": 2000 },
-                "rationale": { "minLength": 1, "maxLength": 500 },
-                "contributingSlices": { "minItems": 1, "maxItems": 20 },
-                "corrections": { "maxItems": 20 },
-                "pitfalls": { "maxItems": 20 },
-                "governingRules": { "maxItems": 50 },
-                "steps": { "maxItems": 20, "consecutiveOrderFrom": 1 },
-                "touchedFiles": { "maxItems": 30 }
+                "title": {
+                    "minLength": 1,
+                    "maxLength": 120
+                },
+                "intent": {
+                    "minLength": 1,
+                    "maxLength": 200
+                },
+                "description": {
+                    "minLength": 1,
+                    "maxLength": 400
+                },
+                "summaryMd": {
+                    "minLength": 1,
+                    "maxLength": 4000
+                },
+                "request": {
+                    "minLength": 1,
+                    "maxLength": 2000
+                },
+                "rationale": {
+                    "minLength": 1,
+                    "maxLength": 500
+                },
+                "contributingSlices": {
+                    "minItems": 1,
+                    "maxItems": 20
+                },
+                "corrections": {
+                    "maxItems": 20
+                },
+                "pitfalls": {
+                    "maxItems": 20
+                },
+                "governingRules": {
+                    "maxItems": 50
+                },
+                "steps": {
+                    "maxItems": 20,
+                    "consecutiveOrderFrom": 1
+                },
+                "touchedFiles": {
+                    "maxItems": 30
+                },
+                "useWhen": {
+                    "maxItems": 6
+                },
+                "inputs": {
+                    "maxItems": 6
+                },
+                "outputs": {
+                    "maxItems": 6
+                },
+                "recovery": {
+                    "maxItems": 10
+                }
             }
         },
         "cleanupSuggestion": {
@@ -110,9 +162,19 @@
             ],
             "optional": [],
             "constraints": {
-                "taskId": { "minLength": 1, "maxLength": 64 },
-                "kind": { "enum": ["archive"] },
-                "rationale": { "minLength": 1, "maxLength": 500 }
+                "taskId": {
+                    "minLength": 1,
+                    "maxLength": 64
+                },
+                "kind": {
+                    "enum": [
+                        "archive"
+                    ]
+                },
+                "rationale": {
+                    "minLength": 1,
+                    "maxLength": 500
+                }
             }
         }
     },
@@ -123,15 +185,34 @@
             "path": "/api/v1/recipes",
             "status": 201,
             "body": {
-                "required": ["recipes", "author"],
-                "optional": ["sourceJobId"],
+                "required": [
+                    "recipes",
+                    "author"
+                ],
+                "optional": [
+                    "sourceJobId"
+                ],
                 "constraints": {
-                    "recipes": { "minItems": 1, "maxItems": 20, "item": "draft.recipe" },
-                    "author": { "enum": ["agent", "user"] },
-                    "sourceJobId": { "minLength": 1, "maxLength": 200 }
+                    "recipes": {
+                        "minItems": 1,
+                        "maxItems": 20,
+                        "item": "draft.recipe"
+                    },
+                    "author": {
+                        "enum": [
+                            "agent",
+                            "user"
+                        ]
+                    },
+                    "sourceJobId": {
+                        "minLength": 1,
+                        "maxLength": 200
+                    }
                 }
             },
-            "data": { "recipes": "recipe[]" },
+            "data": {
+                "recipes": "recipe[]"
+            },
             "order": "요청에 실린 순서를 그대로 지킨다"
         },
         {
@@ -140,14 +221,27 @@
             "path": "/api/v1/task-cleanup/suggestions",
             "status": 201,
             "body": {
-                "required": ["suggestions"],
-                "optional": ["jobId"],
+                "required": [
+                    "suggestions"
+                ],
+                "optional": [
+                    "jobId"
+                ],
                 "constraints": {
-                    "suggestions": { "minItems": 1, "maxItems": 50, "item": "draft.cleanupSuggestion" },
-                    "jobId": { "minLength": 1, "maxLength": 200 }
+                    "suggestions": {
+                        "minItems": 1,
+                        "maxItems": 50,
+                        "item": "draft.cleanupSuggestion"
+                    },
+                    "jobId": {
+                        "minLength": 1,
+                        "maxLength": 200
+                    }
                 }
             },
-            "data": { "suggestions": "cleanupSuggestion[]" },
+            "data": {
+                "suggestions": "cleanupSuggestion[]"
+            },
             "order": "요청에 실린 순서를 그대로 지킨다"
         }
     ],
