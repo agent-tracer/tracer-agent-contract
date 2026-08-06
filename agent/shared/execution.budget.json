@@ -66,6 +66,12 @@
       "structured": "The execution budget is exhausted. Stop calling tools and produce the final structured output now using only what you already verified.",
       "freeText": "The execution budget is exhausted. Stop calling tools and write your final answer to the user now in plain prose, using only what you already retrieved.",
       "reason": "도구만 닫고 지시를 주지 않으면 모델이 도구 실패로 읽고 같은 호출을 되풀이한다"
+    },
+    "landingReserve": {
+      "calls": 2,
+      "meaning": "착지는 도구만 닫으므로 마무리 호출 하나가 그 뒤에 남는다. 그 호출이 지금까지 가장 비쌌던 호출만큼 들 수 있다고 보고 그만큼을 미리 뗀다.",
+      "rule": "쓴 값에 가장 비쌌던 호출의 calls 배를 더해 상한에 닿으면 착지한다.",
+      "reason": "마무리 몫을 남기지 않으면 상한이 착지보다 먼저 걸려 실행이 답 없이 실패한다."
     }
   },
   "wallClock": {
