@@ -1238,6 +1238,10 @@ components:
         - touchedFiles
         - contributingSlices
         - rationale
+        - useWhen
+        - inputs
+        - outputs
+        - recovery
         - language
         - rev
         - parentRecipeId
@@ -1282,6 +1286,19 @@ components:
           items:
             $ref: "#/components/schemas/RecipeSlice"
         rationale: { type: [string, "null"] }
+        useWhen:
+          type: array
+          items: { type: string }
+        inputs:
+          type: array
+          items: { type: string }
+        outputs:
+          type: array
+          items: { type: string }
+        recovery:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecipeRecovery"
         language: { type: [string, "null"] }
         rev:
           type: integer
