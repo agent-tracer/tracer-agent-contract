@@ -5,3 +5,6 @@ build/
 .env
 .env.*
 __pycache__/
+
+# 도구가 남기는 로컬 기록이라 계약에 담지 않는다.
+.claude/
