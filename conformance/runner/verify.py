@@ -54,6 +54,7 @@ def read_served_routes(base_url: str) -> set[str]:
 AGENTS = ["chat", "recipe-scan", "title-suggestion", "task-cleanup"]
 SHARED = [
     "languages.json",
+    "settings.execution.json",
     "error.subtypes.json",
     "execution.vocabulary.json",
     "execution.budget.json",
@@ -532,6 +533,34 @@ def main() -> None:
     missing_scope = [place for place in SCOPE_TOKEN_PLACES if place not in scope_token]
     if missing_scope:
         raise SystemExit(f"실행 자격의 모양에 있어야 할 자리가 없다 — {', '.join(missing_scope)}")
+    setting_inputs = read_shared("settings.execution.json")["inputs"]
+    setting_keys = read_openapi_enum("SettingKey")
+    for field, declared in setting_inputs.items():
+        if declared["setting"] not in setting_keys:
+            raise SystemExit(f"{field} 이 설정 표에 없는 {declared['setting']} 을 읽으라고 적는다")
+        stray_kinds = [kind for kind in declared["kinds"] if kind not in intake_kinds]
+        if stray_kinds:
+            raise SystemExit(
+                f"{field} 이 접수가 받지 않는 종류 {', '.join(stray_kinds)} 에 실린다고 적는다"
+            )
+        stray_request = [kind for kind in declared.get("requestField", {}) if kind not in declared["kinds"]]
+        if stray_request:
+            raise SystemExit(
+                f"{field} 이 싣지 않는 종류 {', '.join(stray_request)} 의 요청 칸을 적는다"
+            )
+    language_input = setting_inputs["language"]
+    if language_input["default"] not in read_shared("languages.json")["languages"]:
+        raise SystemExit(f"기본 출력 언어 {language_input['default']} 가 언어 목록에 없다")
+    language_scope = read_shared("languages.json")["scope"]
+    unread_language = [
+        kind
+        for kind, declared in read_json("wire/job.kinds.json")["kinds"].items()
+        if declared["agent"] in language_scope and kind not in language_input["kinds"]
+    ]
+    if unread_language:
+        raise SystemExit(
+            f"언어를 적용할 범위가 있는 종류가 설정을 읽지 않는다 — {', '.join(unread_language)}"
+        )
     print(f"실행을 접는 조건 {len(SETTLEMENT_PLACES)}개를 계약이 갖는다")
     print(f"공급자 요청 식별자의 값 규칙 {len(PROVIDER_REQUEST_RULES)}개를 계약이 갖는다")
     print(f"첫 토큰까지의 시간에 관한 규칙 {len(TTFT_RULES)}개를 계약이 갖는다")
@@ -544,6 +573,8 @@ def main() -> None:
         f"{len(scope_token['payload']['fields'])}개 칸을 "
         f"{scope_token['signature']['algorithm']} 으로 서명한다"
     )
+    carried = " · ".join(f"{field} ← {declared['setting']}" for field, declared in setting_inputs.items())
+    print(f"설정이 실행 입력에 실리는 자리 {len(setting_inputs)}개를 계약이 갖는다 — {carried}")
 
 
 if __name__ == "__main__":

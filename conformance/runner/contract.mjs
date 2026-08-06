@@ -297,8 +297,11 @@ export function readLeaseOwnerRejectionRef() {
 export function readOpenApiEnum(schemaName) {
     const spec = readFileSync(join(ROOT, "http", "agent-api.openapi.yaml"), "utf8");
     const declared = new RegExp(`^ {4}${schemaName}:\\n(?: {6}.*\\n)*? {6}enum: \\[([^\\]]*)\\]`, "m").exec(spec);
-    if (declared === null) throw new Error(`${schemaName} 이 enum 을 선언하지 않는다`);
-    return declared[1].split(",").map((value) => value.trim());
+    if (declared !== null) return declared[1].split(",").map((value) => value.trim());
+    // 값이 길어 한 줄에 담기지 않는 enum 은 같은 뜻을 블록 목록으로 적는다.
+    const listed = new RegExp(`^ {4}${schemaName}:\\n(?: {6}.*\\n)*? {6}enum:\\n((?: {8}- .*\\n)+)`, "m").exec(spec);
+    if (listed === null) throw new Error(`${schemaName} 이 enum 을 선언하지 않는다`);
+    return listed[1].trimEnd().split("\n").map((line) => line.trim().replace(/^- /, "").trim());
 }
 
 /** 메서드와 경로를 한 문자열로 모아 대조와 정렬의 키로 쓴다. */

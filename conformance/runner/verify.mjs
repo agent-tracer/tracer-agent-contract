@@ -48,6 +48,7 @@ async function readServedRoutes(baseUrl) {
 const AGENTS = ["chat", "recipe-scan", "title-suggestion", "task-cleanup"];
 const SHARED = [
     "languages.json",
+    "settings.execution.json",
     "error.subtypes.json",
     "execution.vocabulary.json",
     "execution.budget.json",
@@ -508,6 +509,32 @@ const missingScopeToken = SCOPE_TOKEN_PLACES.filter((place) => scopeToken[place]
 if (missingScopeToken.length > 0) {
     throw new Error(`실행 자격의 모양에 있어야 할 자리가 없다 — ${missingScopeToken.join(", ")}`);
 }
+const settingInputs = readShared("settings.execution.json").inputs;
+const settingKeys = readOpenApiEnum("SettingKey");
+for (const [field, declared] of Object.entries(settingInputs)) {
+    if (!settingKeys.includes(declared.setting)) {
+        throw new Error(`${field} 이 설정 표에 없는 ${declared.setting} 을 읽으라고 적는다`);
+    }
+    const strayKinds = declared.kinds.filter((kind) => !intakeKinds.includes(kind));
+    if (strayKinds.length > 0) {
+        throw new Error(`${field} 이 접수가 받지 않는 종류 ${strayKinds.join(", ")} 에 실린다고 적는다`);
+    }
+    const strayRequest = Object.keys(declared.requestField ?? {}).filter((kind) => !declared.kinds.includes(kind));
+    if (strayRequest.length > 0) {
+        throw new Error(`${field} 이 싣지 않는 종류 ${strayRequest.join(", ")} 의 요청 칸을 적는다`);
+    }
+}
+const languageInput = settingInputs.language;
+if (!readShared("languages.json").languages.includes(languageInput.default)) {
+    throw new Error(`기본 출력 언어 ${languageInput.default} 가 언어 목록에 없다`);
+}
+const languageScope = readShared("languages.json").scope;
+const unreadLanguage = Object.entries(readJson("wire/job.kinds.json").kinds)
+    .filter(([kind, declared]) => languageScope[declared.agent] !== undefined && !languageInput.kinds.includes(kind))
+    .map(([kind]) => kind);
+if (unreadLanguage.length > 0) {
+    throw new Error(`언어를 적용할 범위가 있는 종류가 설정을 읽지 않는다 — ${unreadLanguage.join(", ")}`);
+}
 console.log(`실행을 접는 조건 ${SETTLEMENT_PLACES.length}개를 계약이 갖는다`);
 console.log(`공급자 요청 식별자의 값 규칙 ${PROVIDER_REQUEST_RULES.length}개를 계약이 갖는다`);
 console.log(`첫 토큰까지의 시간에 관한 규칙 ${TTFT_RULES.length}개를 계약이 갖는다`);
@@ -519,3 +546,7 @@ console.log(
     `실행에 매인 자격은 ${scopeToken.prefix} 로 시작해 ${scopeToken.payload.fields.length}개 칸을 ` +
         `${scopeToken.signature.algorithm} 으로 서명한다`,
 );
+const carried = Object.entries(settingInputs)
+    .map(([field, declared]) => `${field} ← ${declared.setting}`)
+    .join(" · ");
+console.log(`설정이 실행 입력에 실리는 자리 ${Object.keys(settingInputs).length}개를 계약이 갖는다 — ${carried}`);

@@ -232,9 +232,15 @@ def read_openapi_enum(schema_name: str) -> list[str]:
     spec = (ROOT / "http" / "agent-api.openapi.yaml").read_text(encoding="utf-8")
     pattern = rf"^ {{4}}{schema_name}:\n(?: {{6}}.*\n)*? {{6}}enum: \[([^\]]*)\]"
     declared = re.search(pattern, spec, re.MULTILINE)
-    if declared is None:
+    if declared is not None:
+        return [value.strip() for value in declared.group(1).split(",")]
+    # 값이 길어 한 줄에 담기지 않는 enum 은 같은 뜻을 블록 목록으로 적는다.
+    listed = re.search(
+        rf"^ {{4}}{schema_name}:\n(?: {{6}}.*\n)*? {{6}}enum:\n((?: {{8}}- .*\n)+)", spec, re.MULTILINE
+    )
+    if listed is None:
         raise SystemExit(f"{schema_name} 이 enum 을 선언하지 않는다")
-    return [value.strip() for value in declared.group(1).split(",")]
+    return [line.strip().removeprefix("- ").strip() for line in listed.group(1).splitlines()]
 
 
 def route_key(route: dict[str, str]) -> str:
