@@ -1,12 +1,12 @@
 {
-  "meaning": "사용자 설정 원장의 값 가운데 잡의 실행 입력으로 실리는 것을 적는다. 어느 구현체가 설정을 읽지 않으면 사용자가 같은 값을 저장해 두고도 두 축이 다른 답을 낸다.",
+  "meaning": "사용자 설정 원장의 값 가운데 잡의 실행 입력으로 실리는 것을 적는다. 어느 구현체가 설정을 읽지 않으면 사용자가 같은 값을 저장해 두고도 두 축의 산출이 달라진다.",
   "readAt": "실행 입력을 모으는 준비 단계가 설정을 읽어 입력에 싣는다. 산출을 내는 단계는 설정 원장을 다시 보지 않는다.",
   "precedence": [
     "request",
     "setting",
     "default"
   ],
-  "precedenceMeaning": "요청이 그 칸을 실었으면 요청이 이기고, 비었으면 설정을 읽고, 설정도 없거나 읽을 수 없으면 default 를 쓴다.",
+  "precedenceMeaning": "요청이 그 칸을 실었으면 요청의 값이 우선하고, 비었으면 설정을 읽고, 설정도 없거나 읽을 수 없으면 default 를 쓴다.",
   "noRequestField": "요청 칸이 없는 종류는 설정과 default 만 본다. 그 종류의 접수는 그 칸을 받지 않는다.",
   "inputs": {
     "language": {
@@ -36,9 +36,30 @@
       "cap": "wire/job.kinds.json 의 taskCleanup.maxSuggestions 가 상한을 갖는다."
     }
   },
+  "envelope": {
+    "meaning": "설정이 실행 봉투의 칸을 덮는 자리다. 덮는 칸만 적고 나머지는 잡 종류가 그대로 갖는다.",
+    "issuedAt": "봉투를 발급하는 창구가 설정을 읽는다. 실행기는 받은 봉투만 보고 설정 원장을 읽지 않는다.",
+    "model": {
+      "setting": "anthropic.model",
+      "overrides": "model",
+      "keeps": [
+        "fallbackModel",
+        "modelRates",
+        "limits",
+        "deadlineMs"
+      ],
+      "kinds": [
+        "title.suggestion",
+        "recipe.scan",
+        "task.cleanup"
+      ],
+      "default": "그 종류의 기본 모델을 쓴다.",
+      "normalize": "모델 카탈로그에 없는 값은 default 로 본다.",
+      "keepsReason": "예산과 턴과 마감은 잡이 하는 일의 크기에서 나오므로 모델을 바꿔도 종류가 그대로 갖는다."
+    }
+  },
   "outOfScope": {
     "chat": "대화의 언어는 접수가 그 실행 행에 적는 턴마다의 값이라 전역 설정을 읽지 않는다.",
-    "anthropic.model": "서버에서 도는 잡의 모델은 실행 봉투가 종류마다 갖는다. 이 설정은 사용자 기계에서 도는 규칙 생성기의 것이다.",
-    "anthropic.api_key": "자격은 실행 입력이 아니라 봉투로 실리므로 이 표가 아니라 model.envelope.json 이 갖는다."
+    "anthropic.api_key": "자격은 덮어쓰는 값이 아니라 봉투가 늘 실어 보내는 칸이다."
   }
 }

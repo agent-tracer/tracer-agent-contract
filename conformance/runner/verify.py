@@ -561,6 +561,21 @@ def main() -> None:
         raise SystemExit(
             f"언어를 적용할 범위가 있는 종류가 설정을 읽지 않는다 — {', '.join(unread_language)}"
         )
+    envelope_settings = read_shared("settings.execution.json")["envelope"]
+    carried_envelope = {
+        field: declared for field, declared in envelope_settings.items() if isinstance(declared, dict)
+    }
+    for field, declared in carried_envelope.items():
+        if declared["setting"] not in setting_keys:
+            raise SystemExit(f"봉투의 {field} 이 설정 표에 없는 {declared['setting']} 을 읽으라고 적는다")
+        overlap = [kept for kept in declared["keeps"] if kept == declared["overrides"]]
+        if overlap:
+            raise SystemExit(f"봉투의 {field} 이 {declared['overrides']} 를 덮으면서 그대로 둔다고도 적는다")
+        stray_kinds = [kind for kind in declared["kinds"] if kind not in intake_kinds]
+        if stray_kinds:
+            raise SystemExit(
+                f"봉투의 {field} 이 접수가 받지 않는 종류 {', '.join(stray_kinds)} 에 실린다고 적는다"
+            )
     print(f"실행을 접는 조건 {len(SETTLEMENT_PLACES)}개를 계약이 갖는다")
     print(f"공급자 요청 식별자의 값 규칙 {len(PROVIDER_REQUEST_RULES)}개를 계약이 갖는다")
     print(f"첫 토큰까지의 시간에 관한 규칙 {len(TTFT_RULES)}개를 계약이 갖는다")
@@ -575,6 +590,10 @@ def main() -> None:
     )
     carried = " · ".join(f"{field} ← {declared['setting']}" for field, declared in setting_inputs.items())
     print(f"설정이 실행 입력에 실리는 자리 {len(setting_inputs)}개를 계약이 갖는다 — {carried}")
+    overridden = " · ".join(
+        f"{declared['overrides']} ← {declared['setting']}" for declared in carried_envelope.values()
+    )
+    print(f"설정이 봉투를 덮는 자리 {len(carried_envelope)}개를 계약이 갖는다 — {overridden}")
 
 
 if __name__ == "__main__":

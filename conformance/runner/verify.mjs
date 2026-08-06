@@ -535,6 +535,22 @@ const unreadLanguage = Object.entries(readJson("wire/job.kinds.json").kinds)
 if (unreadLanguage.length > 0) {
     throw new Error(`언어를 적용할 범위가 있는 종류가 설정을 읽지 않는다 — ${unreadLanguage.join(", ")}`);
 }
+const envelopeSettings = readShared("settings.execution.json").envelope;
+const carriedEnvelope = Object.fromEntries(
+    Object.entries(envelopeSettings).filter(([, declared]) => typeof declared === "object" && declared !== null),
+);
+for (const [field, declared] of Object.entries(carriedEnvelope)) {
+    if (!settingKeys.includes(declared.setting)) {
+        throw new Error(`봉투의 ${field} 이 설정 표에 없는 ${declared.setting} 을 읽으라고 적는다`);
+    }
+    if (declared.keeps.includes(declared.overrides)) {
+        throw new Error(`봉투의 ${field} 이 ${declared.overrides} 를 덮으면서 그대로 둔다고도 적는다`);
+    }
+    const strayKinds = declared.kinds.filter((kind) => !intakeKinds.includes(kind));
+    if (strayKinds.length > 0) {
+        throw new Error(`봉투의 ${field} 이 접수가 받지 않는 종류 ${strayKinds.join(", ")} 에 실린다고 적는다`);
+    }
+}
 console.log(`실행을 접는 조건 ${SETTLEMENT_PLACES.length}개를 계약이 갖는다`);
 console.log(`공급자 요청 식별자의 값 규칙 ${PROVIDER_REQUEST_RULES.length}개를 계약이 갖는다`);
 console.log(`첫 토큰까지의 시간에 관한 규칙 ${TTFT_RULES.length}개를 계약이 갖는다`);
@@ -550,3 +566,7 @@ const carried = Object.entries(settingInputs)
     .map(([field, declared]) => `${field} ← ${declared.setting}`)
     .join(" · ");
 console.log(`설정이 실행 입력에 실리는 자리 ${Object.keys(settingInputs).length}개를 계약이 갖는다 — ${carried}`);
+const overridden = Object.values(carriedEnvelope)
+    .map((declared) => `${declared.overrides} ← ${declared.setting}`)
+    .join(" · ");
+console.log(`설정이 봉투를 덮는 자리 ${Object.keys(carriedEnvelope).length}개를 계약이 갖는다 — ${overridden}`);
