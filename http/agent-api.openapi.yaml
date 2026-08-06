@@ -1333,7 +1333,6 @@ components:
       enum:
         - anthropic.api_key
         - anthropic.model
-        - ruleGen.maxRulesPerTask
         - taskCleanup.maxSuggestions
         - claude.outputLanguage
 
