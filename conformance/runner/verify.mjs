@@ -69,12 +69,14 @@ const STREAM_KEYS = [
     "replay",
     "reconnect",
     "draftReset",
+    "draft",
     "resendIntervalMs",
     "headers",
 ];
 const STREAM_NESTED = {
     replay: ["mode", "lastEventId", "reason"],
     reconnect: ["initialBackoffMs", "maxBackoffMs", "resetOn", "stopOn"],
+    draft: ["intervalMs", "edge", "meaning", "firstChunk", "coalesce", "seqUnit", "nonBlocking"],
     headers: ["Cache-Control", "Connection", "X-Accel-Buffering"],
 };
 const STREAM_PLACES = STREAM_KEYS.length + Object.values(STREAM_NESTED).flat().length;

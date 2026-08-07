@@ -75,12 +75,14 @@ STREAM_KEYS = [
     "replay",
     "reconnect",
     "draftReset",
+    "draft",
     "resendIntervalMs",
     "headers",
 ]
 STREAM_NESTED = {
     "replay": ["mode", "lastEventId", "reason"],
     "reconnect": ["initialBackoffMs", "maxBackoffMs", "resetOn", "stopOn"],
+    "draft": ["intervalMs", "edge", "meaning", "firstChunk", "coalesce", "seqUnit", "nonBlocking"],
     "headers": ["Cache-Control", "Connection", "X-Accel-Buffering"],
 }
 STREAM_PLACES = len(STREAM_KEYS) + sum(len(keys) for keys in STREAM_NESTED.values())

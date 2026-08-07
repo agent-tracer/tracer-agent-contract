@@ -326,6 +326,15 @@
             "stopOn": "종결 상태를 실은 프레임을 받으면 다시 붙지 않는다"
         },
         "draftReset": "재시도는 답변을 처음부터 다시 쓰므로 draftText가 비고 draftSeq가 0으로 간다. 화면의 글자가 줄어드는 것은 정상이다",
+        "draft": {
+            "intervalMs": 150,
+            "edge": "leading",
+            "meaning": "실행기가 받은 조각을 원장에 적는 리듬이며 이 프레임이 무엇을 실을지가 여기서 정해진다",
+            "firstChunk": "첫 조각은 간격을 기다리지 않고 곧바로 적는다. 뒤쪽 엣지로 묶으면 첫 글자가 그만큼 늦는다",
+            "coalesce": "첫 조각 뒤로는 이 간격 안에 받은 것을 묶어 한 번만 적는다",
+            "seqUnit": "draftSeq는 보낸 횟수가 아니라 받은 조각을 센다",
+            "nonBlocking": "쓰기는 모델이 토큰을 소비하는 루프를 막지 않는다"
+        },
         "resendIntervalMs": 20000,
         "headers": {
             "Cache-Control": "no-cache, no-transform",
