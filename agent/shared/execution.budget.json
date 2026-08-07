@@ -1,5 +1,5 @@
 {
-  "meaning": "실행 하나가 여러 호출에 걸쳐 예산을 나누는 규칙이다. maxTurns 는 실행 전체의 턴 총량이며 노드마다 다시 주어지는 상한이 아니다. 두 축이 같은 계획에서 같은 턴과 같은 달러를 내야 하므로 떼는 순서와 나머지를 돌리는 규칙까지 정한다.",
+  "meaning": "실행 하나가 여러 호출에 걸쳐 예산을 나누는 규칙이다. maxTurns 는 실행 전체의 턴 총량이며 노드마다 다시 주어지는 상한이 아니다. 두 축이 같은 계획에서 같은 턴과 같은 달러를 내야 하므로 떼는 순서와 나머지를 돌려주는 규칙까지 정한다.",
   "reservation": {
     "meaning": "팬아웃 전에 떼어 두어 전문가 배분에서 제외하는 몫이다. 비율은 뗄 당시의 잔량에 곱하므로 뗄 순서가 바뀌면 같은 비율이 다른 액수가 된다.",
     "order": [
@@ -44,7 +44,7 @@
     "budgetFollowsTurns": "달러는 항목이 배분받은 턴이 전체 배분 턴에서 차지하는 비율만큼 나눈다. 배분된 턴이 모두 0이면 달러도 모두 0이다."
   },
   "orchestratorFailureDemotion": {
-    "meaning": "계획 단계가 무너졌을 때 실행이 취하는 모양이다.",
+    "meaning": "계획 단계가 실패했을 때 실행이 취하는 모양이다.",
     "onPlanFailure": "계획 호출이 실패하면 빈 계획으로 낮추고, 그 실행은 전문가를 하나도 부르지 않은 채 빈 결과로 끝난다.",
     "outcome": "낮춘 실행은 실패가 아니라 성공이다.",
     "trajectory": "낮춘 사실은 실행 어휘의 node.failed 로 궤적에 남으며 이후 노드는 이어서 실행되지 않는다.",
@@ -72,19 +72,19 @@
       "reason": "총량만 알리면 모델이 자기 위치를 모르므로 쓴 만큼을 함께 준다"
     },
     "landingDirective": {
-      "when": "예산이 착지에 닿아 도구를 더 열지 않는 시점에 건넨다",
+      "when": "예산이 종료에 닿아 도구를 더 열지 않는 시점에 건넨다",
       "structured": "The execution budget is exhausted. Stop calling tools and produce the final structured output now using only what you already verified.",
       "freeText": "The execution budget is exhausted. Stop calling tools and write your final answer to the user now in plain prose, using only what you already retrieved.",
       "reason": "도구만 닫고 지시를 주지 않으면 모델이 도구 실패로 읽고 같은 호출을 되풀이한다"
     },
     "landingReserve": {
       "calls": 2,
-      "meaning": "착지는 도구만 닫으므로 마무리 호출 하나가 그 뒤에 남는다. 그 호출이 지금까지 가장 비쌌던 호출만큼 들 수 있다고 보고 그만큼을 미리 뗀다.",
-      "rule": "쓴 값에 가장 비쌌던 호출의 calls 배를 더해 상한에 닿으면 착지한다.",
-      "reason": "마무리 몫을 남기지 않으면 상한이 착지보다 먼저 걸려 실행이 답 없이 실패한다.",
+      "meaning": "종료는 도구만 닫으므로 마무리 호출 하나가 그 뒤에 남는다. 그 호출이 지금까지 가장 비쌌던 호출만큼 들 수 있다고 보고 그만큼을 미리 뗀다.",
+      "rule": "쓴 값에 가장 비쌌던 호출의 calls 배를 더해 상한에 닿으면 종료한다.",
+      "reason": "마무리 몫을 남기지 않으면 상한이 종료보다 먼저 걸려 실행이 답 없이 실패한다.",
       "providerBackstop": 2,
-      "providerBackstopMeaning": "공급자에게 넘기는 자기 상한은 이 배수만큼 위에 둔다. 실행을 조이는 것은 착지이고 공급자 상한은 폭주만 끊는 백스톱이다.",
-      "providerBackstopReason": "같은 값을 넘기면 공급자가 호출 도중에 끊어 착지가 마무리 호출을 낼 틈이 없다."
+      "providerBackstopMeaning": "공급자에게 넘기는 자기 상한은 이 배수만큼 위에 둔다. 실행을 조이는 것은 종료이고 공급자 상한은 폭주만 끊는 백스톱이다.",
+      "providerBackstopReason": "같은 값을 넘기면 공급자가 호출 도중에 끊어 종료가 마무리 호출을 낼 틈이 없다."
     }
   },
   "wallClock": {
@@ -111,7 +111,7 @@
   },
   "limits": {
     "meaning": "실행 하나를 조이는 자리가 무엇인지 적는다. 세 값이 같은 일을 나눠 맡지 않는다.",
-    "budgetUsd": "비용을 조이는 유일한 자리다. 닿기 전에 도구를 거두고 결론만 받는 착지로 끝낸다.",
+    "budgetUsd": "비용을 조이는 유일한 자리다. 닿기 전에 도구를 거두고 결론만 받는 종료로 끝낸다.",
     "maxTurns": "폭주만 끊는 느슨한 그물이며 비용을 조이는 자리가 아니다. 허용 모델 가운데 가장 느린 것이 결론에 닿고도 남을 만큼 둔다.",
     "deadlineMs": "벽시계 백스톱이며 멈춘 실행만 끊는다.",
     "tiering": "절감은 상한을 조여서가 아니라 종류마다 허용 모델을 좁게 두어 얻는다.",
