@@ -44,6 +44,7 @@
                 "threadId",
                 "replayAnchorMessageId",
                 "status",
+                "phase",
                 "requestedBackend",
                 "draftText",
                 "draftSeq",
@@ -182,6 +183,13 @@
             "completed",
             "failed",
             "canceled"
+        ],
+        "executionPhase": [
+            "starting",
+            "thinking",
+            "responding",
+            "tool",
+            "done"
         ],
         "stopReason": [
             "completed",
@@ -336,6 +344,17 @@
             "source": "접수 프로세스가 자기 축 상수를 그대로 기록한다. 상류가 실어 보낸 값을 옮겨 적지 않는다",
             "required": "status가 queued이거나 running인 행은 이 칸이 비어 있지 않다",
             "empty": "축을 갖지 않는 채로 종결된 행만 비어 있으며 어느 축의 조회도 그 행을 가져가지 않는다"
+        },
+        "executionPhase": {
+            "meaning": "실행이 지금 무엇을 하는 중인지이며 화면이 침묵 구간에도 살아 있음을 보이는 데 쓴다",
+            "source": "실행기가 공급자에게 받는 신호에서 파생한다. 사람이 읽을 문구를 원장에 적지 않고 화면이 이 낱말을 번역한다",
+            "starting": "시도를 열었고 공급자의 첫 신호를 아직 받지 않았다",
+            "thinking": "공급자가 사고 블록이나 도구 인자를 흘리는 중이며 답변 텍스트는 아직 없다",
+            "responding": "답변 텍스트가 흐르는 중이다",
+            "tool": "도구를 부르고 결과를 기다리는 중이며 이 구간에는 공급자가 아무 신호도 내지 않는다",
+            "done": "종결 상태로 굳었다",
+            "elapsed": "경과 시간은 원장이 갖지 않는다. tool 구간에는 갱신할 신호가 없으므로 화면이 updatedAt 부터 국소적으로 센다",
+            "terminal": "status가 종결이면 phase는 done 이다"
         },
         "stepContent": {
             "meaning": "궤적 한 줄의 content는 사람이 읽는 평문이다",

@@ -574,12 +574,15 @@ paths:
           application/json:
             schema:
               type: object
-              required: [token, attempt, draftSeq, text]
+              required: [token, attempt, draftSeq, text, phase]
               properties:
                 token: { type: string, minLength: 1, maxLength: 200 }
                 attempt: { type: integer, minimum: 1 }
                 draftSeq: { type: integer, minimum: 1 }
                 text: { type: string, maxLength: 200000 }
+                phase:
+                  type: string
+                  enum: [starting, thinking, responding, tool, done]
       responses:
         "200":
           description: 통지를 받았다
@@ -1813,6 +1816,11 @@ components:
       enum: [queued, running, completed, failed, canceled]
       description: 실행의 수명이며 completed와 failed와 canceled가 종결 상태다
 
+    ChatExecutionPhase:
+      type: string
+      enum: [starting, thinking, responding, tool, done]
+      description: 실행이 지금 무엇을 하는 중인지이며 초안이 자라지 않는 구간에도 화면이 살아 있음을 보이게 한다
+
     ChatStopReason:
       type: string
       enum: [completed, deadline, stalled, budget_landed, turn_limit, canceled, failed]
@@ -1883,6 +1891,7 @@ components:
         - threadId
         - replayAnchorMessageId
         - status
+        - phase
         - requestedBackend
         - draftText
         - draftSeq
@@ -1904,6 +1913,8 @@ components:
           description: 이 실행이 되돌려 줄 이력이 끊기는 메시지이며 접수는 사용자 발화를 승인은 도구 결과를 세운다
         status:
           $ref: "#/components/schemas/ChatExecutionStatus"
+        phase:
+          $ref: "#/components/schemas/ChatExecutionPhase"
         requestedBackend:
           oneOf:
             - $ref: "#/components/schemas/AgentAxis"
