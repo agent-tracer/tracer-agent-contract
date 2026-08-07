@@ -531,7 +531,7 @@ paths:
       operationId: get_recipe
       tags: [tool]
       summary: 레시피 하나를 전문으로 조회한다
-      description: 검색이 낸 얇은 적중에서 고른 레시피 하나의 단계·주의점·적용 이력을 편다. 남의 것은 404다
+      description: 검색이 낸 얇은 적중에서 고른 레시피 하나의 단계·주의점·적용 이력을 정리해 낸다. 남의 것은 404다
       x-confirmation-gate: none
       parameters:
         - name: recipeId
