@@ -291,6 +291,24 @@ if (surfaceMismatch.length > 0) {
                 .join(" · "),
     );
 }
+// action 마다 필요한 인자가 다르므로 그 표가 없거나 action 하나를 빠뜨리면 그 갈래는 아무것도 요구하지 않게 된다.
+const chatTools = readAgentTools("chat").tools;
+const brokenRequiredByAction = Object.entries(chatTools).flatMap(([name, tool]) => {
+    if (tool.surface !== CONFIRM_SURFACE || tool.args?.action === undefined) return [];
+    const declared = tool.requiredByAction;
+    if (declared === undefined) return [`${name} 이 requiredByAction 을 갖지 않는다`];
+    const values = tool.args.action.values ?? [];
+    return [
+        ...values.filter((value) => declared[value] === undefined).map((value) => `${name}.${value} 가 표에 없다`),
+        ...Object.keys(declared).filter((key) => !values.includes(key)).map((key) => `${name}.${key} 는 action 이 아니다`),
+        ...Object.entries(declared).flatMap(([action, names]) =>
+            names.filter((argName) => tool.args[argName] === undefined).map((argName) => `${name}.${action} 이 없는 인자 ${argName} 을 요구한다`),
+        ),
+    ];
+});
+if (brokenRequiredByAction.length > 0) {
+    throw new Error(`action 이 요구하는 인자의 표가 어긋난다 — ${brokenRequiredByAction.join(" · ")}`);
+}
 const immediateConfirmTools = confirmToolsCalledImmediate("chat", toolSurfaces[CONFIRM_SURFACE] ?? []);
 if (immediateConfirmTools.length > 0) {
     throw new Error(

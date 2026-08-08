@@ -1205,7 +1205,8 @@
         }
     },
     "failures": {
-        "toolFailed": "Tool {tool} failed: {reason}. Do not call it again more than once. Continue with what you already know, and tell the user plainly which information you could not read."
+        "toolFailed": "Tool {tool} failed: {reason}. Do not call it again more than once. Continue with what you already know, and tell the user plainly which information you could not read.",
+        "argumentsMissing": "Tool {tool} needs {missing} when action is {action}. Call it again with those arguments. This is a correctable mistake, not a failure of the tool."
     },
     "proposalNote": "Queued for user confirmation. This action has NOT run yet and will only run after the user approves it. Tell the user you are awaiting their confirmation; never claim the change is already done.",
     "approvalReportNote": "The user approved the action above and it has now run. Tell them what it did, grounded in that result, and do not propose it again.",
@@ -1667,5 +1668,22 @@
             }
         },
         "local": []
+    },
+    "argumentRejection": {
+        "meaning": "action 마다 필요한 인자가 다르므로 인자 스키마 하나로는 그 자리를 가르지 못한다. requiredByAction 이 정한 인자가 빠진 호출을 어디에서 어떤 어휘로 거절하는지의 정본이다.",
+        "when": "surface 가 confirm 이고 action 을 받는 도구에서 그 action 의 requiredByAction 인자가 빠졌거나 비었을 때다.",
+        "where": "대기 행을 세우는 창구가 세우기 전에 거절한다.",
+        "whereReason": "세운 뒤에 거절하면 사용자가 성공할 수 없는 일을 승인하게 되고, 승인한 뒤 상류가 거절해 그 턴이 도구 실패로 끝난다. 모델이 고칠 수 있었던 실수의 값을 사용자가 치른다.",
+        "status": 400,
+        "code": "chat.tool-arguments-missing",
+        "message": "Tool arguments are missing for this action",
+        "details": {
+            "meaning": "무엇을 고쳐야 하는지 부르는 쪽이 알아야 하므로 빠진 자리를 값으로 싣는다.",
+            "action": "그 호출이 실은 action 이다",
+            "missing": "그 action 에 필요한데 빠진 인자의 이름을 계약이 적은 순서로 담은 배열이다"
+        },
+        "modelText": "failures.argumentsMissing",
+        "correctable": true,
+        "correctableReason": "빠진 인자를 채우면 같은 호출이 성립하므로 모델에게 다시 부르지 말라고 말하지 않는다. toolFailed 를 쓰면 고칠 수 있는 실수에 포기를 지시하게 된다."
     }
 }

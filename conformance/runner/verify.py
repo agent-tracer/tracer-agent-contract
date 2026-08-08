@@ -230,6 +230,26 @@ def main() -> None:
     thread_queue = read_chat_thread_queue()
     tool_surfaces = read_tool_surfaces()
     declared_surfaces = read_case("chat.tools")["tools"]
+    # action 마다 필요한 인자가 다르므로 그 표가 없거나 action 하나를 빠뜨리면 그 갈래는 아무것도 요구하지 않게 된다.
+    chat_tools = read_agent_tools("chat")["tools"]
+    broken_required_by_action: list[str] = []
+    for name, tool in chat_tools.items():
+        if tool.get("surface") != CONFIRM_SURFACE or "action" not in tool.get("args", {}):
+            continue
+        declared = tool.get("requiredByAction")
+        if declared is None:
+            broken_required_by_action.append(f"{name} 이 requiredByAction 을 갖지 않는다")
+            continue
+        values = tool["args"]["action"].get("values", [])
+        broken_required_by_action.extend(f"{name}.{value} 가 표에 없다" for value in values if value not in declared)
+        broken_required_by_action.extend(f"{name}.{key} 는 action 이 아니다" for key in declared if key not in values)
+        broken_required_by_action.extend(
+            f"{name}.{action} 이 없는 인자 {arg_name} 을 요구한다"
+            for action, arg_names in declared.items()
+            for arg_name in arg_names
+            if arg_name not in tool["args"]
+        )
+
     immediate_confirm_tools = confirm_tools_called_immediate(
         "chat", tool_surfaces.get(CONFIRM_SURFACE, [])
     )
@@ -335,6 +355,9 @@ def main() -> None:
             for name in surface_mismatch
         )
         raise SystemExit(f"도구의 표면과 적합성이 적은 목록이 다르다 — {detail}")
+    if broken_required_by_action:
+        broken = " · ".join(broken_required_by_action)
+        raise SystemExit(f"action 이 요구하는 인자의 표가 어긋난다 — {broken}")
     if immediate_confirm_tools:
         raise SystemExit(
             "프롬프트가 확인을 받아야 하는 도구를 즉시 실행이라고 적는다 — "
