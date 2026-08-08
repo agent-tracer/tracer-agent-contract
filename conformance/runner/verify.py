@@ -61,6 +61,9 @@ SHARED = [
     "model.envelope.json",
     "redaction.json",
     "scope.token.json",
+    "text.limits.json",
+    "dispatch.plan.json",
+    "ledger.availability.json",
 ]
 WIRE = ["envelope.json", "headers.json", "topics.json", "job.kinds.json"]
 TOPIC_FIELDS = ["name", "key", "payload", "delivery"]
@@ -81,7 +84,7 @@ STREAM_KEYS = [
 ]
 STREAM_NESTED = {
     "replay": ["mode", "lastEventId", "reason"],
-    "reconnect": ["initialBackoffMs", "maxBackoffMs", "resetOn", "stopOn"],
+    "reconnect": ["initialBackoffMs", "maxBackoffMs", "resetOn", "resetOnReason", "stopOn"],
     "draft": ["intervalMs", "edge", "meaning", "firstChunk", "coalesce", "seqUnit", "nonBlocking"],
     "headers": ["Cache-Control", "Connection", "X-Accel-Buffering"],
 }
@@ -178,6 +181,7 @@ def main() -> None:
         "tool.json": read_agent_tools,
         "output.json": read_agent_output,
         "cases.json": read_agent_cases,
+        "summary.json": lambda agent: read_json(f"agent/{agent}/summary.json"),
     }
     agent_file_count = 0
     for agent in AGENTS:
@@ -196,6 +200,14 @@ def main() -> None:
     grouped: dict[str, list[str]] = {"enforced": [], "recorded": [], "unclassified": []}
     for surface in surfaces:
         grouped[enforcement_level(surface)].append(surface)
+
+    # 목록을 손으로 적는 자리이므로 계약에 파일을 더하고 목록에 적지 않으면 그 자리는 조용히 검사 밖에 선다.
+    counted_surfaces = set(surfaces)
+    unlisted_agent_files = [
+        path
+        for path in list_axis_surfaces()
+        if path.startswith("agent/") and path.endswith(".json") and path not in counted_surfaces
+    ]
 
     stream = read_case("chat.query").get("stream", {})
     missing_stream = [f"stream.{key}" for key in STREAM_KEYS if key not in stream] + [
@@ -276,6 +288,9 @@ def main() -> None:
 
     if not cases:
         raise SystemExit("적합성 케이스가 하나도 없다")
+    if unlisted_agent_files:
+        unlisted = ", ".join(unlisted_agent_files)
+        raise SystemExit(f"계약에 있으나 검사기가 세지 않는 자리가 있다 — {unlisted}")
     if grouped["unclassified"]:
         unclassified = ", ".join(grouped["unclassified"])
         raise SystemExit(f"강제인지 기록인지 정해지지 않은 자리가 있다 — {unclassified}")

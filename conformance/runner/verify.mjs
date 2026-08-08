@@ -55,6 +55,9 @@ const SHARED = [
     "model.envelope.json",
     "redaction.json",
     "scope.token.json",
+    "text.limits.json",
+    "dispatch.plan.json",
+    "ledger.availability.json",
 ];
 const WIRE = ["envelope.json", "headers.json", "topics.json", "job.kinds.json"];
 const TOPIC_FIELDS = ["name", "key", "payload", "delivery"];
@@ -75,7 +78,7 @@ const STREAM_KEYS = [
 ];
 const STREAM_NESTED = {
     replay: ["mode", "lastEventId", "reason"],
-    reconnect: ["initialBackoffMs", "maxBackoffMs", "resetOn", "stopOn"],
+    reconnect: ["initialBackoffMs", "maxBackoffMs", "resetOn", "resetOnReason", "stopOn"],
     draft: ["intervalMs", "edge", "meaning", "firstChunk", "coalesce", "seqUnit", "nonBlocking"],
     headers: ["Cache-Control", "Connection", "X-Accel-Buffering"],
 };
@@ -138,6 +141,7 @@ const AGENT_READERS = {
     "tool.json": readAgentTools,
     "output.json": readAgentOutput,
     "cases.json": readAgentCases,
+    "summary.json": (agent) => readJson(`agent/${agent}/summary.json`),
 };
 
 let agentFileCount = 0;
@@ -160,6 +164,12 @@ surfaces.push(
 
 const grouped = { enforced: [], recorded: [], unclassified: [] };
 for (const surface of surfaces) grouped[enforcementLevel(surface)].push(surface);
+
+// 목록을 손으로 적는 자리이므로 계약에 파일을 더하고 목록에 적지 않으면 그 자리는 조용히 검사 밖에 선다.
+const countedSurfaces = new Set(surfaces);
+const unlistedAgentFiles = listAxisSurfaces()
+    .filter((path) => path.startsWith("agent/") && path.endsWith(".json"))
+    .filter((path) => !countedSurfaces.has(path));
 
 const declaredPaths = new Set(readDeclaredHttpPaths());
 const bindings = readToolBindingPaths();
@@ -226,6 +236,11 @@ const incompleteTopics = Object.entries(topics)
     .map(([id]) => id);
 
 if (cases.length === 0) throw new Error("적합성 케이스가 하나도 없다");
+if (unlistedAgentFiles.length > 0) {
+    throw new Error(
+        `계약에 있으나 검사기가 세지 않는 자리가 있다 — ${unlistedAgentFiles.join(", ")}`,
+    );
+}
 if (grouped.unclassified.length > 0) {
     throw new Error(`강제인지 기록인지 정해지지 않은 자리가 있다 — ${grouped.unclassified.join(", ")}`);
 }
