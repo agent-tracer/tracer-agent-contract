@@ -11,6 +11,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const SEMVER_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 const MIGRATION_PATTERN = /^(\d{4})-[a-z0-9-]+\.sql$/;
 const CONTRACT_VERSION_PATTERN = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+const PLACEHOLDER_PATTERN = /\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g;
 
 function trackedFiles() {
   return execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" }).trim().split("\n");
@@ -56,12 +57,33 @@ function collectVersions(value) {
   );
 }
 
+/** 조각이 선언한 자리표시자와 본문이 쓴 자리표시자가 같은지 검사한다. */
+export function checkPromptPlaceholders(label, document) {
+  const errors = [];
+  for (const [name, fragment] of Object.entries(document.fragments ?? {})) {
+    const lines = [...(fragment.content ?? []), ...Object.values(fragment.byLanguage ?? {}).flat()];
+    const used = new Set([...lines.join("\n").matchAll(PLACEHOLDER_PATTERN)].map((match) => match[1]));
+    const declared = new Set(fragment.placeholders ?? []);
+    const undeclared = [...used].filter((one) => !declared.has(one)).sort();
+    const unused = [...declared].filter((one) => !used.has(one)).sort();
+
+    if (undeclared.length > 0) {
+      errors.push(`${label} 의 ${name} 이 선언하지 않은 자리표시자를 쓴다: ${undeclared.join(", ")}`);
+    }
+    if (unused.length > 0) {
+      errors.push(`${label} 의 ${name} 이 쓰지 않는 자리표시자를 선언한다: ${unused.join(", ")}`);
+    }
+  }
+  return errors;
+}
+
 function checkJson(files) {
   const errors = [];
   for (const file of files) {
     try {
       const document = JSON.parse(fs.readFileSync(path.join(repoRoot, file), "utf8"));
       if (file.startsWith("agent/")) errors.push(...checkContractVersions(file, document));
+      if (file.endsWith("/prompt.json")) errors.push(...checkPromptPlaceholders(file, document));
     } catch (cause) {
       errors.push(`${file} 이 JSON 으로 읽히지 않는다: ${cause.message}`);
     }

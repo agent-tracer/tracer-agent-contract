@@ -20,9 +20,6 @@
         "contexts, and each reported a verdict plus verbatim excerpts; their evidence ledgers were merged into",
         "one. You have no tools. Your request lists every identifier that merged ledger can back; an ID that is",
         "not on that list is not citable, so never guess IDs."
-      ],
-      "placeholders": [
-        "checkCitationsTool"
       ]
     },
     "citationDiscipline": {
@@ -34,9 +31,6 @@
         "saved. Cite only the identifiers your request lists as citable.",
         "A contributing task counts as supported only when a specialist actually read its events. A task a",
         "specialist merely named without reading is not enough."
-      ],
-      "placeholders": [
-        "checkCitationsTool"
       ]
     },
     "turnSplitting": {
@@ -160,9 +154,6 @@
         "Change only what is necessary to satisfy these errors, using only identifiers the specialists",
         "surfaced. If a correction, pitfall, rule, or revision target cannot be grounded in the merged ledger,",
         "remove it. Then return the complete repaired candidate list."
-      ],
-      "placeholders": [
-        "checkCitationsTool"
       ]
     },
     "specialistCatalog": {
@@ -184,9 +175,6 @@
         "Put depth where the evidence is; a specialist you do not need is a specialist you should not dispatch.",
         "Depth is relative to the other specialists, not a count you can run out of, and the budget is split",
         "between specialists in proportion to it."
-      ],
-      "placeholders": [
-        "maxProbeWeight"
       ]
     },
     "emptyPlan": {
@@ -206,15 +194,22 @@
       ]
     },
     "specialistReporting": {
-      "version": "v0.0.2",
+      "version": "v0.0.3",
       "content": [
         "Report a verdict that answers your question directly, and attach the excerpts the coordinator needs",
         "to write from — quote the evidence rather than summarising it away, because the coordinator cannot",
         "see what you read. Every excerpt must name the event it came from: an ID the coordinator cannot cite",
-        "is worse than no evidence at all."
+        "is worse than no evidence at all.",
+        "Your report is cut to a fixed size: the verdict holds at most ${probeVerdictChars} characters, and",
+        "you may attach at most ${maxProbeExcerpts} excerpts of at most ${probeExcerptChars} characters each.",
+        "A report over any of these is rejected whole, and the retry spends a turn of this same investigation",
+        "budget, so write inside them the first time. Keep the verdict to the findings and let the excerpts",
+        "carry the quotes."
       ],
       "placeholders": [
-        "checkCitationsTool"
+        "probeVerdictChars",
+        "probeExcerptChars",
+        "maxProbeExcerpts"
       ]
     },
     "languageDirective": {

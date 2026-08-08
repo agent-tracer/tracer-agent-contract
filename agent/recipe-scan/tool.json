@@ -3,9 +3,13 @@
   "version": "v0.0.1",
   "limits": {
     "recipeCandidateLimit": 4,
+    "maxDispatchProbes": 3,
     "maxRedispatchProbes": 3,
     "maxRedispatchRounds": 1,
-    "citableIdListLimit": 40
+    "citableIdListLimit": 40,
+    "probeVerdictChars": 1200,
+    "probeExcerptChars": 600,
+    "maxProbeExcerpts": 12
   },
   "tools": {
     "get_task_summary": {

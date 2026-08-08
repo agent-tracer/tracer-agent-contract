@@ -98,9 +98,6 @@
                 "a long-running one deserves deep, and a hasEvents=false shell just shallow, since its reviewer only",
                 "has to confirm the shell is empty. Depth sets each reviewer's share of the inspection budget; depth",
                 "is relative to the other assignments, not a count you can run out of."
-            ],
-            "placeholders": [
-                "maxInspectWeight"
             ]
         },
         "reviewerCharter": {
