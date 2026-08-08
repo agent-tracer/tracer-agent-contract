@@ -40,7 +40,8 @@ workflows:
         startToCloseSeconds: 60
         maximumAttempts: 5
         meaning: 이 스레드에서 자기 축이 맡은 다음 대기 실행 하나를 원장에서 조회한다
-    idleSeconds: 5
+    # 대화 간격보다 짧으면 매 턴이 차가운 워크플로 시작 비용을 내므로 이만큼 기다린다.
+    idleSeconds: 120
     maxChildren: 100
 
   chatExecution:
