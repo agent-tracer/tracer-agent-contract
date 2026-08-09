@@ -72,8 +72,9 @@
             "canonical": "ts",
             "ts": "워크플로를 잡 종류마다 두므로 상한도 종류마다 다르다. 계약이 titleSuggestion 에 적은 값은 그 자리에서 읽고, 계약이 적지 않은 recipeScan 과 taskCleanup 은 이 축이 값을 갖는다",
             "python": "워크플로를 한 벌로 받으므로 세 종류에 같은 상한을 쓴다. 계약이 titleSuggestion 에 적은 값과도 어긋난다",
-            "resolution": "계약이 titleSuggestion 에 적은 상한은 갈림이 아니라 지켜야 하는 값이므로 python 축이 그 종류만 먼저 맞춘다. 나머지 두 종류의 상한은 워크플로를 종류마다 두느냐 한 벌로 두느냐에서 나오는 차이이며, 그 모양을 좁히기 전에는 계약이 값을 갖지 않는다",
-            "note": "이 갈림은 job.workflow.shape 이 적는 워크플로 개수의 차이에서 파생된다. 모양이 같아지기 전에 상한만 통일하면 한 축이 자기 실행 특성과 맞지 않는 상한을 쓴다"
+            "resolution": "계약이 titleSuggestion 에 적은 상한은 갈림이 아니라 지켜야 하는 값이므로 python 축이 그 종류를 맞춘다. 나머지 두 종류는 계약이 값을 채우면 닫히며, 무엇을 채울지는 각 축의 생성이 그 상한 안에서 끝나는지로 정한다.",
+            "note": "이 갈림은 job.workflow.shape 과 별개다. shape 이 묻는 것은 재개 상태를 어디에 두는가이고 워크플로를 몇 개로 두는지가 아니므로, shape 이 닫혀도 상한은 저절로 정해지지 않고 상한이 정해져도 shape 은 남는다.",
+            "measured": "두 축의 값을 나란히 두면 좁혀야 하는 자리가 하나다. title 은 두 축이 같고, recipe 는 start 가 같고 schedule 만 다르며, cleanup 만 start 가 갈린다(python 900 초 · ts 600 초). 그러므로 이 갈림의 실질은 cleanup 생성이 600 초 안에 끝나는가 하나이며 그 답은 두 축의 관측이 갖는다."
         }
     ],
     "canonical": "ts가 정본이다. 항목의 canonical이 python이면 SDK나 LangGraph가 강제해 정본이 따라가야 하는 자리다.",
