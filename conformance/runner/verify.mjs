@@ -53,6 +53,7 @@ const SHARED = [
     "execution.vocabulary.json",
     "execution.budget.json",
     "model.envelope.json",
+    "model.rates.json",
     "redaction.json",
     "scope.token.json",
     "text.limits.json",
@@ -625,6 +626,24 @@ console.log(
     `실행에 매인 자격은 ${scopeToken.prefix} 로 시작해 ${scopeToken.payload.fields.length}개 칸을 ` +
         `${scopeToken.signature.algorithm} 으로 서명한다`,
 );
+const modelRates = readShared("model.rates.json");
+if (modelRates.cache.writeMultiplier[modelRates.cache.defaultTtl] === undefined) {
+    throw new Error(
+        `기본 캐시 수명 ${modelRates.cache.defaultTtl} 의 배수를 계약이 적지 않는다`,
+    );
+}
+for (const [model, rate] of Object.entries(modelRates.base)) {
+    if (!(rate.input > 0) || !(rate.output > 0)) {
+        throw new Error(`${model} 의 단가가 0 이하라 예산을 집행할 수 없다`);
+    }
+}
+const unpricedModels = (readShared("model.envelope.json").sharedOutputBudget?.appliesTo ?? []).filter(
+    (model) => modelRates.base[model] === undefined,
+);
+if (unpricedModels.length > 0) {
+    throw new Error(`봉투가 이름으로 가리키나 단가를 적지 않은 모델이 있다 — ${unpricedModels.join(", ")}`);
+}
+
 const carried = Object.entries(settingInputs)
     .map(([field, declared]) => `${field} ← ${declared.setting}`)
     .join(" · ");
@@ -633,3 +652,9 @@ const overridden = Object.values(carriedEnvelope)
     .map((declared) => `${declared.overrides} ← ${declared.setting}`)
     .join(" · ");
 console.log(`설정이 봉투를 덮는 자리 ${Object.keys(carriedEnvelope).length}개를 계약이 갖는다 — ${overridden}`);
+console.log(
+    `단가를 아는 모델 ${Object.keys(modelRates.base).length}개와 캐시 수명 ` +
+        `${Object.keys(modelRates.cache.writeMultiplier).length}개를 계약이 갖는다 — ` +
+        `기본 수명 ${modelRates.cache.defaultTtl} 의 쓰기 배수는 ` +
+        `${modelRates.cache.writeMultiplier[modelRates.cache.defaultTtl]} 다`,
+);

@@ -1,0 +1,25 @@
+{
+  "meaning": "실행이 태운 토큰을 달러로 옮기는 단가와 그 단가를 정하는 규칙을 두 구현체가 같은 자리에서 읽게 한다. 단가가 갈리면 같은 실행이 한 축에서만 예산에 닿아 도구를 잃는다.",
+  "unit": "백만 토큰당 USD 이며 값의 출처는 Anthropic 공식 요금 문서다.",
+  "base": {
+    "claude-opus-5": { "input": 5.0, "output": 25.0 },
+    "claude-sonnet-5": { "input": 3.0, "output": 15.0 },
+    "claude-sonnet-4-6": { "input": 3.0, "output": 15.0 },
+    "claude-haiku-4-5": { "input": 1.0, "output": 5.0 }
+  },
+  "baseNote": "도입 단가가 걸린 모델도 정가로 적는다. 예산을 낮춰 잡으면 상한이 늦게 걸려 실행이 예산을 넘긴 뒤에야 멈춘다.",
+  "cache": {
+    "meaning": "캐시 단가는 입력 단가의 배수이며 쓰기의 배수는 그 캐시 항목의 수명이 정한다.",
+    "writeMultiplier": {
+      "5m": 1.25,
+      "1h": 2.0
+    },
+    "readMultiplier": 0.1,
+    "defaultTtl": "5m",
+    "defaultTtlMeaning": "cache_control 이 수명을 싣지 않으면 공급자가 이 수명을 쓴다.",
+    "rule": "구현체는 자기 실행이 실제로 요청하는 수명의 배수로 청구한다. 수명을 지정할 자리가 없는 실행기를 쓰면 요청하는 수명은 defaultTtl 이다.",
+    "reportedTokens": "실행기가 캐시 쓰기 토큰을 수명별로 나누어 주지 않으면 한 배수로만 청구할 수 있다. 그러므로 청구하는 배수는 실행기가 실제로 요청하는 수명에서 나와야 하며 골라 적는 값이 아니다.",
+    "divergenceRule": "두 축이 다른 수명을 청구하면 같은 실행의 비용이 갈린다. 수명을 맞추거나 conformance/cases/divergence.json 에 근거를 남긴다."
+  },
+  "verification": "구현체는 자기 단가표의 모든 행이 base 와 같고 cacheWrite 와 cacheRead 가 자기 수명의 배수와 같은지 보는 검사를 갖는다. 배수를 산문으로만 적으면 표의 한 줄이 어긋나도 아무도 알지 못한다."
+}

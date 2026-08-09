@@ -59,6 +59,7 @@ SHARED = [
     "execution.vocabulary.json",
     "execution.budget.json",
     "model.envelope.json",
+    "model.rates.json",
     "redaction.json",
     "scope.token.json",
     "text.limits.json",
@@ -662,12 +663,32 @@ def main() -> None:
         f"{len(scope_token['payload']['fields'])}개 칸을 "
         f"{scope_token['signature']['algorithm']} 으로 서명한다"
     )
+    model_rates = read_shared("model.rates.json")
+    cache = model_rates["cache"]
+    if cache["defaultTtl"] not in cache["writeMultiplier"]:
+        raise SystemExit(f"기본 캐시 수명 {cache['defaultTtl']} 의 배수를 계약이 적지 않는다")
+    for model, rate in model_rates["base"].items():
+        if rate["input"] <= 0 or rate["output"] <= 0:
+            raise SystemExit(f"{model} 의 단가가 0 이하라 예산을 집행할 수 없다")
+    unpriced_models = [
+        model
+        for model in read_shared("model.envelope.json").get("sharedOutputBudget", {}).get("appliesTo", [])
+        if model not in model_rates["base"]
+    ]
+    if unpriced_models:
+        raise SystemExit(f"봉투가 이름으로 가리키나 단가를 적지 않은 모델이 있다 — {', '.join(unpriced_models)}")
+
     carried = " · ".join(f"{field} ← {declared['setting']}" for field, declared in setting_inputs.items())
     print(f"설정이 실행 입력에 실리는 자리 {len(setting_inputs)}개를 계약이 갖는다 — {carried}")
     overridden = " · ".join(
         f"{declared['overrides']} ← {declared['setting']}" for declared in carried_envelope.values()
     )
     print(f"설정이 봉투를 덮는 자리 {len(carried_envelope)}개를 계약이 갖는다 — {overridden}")
+    print(
+        f"단가를 아는 모델 {len(model_rates['base'])}개와 캐시 수명 "
+        f"{len(cache['writeMultiplier'])}개를 계약이 갖는다 — "
+        f"기본 수명 {cache['defaultTtl']} 의 쓰기 배수는 {cache['writeMultiplier'][cache['defaultTtl']]} 다"
+    )
 
 
 if __name__ == "__main__":
