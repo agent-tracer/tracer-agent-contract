@@ -105,12 +105,22 @@ jobWorkflows:
       activities:
         - name: prepareRecipeScan
           queue: jobs
+          startToCloseSeconds: 60
+          maximumAttempts: 5
         - name: generateRecipeCandidates
           queue: generate
+          startToCloseSeconds: 900
+          scheduleToCloseSeconds: 3600
+          heartbeatTimeoutSeconds: 30
+          maximumAttempts: 3
         - name: finalizeRecipeScan
           queue: jobs
+          startToCloseSeconds: 60
+          maximumAttempts: 5
         - name: markRecipeJobFailed
           queue: jobs
+          startToCloseSeconds: 60
+          maximumAttempts: 5
 
     taskCleanup:
       name: taskCleanupWorkflow
@@ -119,12 +129,22 @@ jobWorkflows:
       activities:
         - name: prepareTaskCleanup
           queue: jobs
+          startToCloseSeconds: 120
+          maximumAttempts: 5
         - name: generateTaskCleanupSuggestions
           queue: generate
+          startToCloseSeconds: 600
+          scheduleToCloseSeconds: 1800
+          heartbeatTimeoutSeconds: 30
+          maximumAttempts: 3
         - name: finalizeTaskCleanup
           queue: jobs
+          startToCloseSeconds: 60
+          maximumAttempts: 5
         - name: markCleanupJobFailed
           queue: jobs
+          startToCloseSeconds: 60
+          maximumAttempts: 5
 
   singleKind:
     agentJob:

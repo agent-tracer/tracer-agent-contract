@@ -126,6 +126,28 @@ const RETIRED_ATTRIBUTES = [
     "agent_tracer.variant.id",
 ];
 
+
+/** 모델이 지켜야 하는 수치는 스키마에만 두면 모델에게 닿지 않으므로 프롬프트 본문에도 있어야 한다. */
+function schemaNumbersMissingFromPrompt(agentId) {
+    const seen = new Set();
+    const numbers = [];
+    const walk = (node) => {
+        if (node === null || typeof node !== "object") return;
+        if (Array.isArray(node)) return node.forEach(walk);
+        for (const key of ["maxLength", "maxItems", "minItems"]) {
+            const value = node[key];
+            if (typeof value === "number" && value > 1 && !seen.has(value)) {
+                seen.add(value);
+                numbers.push(value);
+            }
+        }
+        Object.values(node).forEach(walk);
+    };
+    walk(readAgentOutput(agentId).schema);
+    const body = JSON.stringify(readAgentPrompt(agentId));
+    return numbers.filter((value) => !new RegExp(`\\b${value}\\b`, "u").test(body));
+}
+
 const version = readVersion();
 const cases = listCases();
 const surfaces = [];
@@ -308,6 +330,12 @@ const brokenRequiredByAction = Object.entries(chatTools).flatMap(([name, tool]) 
 });
 if (brokenRequiredByAction.length > 0) {
     throw new Error(`action 이 요구하는 인자의 표가 어긋난다 — ${brokenRequiredByAction.join(" · ")}`);
+}
+const promptlessLimits = AGENTS.flatMap((agent) =>
+    schemaNumbersMissingFromPrompt(agent).map((value) => `${agent} 의 ${value}`),
+);
+if (promptlessLimits.length > 0) {
+    throw new Error(`스키마가 요구하는 수치를 프롬프트가 모델에게 알리지 않는다 — ${promptlessLimits.join(" · ")}`);
 }
 const immediateConfirmTools = confirmToolsCalledImmediate("chat", toolSurfaces[CONFIRM_SURFACE] ?? []);
 if (immediateConfirmTools.length > 0) {

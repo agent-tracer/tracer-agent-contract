@@ -39,7 +39,8 @@
                 "  - rationale: one sentence, under 500 chars, restating what the reviewer found (e.g. \"no events",
                 "    since creation\", \"only a Read with no edits and no conclusion\").",
                 "  - evidenceEventIds: up to ${maxEvidenceEventIds} IDs, exactly as the reviewer cited them.",
-                "  - Task ids and the \"kind\" enum stay literal; only the rationale follows the output language."
+                "  - Task ids and the \"kind\" enum stay literal; only the rationale follows the output language.",
+                "Hard limits the output is rejected for exceeding: at most 50 suggestions in one response, and at most 100 evidence event ids on each suggestion."
             ],
             "placeholders": [
                 "maxEvidenceEventIds"

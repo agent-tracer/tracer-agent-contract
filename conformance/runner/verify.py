@@ -149,6 +149,32 @@ RETIRED_ATTRIBUTES = [
 ]
 
 
+
+def schema_numbers_missing_from_prompt(agent_id: str) -> list[int]:
+    """모델이 지켜야 하는 수치는 스키마에만 두면 모델에게 닿지 않으므로 프롬프트 본문에도 있어야 한다."""
+    seen: set[int] = set()
+    numbers: list[int] = []
+
+    def walk(node: object) -> None:
+        if isinstance(node, list):
+            for entry in node:
+                walk(entry)
+            return
+        if not isinstance(node, dict):
+            return
+        for key in ("maxLength", "maxItems", "minItems"):
+            value = node.get(key)
+            if isinstance(value, int) and not isinstance(value, bool) and value > 1 and value not in seen:
+                seen.add(value)
+                numbers.append(value)
+        for entry in node.values():
+            walk(entry)
+
+    walk(read_agent_output(agent_id)["schema"])
+    body = json.dumps(read_agent_prompt(agent_id), ensure_ascii=False)
+    return [value for value in numbers if not re.search(rf"\b{value}\b", body)]
+
+
 def confirm_tools_called_immediate(agent_id: str, confirm_tools: list[str]) -> list[str]:
     """확인을 받아야 하는 도구를 즉시 실행이라고 적은 프롬프트 문장을 찾는다."""
     fragments = read_agent_prompt(agent_id)["fragments"]
@@ -355,6 +381,14 @@ def main() -> None:
             for name in surface_mismatch
         )
         raise SystemExit(f"도구의 표면과 적합성이 적은 목록이 다르다 — {detail}")
+    promptless_limits = [
+        f"{agent} 의 {value}"
+        for agent in AGENTS
+        for value in schema_numbers_missing_from_prompt(agent)
+    ]
+    if promptless_limits:
+        detail = " · ".join(promptless_limits)
+        raise SystemExit(f"스키마가 요구하는 수치를 프롬프트가 모델에게 알리지 않는다 — {detail}")
     if broken_required_by_action:
         broken = " · ".join(broken_required_by_action)
         raise SystemExit(f"action 이 요구하는 인자의 표가 어긋난다 — {broken}")

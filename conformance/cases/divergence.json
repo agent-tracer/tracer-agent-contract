@@ -7,9 +7,10 @@
             "area": "agent",
             "summary": "실행 도중 쌓인 오래된 도구 결과를 비우는 주체가 한 축에만 있다",
             "canonical": "python",
-            "ts": "에이전트 SDK 의 자동 압축에 맡기며 그 판단 시점과 임계값이 구현체 밖에 있어 조회할 수 없다",
+            "ts": "에이전트 SDK 의 자동 압축에 맡긴다. 임계값은 실행 중 Query.getContextUsage 로 조회되고 압축 시점은 PreCompact 와 PostCompact 훅으로 관측되므로 구현체가 볼 수 없는 것은 아니다. 끄고 직접 편집하는 값은 settings.json 이 갖는데 운영 프로파일이 settingSources 를 비워 그 파일을 읽지 않는다.",
             "python": "ContextEditingMiddleware 가 chat 과 recipe-scan 의 표준 실행 체인 안에서 앞선 도구 결과를 비운다. 비우는 자리는 프롬프트 캐시 경계 안쪽이므로 정리가 실행되는 호출은 그 접두사를 다시 쓴다",
-            "resolution": "SDK 축이 압축 임계값과 결과를 관측 가능한 형태로 노출하거나, python 이 SDK 의 자동 압축과 같은 판단 기준을 따르도록 trigger 와 keep 을 계약이 갖는 뒤에만 좁힐 수 있다"
+            "resolution": "좁히려면 운영 프로파일이 봉인한 settingSources 를 여는 결정이 먼저이며, 그 봉인은 디스크 설정이 모델과 permissions 와 도구 표면을 바꾸지 못하게 하려는 것이므로 이 갈림보다 무겁다. 봉인을 유지하는 동안에는 계약이 trigger 와 keep 을 값으로 갖고 python 축이 그것을 따르는 것까지만 할 수 있다.",
+            "note": "이 갈림은 SDK 가 강제한 것이 아니라 이 저장소의 운영 정책이 닫은 자리다. 두 말은 다르므로 근거를 섞지 않는다."
         },
         {
             "id": "agent.model.retry",
@@ -39,15 +40,6 @@
             "resolution": "계약이 턴을 무엇으로 세는지 정하고 두 축이 같은 단위를 쓰거나, 마무리에 필요한 몫을 계약이 값으로 갖는 뒤에 좁힐 수 있다"
         },
         {
-            "id": "recipe.draft.language",
-            "area": "agent",
-            "summary": "레시피 초안이 답변 언어를 싣는 축이 하나뿐이다",
-            "canonical": "ts",
-            "ts": "산출 어댑터가 배치의 language 를 초안마다 실어 보내므로 원장의 레시피가 어느 언어로 쓰였는지를 갖는다",
-            "python": "산출을 종결하는 자리가 요청 payload 를 받지 않아 language 에 닿지 못하고 초안에서 뺀다. 계약이 optional 로 두므로 본문은 유효하지만 python 축이 만든 레시피는 언어가 비어 저장된다",
-            "resolution": "잡 산출을 종결하는 공유 표면이 요청 payload 를 함께 받도록 계약이 그 자리를 갖는 뒤에 좁힌다. 그 전에는 python 축의 레시피 언어가 비는 것을 알고 읽는다"
-        },
-        {
             "id": "chat.draft.transport",
             "area": "agent",
             "summary": "진행 중인 답변이 원장에 닿는 경로가 한 축은 프로세스 안이고 다른 축은 실행 창구다",
@@ -55,26 +47,6 @@
             "ts": "워커가 원장 저장소를 직접 불러 검사점을 적는다. 홉이 하나라 창구의 상태와 무관하다",
             "python": "그래프 코드가 원장을 알지 않고 전송 경계만 아는 구조라 실행 창구로 POST 한다. 접수가 받아 원장에 적고 열린 연결에 알린다",
             "resolution": "두 축의 전송이 모델 루프를 막지 않고 같은 리듬과 같은 순번을 내면 사용자에게 닿는 결과가 같다. 그래프가 원장을 직접 아는 구조로 바꾸지 않는 한 홉 수는 좁히지 않는다"
-        },
-        {
-            "id": "chat.stream.resend",
-            "area": "agent",
-            "summary": "변화가 없을 때 정본을 다시 싣는 주기를 세는 방식이 두 축에서 다르다",
-            "canonical": "ts",
-            "ts": "고정 간격 타이머라 마지막 활동과 무관하게 계약이 정한 주기마다 깨어난다",
-            "python": "유휴 타임아웃이라 신호를 받으면 그 시점부터 주기를 다시 센다",
-            "resolution": "두 축 모두 계약이 정한 주기를 넘겨 침묵하지 않으므로 게이트웨이 유휴 판정에는 같다. 계약이 프레임의 간격을 상한으로만 정하는 동안에는 좁히지 않는다"
-        },
-        {
-            "id": "job.workflow.limits",
-            "area": "workflow",
-            "summary": "잡 생성 활동의 상한을 계약이 한 종류만 갖고 나머지는 축마다 다르다",
-            "canonical": "ts",
-            "ts": "워크플로를 잡 종류마다 두므로 상한도 종류마다 다르다. 계약이 titleSuggestion 에 적은 값은 그 자리에서 읽고, 계약이 적지 않은 recipeScan 과 taskCleanup 은 이 축이 값을 갖는다",
-            "python": "워크플로를 한 벌로 받으므로 세 종류에 같은 상한을 쓴다. 계약이 titleSuggestion 에 적은 값과도 어긋난다",
-            "resolution": "계약이 titleSuggestion 에 적은 상한은 갈림이 아니라 지켜야 하는 값이므로 python 축이 그 종류를 맞춘다. 나머지 두 종류는 계약이 값을 채우면 닫히며, 무엇을 채울지는 각 축의 생성이 그 상한 안에서 끝나는지로 정한다.",
-            "note": "이 갈림은 job.workflow.shape 과 별개다. shape 이 묻는 것은 재개 상태를 어디에 두는가이고 워크플로를 몇 개로 두는지가 아니므로, shape 이 닫혀도 상한은 저절로 정해지지 않고 상한이 정해져도 shape 은 남는다.",
-            "measured": "두 축의 값을 나란히 두면 좁혀야 하는 자리가 하나다. title 은 두 축이 같고, recipe 는 start 가 같고 schedule 만 다르며, cleanup 만 start 가 갈린다(python 900 초 · ts 600 초). 그러므로 이 갈림의 실질은 cleanup 생성이 600 초 안에 끝나는가 하나이며 그 답은 두 축의 관측이 갖는다."
         }
     ],
     "canonical": "ts가 정본이다. 항목의 canonical이 python이면 SDK나 LangGraph가 강제해 정본이 따라가야 하는 자리다.",
