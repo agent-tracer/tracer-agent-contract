@@ -1,5 +1,34 @@
 # 데이터베이스 스키마
 
+## 마이그레이션 적용
+
+`db/migrations/` 의 SQL 은 Flyway 가 적용한다. 적용기는 언어 중립 도구 하나이며 어느 구현체도
+DDL 을 실행하지 않는다. 파일 이름은 Flyway 관습인 `V<번호>__<이름>.sql` 이고 네 자리 번호가
+곧 판이다. 번호는 `0001` 부터 빠짐없이 하나씩 오르며 `scripts/check-contract-files.mjs` 가
+그 규칙을 검사한다.
+
+적용 이력은 Flyway 가 대상 원장에 만드는 `flyway_schema_history` 가 갖는다. 계약은 이력 표를
+선언하지 않으며 이미 적용된 판을 건너뛰는 판단도 그 표가 한다. 이 판의 적용기는 빈 원장을
+전제하므로, 이력 표 없이 DDL 이 적용되어 있던 원장은 이어받지 않고 비운 뒤 다시 적용한다.
+
+이 디렉터리의 DDL 은 에이전트 실행 원장 `agent-db` 하나만 대상으로 한다. 추적 원장의 DDL 은
+`agent-tracer` 가 소유하며 이 계약의 범위 밖이다. 배포에서 어느 원장의 DDL 이 서는지는
+프로파일이 세우는 원장이 정한다.
+
+| 배포 프로파일 | 추적 원장 `event-db`·`tracer-db` | 에이전트 원장 `agent-db` |
+| --- | --- | --- |
+| `tracer` | `agent-tracer` 의 `migrate` 원샷 | 원장을 세우지 않는다 |
+| `ts` | 같다 | 이 디렉터리를 Flyway 가 적용한다 |
+| `python` | 같다 | 이 디렉터리를 Flyway 가 적용한다 |
+| `compare` | 같다 | 이 디렉터리를 Flyway 가 한 번 적용한다 |
+
+```bash
+docker run --rm -v "$PWD/db/migrations:/flyway/sql:ro" \
+  -e FLYWAY_URL=jdbc:postgresql://127.0.0.1:5434/agent \
+  -e FLYWAY_USER=root -e FLYWAY_PASSWORD=root \
+  flyway/flyway:11-alpine migrate
+```
+
 ## 채팅 도메인
 
 - `chat_threads`: 사용자별 대화 묶음과 제목, 요약, backend 정보를 담는다. `summary_through_message_id` 는 그 요약이 접은 마지막 메시지를 가리키며, 읽는 쪽이 그 뒤부터 실어 요약과 재생 사이에 빈 구간이 생기지 않게 한다. 요약과 이 칸은 CHECK 제약으로 함께 있거나 함께 없다.

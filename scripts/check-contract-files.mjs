@@ -9,7 +9,8 @@ import { fileURLToPath } from "node:url";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const SEMVER_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
-const MIGRATION_PATTERN = /^(\d{4})-[a-z0-9-]+\.sql$/;
+// 이름은 Flyway 가 판과 설명을 가르는 자리이므로 접두 V 와 구분자 __ 를 그대로 쓴다.
+const MIGRATION_PATTERN = /^V(\d{4})__[a-z0-9-]+\.sql$/;
 const CONTRACT_VERSION_PATTERN = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 const PLACEHOLDER_PATTERN = /\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g;
 
@@ -25,7 +26,7 @@ export function checkMigrationOrder(fileNames) {
   for (const name of fileNames) {
     const matched = MIGRATION_PATTERN.exec(name);
     if (matched === null) {
-      errors.push(`migration 이름이 NNNN-소문자-이름.sql 이 아니다: ${name}`);
+      errors.push(`migration 이름이 VNNNN__소문자-이름.sql 이 아니다: ${name}`);
       continue;
     }
     numbered.push({ name, number: Number.parseInt(matched[1], 10) });
