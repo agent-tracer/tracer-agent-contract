@@ -627,6 +627,17 @@ console.log(
     `실행에 매인 자격은 ${scopeToken.prefix} 로 시작해 ${scopeToken.payload.fields.length}개 칸을 ` +
         `${scopeToken.signature.algorithm} 으로 서명한다`,
 );
+// 도구 인자의 상한은 스키마가 강제하지 못하므로 설명에 그 수가 있어야 모델에게 닿는다.
+const silentArgLimits = AGENTS.flatMap((agent) =>
+    Object.entries(readAgentTools(agent).tools ?? {}).flatMap(([tool, declared]) =>
+        Object.entries(declared.args ?? {})
+            .filter(([, arg]) => typeof arg?.maxLength === "number")
+            .filter(([, arg]) => !String(arg.description ?? "").includes(String(arg.maxLength)))
+            .map(([name]) => `${agent}.${tool}.${name}`)));
+if (silentArgLimits.length > 0) {
+    throw new Error(`도구 인자의 상한이 설명에 없어 모델에게 닿지 않는다 — ${silentArgLimits.join(", ")}`);
+}
+
 // 보고의 칸 목록은 두 축이 자기 모양을 대조하는 자리이므로 없어지면 그 대조가 조용히 사라진다.
 for (const agent of AGENTS) {
     const report = readAgentTools(agent).orchestration?.workerReport;

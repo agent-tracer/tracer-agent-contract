@@ -377,7 +377,8 @@
                     "required": true,
                     "trim": true,
                     "minLength": 1,
-                    "description": "The fact itself, written so it still makes sense in a different thread weeks from now."
+                    "maxLength": 4000,
+                    "description": "The fact itself, written so it still makes sense in a different thread weeks from now. At most 4000 characters."
                 }
             }
         },

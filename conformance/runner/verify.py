@@ -664,6 +664,21 @@ def main() -> None:
         f"{len(scope_token['payload']['fields'])}개 칸을 "
         f"{scope_token['signature']['algorithm']} 으로 서명한다"
     )
+    # 도구 인자의 상한은 스키마가 강제하지 못하므로 설명에 그 수가 있어야 모델에게 닿는다.
+    silent_arg_limits = [
+        f"{agent}.{tool}.{name}"
+        for agent in AGENTS
+        for tool, declared in (read_agent_tools(agent).get("tools") or {}).items()
+        for name, arg in (declared.get("args") or {}).items()
+        if isinstance(arg, dict)
+        and isinstance(arg.get("maxLength"), int)
+        and str(arg["maxLength"]) not in str(arg.get("description", ""))
+    ]
+    if silent_arg_limits:
+        raise SystemExit(
+            f"도구 인자의 상한이 설명에 없어 모델에게 닿지 않는다 — {', '.join(silent_arg_limits)}"
+        )
+
     # 보고의 칸 목록은 두 축이 자기 모양을 대조하는 자리이므로 없어지면 그 대조가 조용히 사라진다.
     for agent in AGENTS:
         report = (read_agent_tools(agent).get("orchestration") or {}).get("workerReport")
