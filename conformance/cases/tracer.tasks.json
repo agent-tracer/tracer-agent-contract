@@ -10,8 +10,7 @@
         "defaultValue": "local"
     },
     "surface": "http/tracer-dependency.openapi.yaml",
-    "implementedByTracer": false,
-    "pending": "추적은 이 조건을 아직 받지 않는다. 계약이 먼저 적고 구현이 뒤따르며, 그때까지 에이전트는 이 조건을 싣지 않는다.",
+    "implementedByTracer": true,
     "shapes": {
         "taskListItem": {
             "meaning": "목록 창구가 내는 태스크 한 행이며 단건 조회 창구가 data.task 에 싣는 것과 같은 칸이다. 세션과 이어서 볼 대상은 단건 조회에만 있고 이 모양에 없다",
