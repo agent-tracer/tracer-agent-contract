@@ -89,6 +89,7 @@
                 "reason",
                 "citedEventIds"
             ],
+            "requiredMeaning": "보고가 갖는 칸의 이름이며 두 축이 자기 모양을 이 목록과 대조한다. 비어 있어도 되는 칸을 가리지 않으므로 그 구분은 각 축의 스키마가 갖는다.",
             "maxReasonChars": 400,
             "maxCitedEventIds": 6,
             "lengthUnit": "codePoint",
