@@ -316,16 +316,6 @@
       "path": "/api/agent/chat/threads/{threadId}/confirmations/{confirmationId}",
       "status": 200,
       "data": "decision"
-    },
-    {
-      "name": "누적 답변을 원장에 통지한다",
-      "method": "POST",
-      "path": "/api/agent/chat/executions/{executionId}/drafts",
-      "status": 200,
-      "data": {
-        "stored": "boolean",
-        "terminal": "boolean"
-      }
     }
   ],
   "stream": {
