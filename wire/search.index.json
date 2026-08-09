@@ -1,0 +1,119 @@
+{
+    "meaning": "레시피 검색이 기대는 색인 하나와 그 색인까지 가는 단계의 정본이다. 두 구현체가 같은 문서 모양과 같은 매핑을 써야 한 색인을 두 축이 번갈아 채워도 검색 결과가 갈리지 않는다.",
+    "store": {
+        "engine": "opensearch",
+        "shared": "추적과 같은 OpenSearch 를 쓰되 색인은 나눈다. 이 계약은 recipes 색인 하나만 소유하고 events 와 tasks 와 memos 는 추적이 소유한다."
+    },
+    "pipeline": {
+        "meaning": "원장 쓰기와 색인 반영을 한 커밋으로 묶을 수 없으므로 아웃박스 행을 남기고 배출기가 뒤에서 반영한다. 단계와 순서는 추적이 자기 원장에서 쓰는 것과 같다.",
+        "outboxTable": "search_outbox",
+        "outboxTarget": "recipe",
+        "stages": [
+            {
+                "name": "enqueue",
+                "where": "agent-api",
+                "does": "레시피를 쓰는 트랜잭션 안에서 search_outbox 에 target 이 recipe 인 행 하나를 함께 적는다",
+                "reason": "행이 도메인 쓰기와 같은 커밋에 있으므로 쓰기가 남고 반영이 빠지는 상태가 없다"
+            },
+            {
+                "name": "drain",
+                "where": "agent-projector",
+                "does": "주기마다 search_outbox 를 배치로 읽어 대상 레시피를 원장에서 다시 조회하고 색인에 쓴 뒤 그 행을 지운다",
+                "batchSize": 100,
+                "concurrency": "배출기는 원장 자문 잠금 하나를 잡고 돌므로 replica 가 여럿이어도 한 번에 하나만 배출한다",
+                "onFailure": "그 행의 attempts 를 하나 올리고 last_error 를 적은 뒤 남긴다. 다음 주기가 같은 행을 다시 집는다"
+            },
+            {
+                "name": "index",
+                "where": "opensearch",
+                "does": "레시피 식별자를 문서 식별자로 삼아 recipes 별칭에 문서 하나를 덮어쓴다",
+                "reason": "문서 식별자가 원장의 식별자와 같으므로 같은 행을 여러 번 배출해도 문서가 늘지 않는다"
+            }
+        ],
+        "deletion": {
+            "meaning": "지워진 레시피와 애초에 없던 레시피를 배출기가 구분하지 않는다",
+            "rule": "배출 시점에 조회로 잡히지 않는 대상은 색인에서 문서를 지운다",
+            "reason": "지운 레시피는 deleted_at 이 채워져 조회에 잡히지 않으므로 없는 것과 같은 처리가 곧 옳은 처리다"
+        },
+        "noTopic": {
+            "meaning": "이 단계에는 Kafka 토픽이 없다",
+            "reason": "정본인 추적의 검색 아웃박스도 배출기가 OpenSearch 에 직접 쓰며 토픽을 지나지 않는다. 추적이 Kafka 로 받는 것은 원장 변경 스트림이고 그것은 이벤트와 태스크 문서를 만드는 다른 경로다.",
+            "note": "토픽을 하나 두면 배출기와 소비자 사이에 순서와 재시도를 다시 정해야 하고 그 규칙이 추적과 갈린다. 계약은 정본의 단계를 그대로 적는다.",
+            "notTheProjectorTopic": "에이전트가 읽는 토픽이 따로 있으나 그것은 적용 이력을 만드는 경로이며 이 색인 경로와 다르다. 그 토픽은 wire/topics.json 의 ledgerEvents 가 갖는다."
+        }
+    },
+    "indices": {
+        "recipes": {
+            "alias": "recipes",
+            "index": "recipes-v2",
+            "documentId": "레시피 원장의 id 를 그대로 쓴다",
+            "settings": {
+                "number_of_shards": 1,
+                "number_of_replicas": 0,
+                "analysis": {
+                    "meaning": "표준 분석기는 한글 음절 뭉치를 토큰 하나로 색인해 부분 문자열을 찾지 못하므로 두 글자 ngram 으로 색인하고 질의한다",
+                    "analyzer": {
+                        "substring": {
+                            "type": "custom",
+                            "tokenizer": "substring_bigram",
+                            "filter": ["lowercase"]
+                        }
+                    },
+                    "tokenizer": {
+                        "substring_bigram": {
+                            "type": "ngram",
+                            "min_gram": 2,
+                            "max_gram": 2,
+                            "token_chars": ["letter", "digit"]
+                        }
+                    }
+                }
+            },
+            "document": {
+                "meaning": "색인에 실리는 칸의 정본이며 원장 행의 어느 칸에서 오는지와 매핑 종류를 함께 적는다. 원장 행 전부를 싣지 않으므로 여기 없는 칸은 검색으로 찾을 수 없다.",
+                "fields": {
+                    "userId": {
+                        "from": "recipes.user_id",
+                        "type": "keyword",
+                        "meaning": "검색은 부른 사용자의 레시피만 대상으로 하므로 이 칸으로 먼저 거른다"
+                    },
+                    "title": { "from": "recipes.title", "type": "text", "analyzer": "substring" },
+                    "intent": { "from": "recipes.intent", "type": "text", "analyzer": "substring" },
+                    "description": { "from": "recipes.description", "type": "text", "analyzer": "substring" },
+                    "useWhen": {
+                        "from": "recipes.use_when",
+                        "type": "text",
+                        "analyzer": "substring",
+                        "meaning": "적용 조건은 고르기 전에 보여야 하는 판단 정보이므로 검색 단계에서 이미 걸린다"
+                    },
+                    "summaryMd": { "from": "recipes.summary_md", "type": "text", "analyzer": "substring" },
+                    "touchedFiles": {
+                        "from": "recipes.touched_files",
+                        "type": "keyword",
+                        "meaning": "원장의 칸은 경로와 역할을 가진 객체 배열이며 색인에는 경로 문자열만 싣는다"
+                    },
+                    "status": { "from": "recipes.status", "type": "keyword" },
+                    "userEdited": { "from": "recipes.user_edited", "type": "boolean" },
+                    "rev": { "from": "recipes.rev", "type": "integer" },
+                    "updatedAt": {
+                        "from": "recipes.updated_at",
+                        "type": "date",
+                        "format": "RFC 3339 문자열로 싣는다"
+                    }
+                }
+            },
+            "query": {
+                "meaning": "검색 창구가 이 색인에 거는 조건이며 값이 갈리면 같은 질의에 두 축이 다른 적중을 낸다",
+                "matchFields": ["title", "intent", "description", "useWhen", "summaryMd"],
+                "minimumShouldMatch": "30%",
+                "ownerFilter": "userId 가 부른 사용자와 같은 문서만 본다",
+                "statusFilter": "status 가 active 인 문서만 본다",
+                "statusReason": "아직 결정을 기다리는 후보가 검색에 섞이면 모델이 사용자가 채택하지 않은 절차를 따른다",
+                "relativeScoreCutoffRatio": 0.4,
+                "cutoffMeaning": "가장 높은 점수의 이 비율에 못 미치는 적중을 버린다. 상한을 채우려고 관련 없는 것을 끌어오지 않는다.",
+                "cutoffNote": "이 비율과 minimumShouldMatch 는 얇은 코퍼스에서 실측해 정한 값이며 레시피가 쌓이면 다시 정한다",
+                "limit": { "default": 3, "min": 1, "max": 10 }
+            }
+        }
+    }
+}
