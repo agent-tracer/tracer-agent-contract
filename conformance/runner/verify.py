@@ -670,14 +670,25 @@ def main() -> None:
         raise SystemExit(f"실행 한도를 적은 종류가 에이전트 목록과 다르다 — {', '.join(limit_kinds)}")
 
     model_rates = read_shared("model.rates.json")
-    unpriced_defaults = [
+    unpriced_models = [
+        f"{kind}: {model}"
+        for kind, limits in execution_limits.items()
+        for model in (limits.get("defaultModel"), limits.get("fallbackModel"), *limits["allowedModels"])
+        if model is not None and model not in model_rates["base"]
+    ]
+    if unpriced_models:
+        raise SystemExit(f"실행 한도가 단가를 모르는 모델을 가리킨다 — {', '.join(unpriced_models)}")
+    # 허용 목록 밖의 모델을 기본으로 두면 그 종류는 자기가 거절하는 값으로 실행한다.
+    disallowed_defaults = [
         f"{kind}: {model}"
         for kind, limits in execution_limits.items()
         for model in (limits.get("defaultModel"), limits.get("fallbackModel"))
-        if model is not None and model not in model_rates["base"]
+        if model is not None and model not in limits["allowedModels"]
     ]
-    if unpriced_defaults:
-        raise SystemExit(f"실행 한도가 단가를 모르는 모델을 가리킨다 — {', '.join(unpriced_defaults)}")
+    if disallowed_defaults:
+        raise SystemExit(
+            f"실행 한도가 허용하지 않은 모델을 기본이나 대체로 둔다 — {', '.join(disallowed_defaults)}"
+        )
     cache = model_rates["cache"]
     if cache["defaultTtl"] not in cache["writeMultiplier"]:
         raise SystemExit(f"기본 캐시 수명 {cache['defaultTtl']} 의 배수를 계약이 적지 않는다")

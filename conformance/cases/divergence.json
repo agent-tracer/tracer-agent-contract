@@ -1,54 +1,64 @@
 {
-    "name": "divergence",
-    "meaning": "Python 구현이 아직 정본을 따라가지 못한 자리의 목록이다. 양쪽 다 옳을 수 있는 차이가 아니라 좁혀야 할 대상이며, 계약이 목표 상태를 적으면 두 구현체가 동시에 실패해 무엇이 문제인지 보이지 않으므로 갈라진 곳은 갈라진 대로 여기 적는다. 이 목록이 다음 단계의 백로그다.",
-    "items": [
-        {
-            "id": "agent.context.editing",
-            "area": "agent",
-            "summary": "실행 도중 쌓인 오래된 도구 결과를 비우는 주체가 한 축에만 있다",
-            "canonical": "python",
-            "ts": "에이전트 SDK 의 자동 압축에 맡긴다. 임계값은 실행 중 Query.getContextUsage 로 조회되고 압축 시점은 PreCompact 와 PostCompact 훅으로 관측되므로 구현체가 볼 수 없는 것은 아니다. 끄고 직접 편집하는 값은 settings.json 이 갖는데 운영 프로파일이 settingSources 를 비워 그 파일을 읽지 않는다.",
-            "python": "ContextEditingMiddleware 가 chat 과 recipe-scan 의 표준 실행 체인 안에서 앞선 도구 결과를 비운다. 비우는 자리는 프롬프트 캐시 경계 안쪽이므로 정리가 실행되는 호출은 그 접두사를 다시 쓴다",
-            "resolution": "좁히려면 운영 프로파일이 봉인한 settingSources 를 여는 결정이 먼저이며, 그 봉인은 디스크 설정이 모델과 permissions 와 도구 표면을 바꾸지 못하게 하려는 것이므로 이 갈림보다 무겁다. 봉인을 유지하는 동안에는 계약이 trigger 와 keep 을 값으로 갖고 python 축이 그것을 따르는 것까지만 할 수 있다.",
-            "note": "이 갈림은 SDK 가 강제한 것이 아니라 이 저장소의 운영 정책이 닫은 자리다. 두 말은 다르므로 근거를 섞지 않는다."
-        },
-        {
-            "id": "agent.model.retry",
-            "area": "agent",
-            "summary": "일시 오류에서 대체 모델로 넘어가는 절차가 한 축에만 2단으로 있다",
-            "canonical": "python",
-            "ts": "에이전트 SDK 의 질의 옵션에 대체 모델을 그대로 넘긴다. SDK 안에서 재시도와 대체가 몇 단계로 나뉘는지, 어떤 오류에서 넘어가는지는 구현체 밖의 동작이라 조회할 수 없다",
-            "python": "ModelRetryMiddleware 가 과부하와 속도 제한과 연결 오류만 같은 모델로 재시도하고, 소진된 뒤에만 바깥의 FallbackModelMiddleware 가 대체 모델로 한 번 넘어간다. 예산 초과와 출력 절단과 취소는 둘 다 건드리지 않고 그대로 재전파된다",
-            "resolution": "SDK 축이 재시도와 대체의 2단 절차와 그 판정 오류 목록을 관측 가능하게 노출하거나, 계약이 재시도 대상 오류의 어휘와 재시도 횟수를 정해 두 축이 같은 절차를 갖도록 좁힌다"
-        },
-        {
-            "id": "job.workflow.shape",
-            "area": "workflow",
-            "summary": "끝난 단계를 다시 실행하지 않는 장치가 두 벌이다",
-            "canonical": "ts",
-            "ts": "잡 종류마다 워크플로 하나를 두고 준비·생성·종결 액티비티로 나누며 생성만 generate 큐로 보낸다. 끝난 단계의 산출은 ai_job_stage_outputs 에 남아 다시 시도한 실행이 앞선 단계를 다시 실행하지 않는다",
-            "python": "agentJobWorkflow 하나가 셋을 받고 같은 단계 경계와 같은 큐 배치와 같은 재시도 상한을 갖는다. 다시 실행하지 않는 장치는 생성 액티비티 안의 LangGraph 체크포인트이며 그 상태는 계약이 소유하지 않는 스키마에 있다",
-            "resolution": "단계 경계와 큐와 재시도 상한은 workflow/queues.yaml 이 이미 갖는다. 남은 것은 재개 상태를 어디에 두는가이며, python 이 ai_job_stage_outputs 로 옮기거나 계약이 재개의 보장만 갖고 저장소를 구현체에 남긴다. 두 벌을 함께 두면 같은 사실이 두 자리에 적혀 어긋날 수 있으므로 어느 쪽을 고르든 한 벌만 남긴다"
-        },
-        {
-            "id": "agent.turn.unit",
-            "area": "agent",
-            "summary": "turnLedger 의 턴 하나가 두 축에서 세는 단위가 다르다",
-            "canonical": "ts",
-            "ts": "에이전트 SDK 의 질의 옵션 maxTurns 에 계약의 값을 그대로 넘긴다. SDK 가 도구 호출과 산출을 한 턴 안에서 어떻게 세는지는 구현체 밖의 동작이라 조회할 수 없다",
-            "python": "ModelCallLimitMiddleware 가 세는 단위는 모델 호출 하나이며 도구를 부른 호출과 산출을 내는 호출이 따로 세인다. 그래서 상한을 maxTurns + 2 로 두고 모델에게 알리는 총량은 maxTurns 로 둔다. 딱 맞추면 몫이 작은 전문가가 도구를 한 번 부른 뒤 산출을 낼 호출이 남지 않아 max_turns_exceeded 로 끝난다",
-            "resolution": "계약이 턴을 무엇으로 세는지 정하고 두 축이 같은 단위를 쓰거나, 마무리에 필요한 몫을 계약이 값으로 갖는 뒤에 좁힐 수 있다"
-        },
-        {
-            "id": "chat.draft.transport",
-            "area": "agent",
-            "summary": "진행 중인 답변이 원장에 닿는 경로가 한 축은 프로세스 안이고 다른 축은 실행 창구다",
-            "canonical": "ts",
-            "ts": "워커가 원장 저장소를 직접 불러 검사점을 적는다. 홉이 하나라 창구의 상태와 무관하다",
-            "python": "그래프 코드가 원장을 알지 않고 전송 경계만 아는 구조라 실행 창구로 POST 한다. 접수가 받아 원장에 적고 열린 연결에 알린다",
-            "resolution": "두 축의 전송이 모델 루프를 막지 않고 같은 리듬과 같은 순번을 내면 사용자에게 닿는 결과가 같다. 그래프가 원장을 직접 아는 구조로 바꾸지 않는 한 홉 수는 좁히지 않는다"
-        }
-    ],
-    "canonical": "ts가 정본이다. 항목의 canonical이 python이면 SDK나 LangGraph가 강제해 정본이 따라가야 하는 자리다.",
-    "unservedPaths": "갈라진 구현체가 아직 열지 않은 경로의 접두사이며 실행 중인 서버의 표면을 대조하는 검사가 이 자리만 비켜 준다. 항목을 지울 때 그 비켜 줌도 함께 사라진다."
+  "name": "divergence",
+  "meaning": "Python 구현이 아직 정본을 따라가지 못한 자리의 목록이다. 양쪽 다 옳을 수 있는 차이가 아니라 좁혀야 할 대상이며, 계약이 목표 상태를 적으면 두 구현체가 동시에 실패해 무엇이 문제인지 보이지 않으므로 갈라진 곳은 갈라진 대로 여기 적는다. 이 목록이 다음 단계의 백로그다.",
+  "items": [
+    {
+      "id": "agent.context.editing",
+      "area": "agent",
+      "summary": "실행 도중 쌓인 오래된 도구 결과를 비우는 주체가 한 축에만 있다",
+      "canonical": "python",
+      "ts": "에이전트 SDK 의 자동 압축에 맡긴다. 임계값은 실행 중 Query.getContextUsage 로 조회되고 압축 시점은 PreCompact 와 PostCompact 훅으로 관측되므로 구현체가 볼 수 없는 것은 아니다. 끄고 직접 편집하는 값은 settings.json 이 갖는데 운영 프로파일이 settingSources 를 비워 그 파일을 읽지 않는다.",
+      "python": "ContextEditingMiddleware 가 chat 과 recipe-scan 의 표준 실행 체인 안에서 앞선 도구 결과를 비운다. 비우는 자리는 프롬프트 캐시 경계 안쪽이므로 정리가 실행되는 호출은 그 접두사를 다시 쓴다",
+      "resolution": "좁히려면 운영 프로파일이 봉인한 settingSources 를 여는 결정이 먼저이며, 그 봉인은 디스크 설정이 모델과 permissions 와 도구 표면을 바꾸지 못하게 하려는 것이므로 이 갈림보다 무겁다. 봉인을 유지하는 동안에는 계약이 trigger 와 keep 을 값으로 갖고 python 축이 그것을 따르는 것까지만 할 수 있다.",
+      "note": "이 갈림은 SDK 가 강제한 것이 아니라 이 저장소의 운영 정책이 닫은 자리다. 두 말은 다르므로 근거를 섞지 않는다."
+    },
+    {
+      "id": "agent.model.retry",
+      "area": "agent",
+      "summary": "일시 오류에서 대체 모델로 넘어가는 절차가 한 축에만 2단으로 있다",
+      "canonical": "python",
+      "ts": "에이전트 SDK 의 질의 옵션에 대체 모델을 그대로 넘긴다. SDK 안에서 재시도와 대체가 몇 단계로 나뉘는지, 어떤 오류에서 넘어가는지는 구현체 밖의 동작이라 조회할 수 없다",
+      "python": "ModelRetryMiddleware 가 과부하와 속도 제한과 연결 오류만 같은 모델로 재시도하고, 소진된 뒤에만 바깥의 FallbackModelMiddleware 가 대체 모델로 한 번 넘어간다. 예산 초과와 출력 절단과 취소는 둘 다 건드리지 않고 그대로 재전파된다",
+      "resolution": "SDK 축이 재시도와 대체의 2단 절차와 그 판정 오류 목록을 관측 가능하게 노출하거나, 계약이 재시도 대상 오류의 어휘와 재시도 횟수를 정해 두 축이 같은 절차를 갖도록 좁힌다"
+    },
+    {
+      "id": "job.workflow.shape",
+      "area": "workflow",
+      "summary": "끝난 단계를 다시 실행하지 않는 장치가 두 벌이다",
+      "canonical": "ts",
+      "ts": "잡 종류마다 워크플로 하나를 두고 준비·생성·종결 액티비티로 나누며 생성만 generate 큐로 보낸다. 끝난 단계의 산출은 ai_job_stage_outputs 에 남아 다시 시도한 실행이 앞선 단계를 다시 실행하지 않는다",
+      "python": "agentJobWorkflow 하나가 셋을 받고 같은 단계 경계와 같은 큐 배치와 같은 재시도 상한을 갖는다. 다시 실행하지 않는 장치는 생성 액티비티 안의 LangGraph 체크포인트이며 그 상태는 계약이 소유하지 않는 스키마에 있다",
+      "resolution": "단계 경계와 큐와 재시도 상한은 workflow/queues.yaml 이 이미 갖는다. 남은 것은 재개 상태를 어디에 두는가이며, python 이 ai_job_stage_outputs 로 옮기거나 계약이 재개의 보장만 갖고 저장소를 구현체에 남긴다. 두 벌을 함께 두면 같은 사실이 두 자리에 적혀 어긋날 수 있으므로 어느 쪽을 고르든 한 벌만 남긴다"
+    },
+    {
+      "id": "agent.turn.unit",
+      "area": "agent",
+      "summary": "turnLedger 의 턴 하나가 두 축에서 세는 단위가 다르다",
+      "canonical": "ts",
+      "ts": "에이전트 SDK 의 질의 옵션 maxTurns 에 계약의 값을 그대로 넘긴다. SDK 가 도구 호출과 산출을 한 턴 안에서 어떻게 세는지는 구현체 밖의 동작이라 조회할 수 없다",
+      "python": "ModelCallLimitMiddleware 가 세는 단위는 모델 호출 하나이며 도구를 부른 호출과 산출을 내는 호출이 따로 세인다. 그래서 상한을 maxTurns + 2 로 두고 모델에게 알리는 총량은 maxTurns 로 둔다. 딱 맞추면 몫이 작은 전문가가 도구를 한 번 부른 뒤 산출을 낼 호출이 남지 않아 max_turns_exceeded 로 끝난다",
+      "resolution": "계약이 턴을 무엇으로 세는지 정하고 두 축이 같은 단위를 쓰거나, 마무리에 필요한 몫을 계약이 값으로 갖는 뒤에 좁힐 수 있다"
+    },
+    {
+      "id": "chat.draft.transport",
+      "area": "agent",
+      "summary": "진행 중인 답변이 원장에 닿는 경로가 한 축은 프로세스 안이고 다른 축은 실행 창구다",
+      "canonical": "ts",
+      "ts": "워커가 원장 저장소를 직접 불러 검사점을 적는다. 홉이 하나라 창구의 상태와 무관하다",
+      "python": "그래프 코드가 원장을 알지 않고 전송 경계만 아는 구조라 실행 창구로 POST 한다. 접수가 받아 원장에 적고 열린 연결에 알린다",
+      "resolution": "두 축의 전송이 모델 루프를 막지 않고 같은 리듬과 같은 순번을 내면 사용자에게 닿는 결과가 같다. 그래프가 원장을 직접 아는 구조로 바꾸지 않는 한 홉 수는 좁히지 않는다"
+    },
+    {
+      "id": "agent.cache.writeTtl",
+      "area": "agent",
+      "summary": "캐시 쓰기의 수명을 고를 수 있는 축과 없는 축이 갈리고 청구하는 배수가 따라 갈린다",
+      "canonical": "python",
+      "ts": "Claude Agent SDK 에 캐시 수명을 실을 자리가 없다. @anthropic-ai/sdk 의 CacheControlEphemeral 은 ttl 을 5m 과 1h 로 받고 적지 않으면 5m 이지만, claude-agent-sdk 의 질의 옵션에 그 칸이 없어 실행기가 값을 고를 수 없다. 실행기가 내는 apiUsage 도 cache_creation_input_tokens 한 칸이라 수명별로 나뉘지 않으므로 쓴 수명을 사후에 셀 수도 없다. 그래서 요청하는 수명은 공급자 기본값이고 청구하는 배수는 1.25 다.",
+      "python": "LangChain ChatAnthropic 을 쓰므로 cache_control 을 직접 싣는다. PromptCacheMiddleware 가 ttl 을 받아 도구 선언과 본문의 경계에 붙이고 실행 체인이 1h 로 세운다. 그래서 요청하는 수명이 1h 이고 청구하는 배수는 2.0 이다.",
+      "resolution": "두 축 모두 model.rates.json 의 rule 을 지킨다. 각자 실제로 요청하는 수명의 배수로 청구하므로 값이 다른 것이 규칙을 어긴 것이 아니다. 좁히려면 TS 실행기가 수명을 고를 자리를 열어야 하고 그것은 이 저장소 밖의 SDK 표면이다.",
+      "note": "이 갈림은 정책이 아니라 SDK 표면이 닫은 자리다. 배수를 한쪽에 맞추면 그 축은 자기가 실제로 지불하지 않는 값으로 예산을 집행하게 되므로 값을 맞추는 것이 통일이 아니다."
+    }
+  ],
+  "canonical": "ts가 정본이다. 항목의 canonical이 python이면 SDK나 LangGraph가 강제해 정본이 따라가야 하는 자리다.",
+  "unservedPaths": "갈라진 구현체가 아직 열지 않은 경로의 접두사이며 실행 중인 서버의 표면을 대조하는 검사가 이 자리만 비켜 준다. 항목을 지울 때 그 비켜 줌도 함께 사라진다."
 }

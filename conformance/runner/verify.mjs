@@ -634,12 +634,22 @@ if (limitKinds.sort().join() !== [...AGENTS].sort().join()) {
 }
 
 const modelRates = readShared("model.rates.json");
-const unpricedDefaults = Object.entries(executionLimits)
-    .flatMap(([kind, limits]) => [limits.defaultModel, limits.fallbackModel].map((model) => ({ kind, model })))
-    .filter(({ model }) => model !== undefined && modelRates.base[model] === undefined);
-if (unpricedDefaults.length > 0) {
-    const named = unpricedDefaults.map(({ kind, model }) => `${kind}: ${model}`).join(", ");
+const namedModels = Object.entries(executionLimits).flatMap(([kind, limits]) =>
+    [limits.defaultModel, limits.fallbackModel, ...limits.allowedModels].map((model) => ({ kind, model })));
+const unpricedLimitModels = namedModels.filter(
+    ({ model }) => model !== undefined && modelRates.base[model] === undefined,
+);
+if (unpricedLimitModels.length > 0) {
+    const named = unpricedLimitModels.map(({ kind, model }) => `${kind}: ${model}`).join(", ");
     throw new Error(`실행 한도가 단가를 모르는 모델을 가리킨다 — ${named}`);
+}
+// 허용 목록 밖의 모델을 기본으로 두면 그 종류는 자기가 거절하는 값으로 실행한다.
+const disallowedDefaults = Object.entries(executionLimits)
+    .flatMap(([kind, limits]) => [limits.defaultModel, limits.fallbackModel].map((model) => ({ kind, model })))
+    .filter(({ kind, model }) => model !== undefined && !executionLimits[kind].allowedModels.includes(model));
+if (disallowedDefaults.length > 0) {
+    const named = disallowedDefaults.map(({ kind, model }) => `${kind}: ${model}`).join(", ");
+    throw new Error(`실행 한도가 허용하지 않은 모델을 기본이나 대체로 둔다 — ${named}`);
 }
 if (modelRates.cache.writeMultiplier[modelRates.cache.defaultTtl] === undefined) {
     throw new Error(

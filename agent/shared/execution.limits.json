@@ -6,7 +6,8 @@
     "maxOutputTokens": "한 호출이 낼 수 있는 출력 토큰이며 모델별로 다른 값은 model.envelope.json 이 갖는다.",
     "deadlineMs": "벽시계 백스톱이며 도구를 부르는 턴이 몇 분인 것은 정상이다.",
     "stallMs": "마지막 진행 이후 이만큼 소식이 없으면 멈춘 것으로 보고 끊는다.",
-    "effort": "모델에 실어 보내는 추론 노력이며 값의 목록은 model.envelope.json 이 갖는다."
+    "effort": "모델에 실어 보내는 추론 노력이며 값의 목록은 model.envelope.json 이 갖는다.",
+    "allowedModels": "그 종류가 쓸 수 있는 모델이며 목록 밖의 값은 기본 모델로 되돌린다. 예산은 이 목록을 전제로 잡히므로 한 축이 목록을 넓히면 같은 예산이 다른 모델을 태운다."
   },
   "kinds": {
     "chat": {
@@ -15,7 +16,13 @@
       "maxTurns": 14,
       "maxOutputTokens": 4000,
       "deadlineMs": 600000,
-      "stallMs": 120000
+      "stallMs": 120000,
+      "allowedModels": [
+        "claude-sonnet-4-6",
+        "claude-sonnet-5",
+        "claude-opus-5",
+        "claude-haiku-4-5"
+      ]
     },
     "recipe-scan": {
       "defaultModel": "claude-sonnet-4-6",
@@ -24,7 +31,13 @@
       "maxTurns": 15,
       "maxOutputTokens": 16000,
       "deadlineMs": 720000,
-      "effort": "low"
+      "effort": "low",
+      "allowedModels": [
+        "claude-sonnet-4-6",
+        "claude-sonnet-5",
+        "claude-opus-5",
+        "claude-haiku-4-5"
+      ]
     },
     "title-suggestion": {
       "defaultModel": "claude-haiku-4-5",
@@ -32,7 +45,12 @@
       "budgetUsd": 0.2,
       "maxTurns": 12,
       "maxOutputTokens": 4000,
-      "deadlineMs": 300000
+      "deadlineMs": 300000,
+      "allowedModels": [
+        "claude-haiku-4-5",
+        "claude-sonnet-4-6",
+        "claude-sonnet-5"
+      ]
     },
     "task-cleanup": {
       "defaultModel": "claude-haiku-4-5",
@@ -40,7 +58,12 @@
       "budgetUsd": 0.5,
       "maxTurns": 16,
       "maxOutputTokens": 16000,
-      "deadlineMs": 600000
+      "deadlineMs": 600000,
+      "allowedModels": [
+        "claude-haiku-4-5",
+        "claude-sonnet-4-6",
+        "claude-sonnet-5"
+      ]
     }
   },
   "absent": {
@@ -49,10 +72,16 @@
     "stallMs": "chat 밖의 종류는 침묵을 따로 끊지 않고 deadlineMs 가 백스톱이다.",
     "effort": "적지 않은 종류는 공급자의 기본값을 쓴다."
   },
+  "knownGap": {
+    "id": "execution.limits.effortUnit",
+    "summary": "추론 노력을 거는 단위가 두 자리에서 다르게 적힌다.",
+    "detail": "이 파일은 effort 를 종류에 걸고 model.envelope.json 은 모델에 건다. 종류에 걸면 그 종류의 모든 모델이 같은 노력으로 실행되고, 모델에 걸면 같은 종류라도 고른 모델에 따라 노력이 달라진다. 두 축이 서로 다른 단위를 읽으면 같은 종류를 같은 모델로 실행해도 노력이 갈린다.",
+    "decide": "어느 단위가 정본인지 정하고 다른 자리에서 그 칸을 지운다."
+  },
   "notOwnedHere": {
-    "allowedModels": "사용자가 고를 수 있는 모델 목록은 설정 화면을 가진 축만 갖는다. 두 축이 모두 갖게 되면 이 파일로 옮긴다.",
     "modelRates": "단가는 model.rates.json 이 갖는다.",
-    "reservation": "예약된 몫과 마무리 자리는 execution.budget.json 이 갖는다."
+    "reservation": "예약된 몫과 마무리 자리는 execution.budget.json 이 갖는다.",
+    "settingSurface": "사용자가 그 목록에서 값을 고르는 화면은 설정 표면을 가진 축만 갖는다. 목록 자체는 두 축이 모두 갖는다."
   },
   "verification": "구현체는 자기 실행 카탈로그의 네 종류가 이 파일과 칸마다 같은지 보는 검사를 갖는다. 한 축이 값을 올려도 다른 축이 알지 못하면 같은 요청의 결과가 갈린다."
 }
