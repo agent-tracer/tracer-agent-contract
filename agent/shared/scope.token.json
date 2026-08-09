@@ -26,7 +26,10 @@
         "meaning": "자격은 그 시도의 마감을 넘겨 살아남지 않는다.",
         "ttlFrom": "그 기능의 deadlineMs",
         "marginMs": 60000,
-        "marginReason": "마감 직전에 시작한 도구 호출이 응답을 받기 전에 자격을 잃지 않도록 마감보다 조금 더 살린다"
+        "marginReason": "마감 직전에 시작한 도구 호출이 응답을 받기 전에 자격을 잃지 않도록 마감보다 조금 더 살린다",
+        "expiryBoundary": "exclusive",
+        "expiryBoundaryMeaning": "지금이 expiresAt 과 같으면 이미 만료다. 즉 자격이 사는 구간은 issuedAt 이상 expiresAt 미만이다.",
+        "expiryBoundaryReason": "경계를 정하지 않으면 한 축은 그 밀리초를 통과시키고 다른 축은 거절해, 한 축이 발급한 자격을 다른 축의 창구가 그 순간에만 받지 않는다. 만료를 포함으로 두면 expiresAt 이 자격이 살아 있는 마지막 시각이 아니라 죽은 첫 시각이 되어 이름과 뜻이 맞는다."
     },
     "precedence": "서명과 수명이 모두 맞을 때만 실행 범위를 내주며 그 값이 자기신고 헤더를 우선한다"
 }
