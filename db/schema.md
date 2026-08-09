@@ -2,7 +2,7 @@
 
 ## 채팅 도메인
 
-- `chat_threads`: 사용자별 대화 묶음과 제목, 요약, backend 정보를 담는다.
+- `chat_threads`: 사용자별 대화 묶음과 제목, 요약, backend 정보를 담는다. `summary_through_message_id` 는 그 요약이 접은 마지막 메시지를 가리키며, 읽는 쪽이 그 뒤부터 실어 요약과 재생 사이에 빈 구간이 생기지 않게 한다. 요약과 이 칸은 CHECK 제약으로 함께 있거나 함께 없다.
 - `chat_messages`: 대화에 속한 메시지 본문과 tool 호출 정보를 담는다.
 - `chat_executions`: 사용자 요청 단위의 실행 상태, 응답 초안, 사용량, 비용, 종료 사유를 담는다. `replay_anchor_message_id` 는 이 실행이 모델에게 되돌려 줄 이력이 어느 메시지에서 끊기는지를 가리키며, 사용자 발화와 승인이 적재한 도구 결과가 모두 그 자리에 선다. `phase` 는 초안이 자라지 않는 구간에도 실행이 무엇을 하는 중인지를 담으며 값의 목록은 `conformance/cases/chat.query.json` 의 `executionPhase` 가 갖는다.
 - `chat_execution_steps`: 실행별 모델 응답과 tool 호출 과정을 순서대로 담는다.
