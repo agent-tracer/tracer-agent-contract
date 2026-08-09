@@ -255,6 +255,35 @@ def read_dependency_paths() -> list[str]:
     return sorted(_read_surface_paths("tracer-dependency.openapi.yaml"))
 
 
+def read_dependency_query_names(path: str, method: str) -> list[str]:
+    """추적 표면의 창구 하나가 받는 질의의 이름을 사전순으로 낸다."""
+    spec = (ROOT / "http" / "tracer-dependency.openapi.yaml").read_text(encoding="utf-8")
+    verb = method.lower()
+    block: list[str] = []
+    in_path = False
+    in_operation = False
+    for line in spec.split("\n"):
+        declared = re.match(r"^ {2}(/\S+):$", line)
+        if declared:
+            in_path = declared.group(1) == path
+            in_operation = False
+            continue
+        if re.match(r"^ {0,3}\S", line):
+            in_path = False
+            in_operation = False
+            continue
+        if not in_path:
+            continue
+        declared_verb = re.match(r"^ {4}(get|post|put|patch|delete):$", line)
+        if declared_verb:
+            in_operation = declared_verb.group(1) == verb
+            continue
+        if in_operation:
+            block.append(line)
+    found = re.findall(r"^ {8}- name: (\S+)\n {10}in: query$", "\n".join(block), re.MULTILINE)
+    return sorted(found)
+
+
 def read_declared_http_paths() -> list[str]:
     """계약이 선언한 HTTP 경로 전부를 변수 이름을 지운 꼴로 사전순으로 낸다."""
     declared = (

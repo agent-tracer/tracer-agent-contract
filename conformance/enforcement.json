@@ -22,6 +22,7 @@
         "conformance/cases/recipe.ledger.json",
         "conformance/cases/recipe.projection.json",
         "conformance/cases/cleanup.archive.json",
+        "conformance/cases/tracer.tasks.json",
         "conformance/cases/recipe.prompt.json",
         "conformance/cases/cleanup.prompt.json"
       ]
@@ -40,6 +41,7 @@
     "valueRules": "칸의 존재만 적으면 두 구현체가 같은 칸에 다른 뜻의 값을 담고도 통과한다. chat.query.json의 valueRules와 job.intake.json의 response.usage가 값의 규칙을 소유한다.",
     "recipeLedger": "recipe.ledger.json은 레시피와 정리 제안의 원장이 에이전트 원장이라는 사실에서 오는 것을 갖는다. 만드는 창구를 HTTP로 열지 않으므로 만드는 규칙은 창구가 아니라 잡의 종결 단계가 지키며, 그 규칙과 조회·해소 창구의 칸을 한 자리에 둔다.",
     "recipeProjection": "recipe.projection.json은 적용 이력이 HTTP 로만 채워지지 않는다는 사실에서 오는 것을 갖는다. 사건 원장은 추적이 소유하고 그 사건이 만드는 행은 에이전트 원장에 있으므로, 두 프로젝터가 같은 토픽을 다른 그룹으로 읽고 어느 종류를 어느 칸으로 옮기는지를 계약이 정한다.",
+    "tracerTasks": "tracer.tasks.json은 레시피가 인용한 태스크의 제목이 추적 원장에 있다는 사실에서 오는 것을 갖는다. 식별자마다 단건 조회를 부르면 왕복이 인용 수를 따라가므로 집합 하나를 한 번에 푸는 조건과 그 상한과 없는 식별자의 결말을 계약이 정한다. 상한은 목록 한 장이 담는 최대 개수와 같아야 집합 전체가 한 번에 들어온다.",
     "cleanupArchive": "cleanup.archive.json은 제안이 에이전트 원장에 있고 태스크가 추적 원장에 있어 생기는 것을 갖는다. 두 원장을 묶는 트랜잭션이 없으므로 판정의 정본과 조건이 깨졌을 때의 보상과 끊긴 뒤의 수렴을 함께 적는다.",
     "searchIndex": "wire/search.index.json은 레시피 검색이 기대는 색인 하나와 그 색인까지 가는 단계를 갖는다. 문서의 칸과 질의의 조건이 갈리면 같은 질의에 두 축이 다른 적중을 내므로 이 자리는 강제다.",
     "redaction": "agent/shared/redaction.json은 가릴 낱말과 비교 절차와 표시를 계약이 갖게 한다. 두 구현체가 각자 정규식을 세우면 같은 payload에서 다른 것이 걸리므로 이 자리는 강제다.",

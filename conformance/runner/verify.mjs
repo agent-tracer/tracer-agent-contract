@@ -11,6 +11,7 @@ import {
     readAgentPrompt,
     readAgentTools,
     readCase,
+    readDependencyQueryNames,
     readIdentifierRules,
     readRunObservationRules,
     readDeclaredHttpPaths,
@@ -76,6 +77,9 @@ const INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const MCP_AGENT_TOOLS = ["get_recipe", "report_recipe_outcome", "request_recipe_scan", "search_recipes"];
 // 적용 이력 행이 사건에서 오므로 그 사건이 실어야 하는 칸이 없으면 행을 만들 수 없다.
 const PROJECTION_GUARDS = ["missingFields", "alreadyOpen", "redelivery"];
+// 없는 식별자의 결말은 빠뜨림과 자리표시자 둘뿐이며 계약이 그중 하나를 고른다.
+const TASK_MISSING_BEHAVIORS = ["omitted", "null"];
+const TASK_MISSING_PLACES = ["meaning", "behavior", "reason", "duplicates", "empty", "caller"];
 
 /**
  * 조건보다 뒤에 도착한 사건만 새 활동이다. 같은 시각은 새 활동이 아니다.
@@ -900,6 +904,66 @@ console.log(
 console.log(`색인 아웃박스가 받는 대상은 ${outboxTarget} 하나이며 migration 이 그 값만 받는다`);
 console.log(`레시피와 정리의 창구 ${ledgerCase.windows.length}자리를 케이스와 에이전트 표면이 같게 적는다`);
 console.log(`낡음 판정의 사례 ${archiveCase.condition.cases.length}개가 비교 규칙과 같은 답을 낸다`);
+
+// 레시피 목록의 제목 표가 인용한 태스크 수만큼 왕복을 만들지 않으려면 추적이 집합 조회를 열어야 한다.
+const tasksCase = readCase("tracer.tasks");
+const tasksWindow = tasksCase.window;
+if (!declaredPaths.has(normalizePathTemplate(tasksWindow.path))) {
+    throw new Error(`케이스가 적은 태스크 집합 조회를 어느 HTTP 표면도 선언하지 않는다 — ${tasksWindow.path}`);
+}
+const tasksQuery = readDependencyQueryNames(tasksWindow.path, tasksWindow.method);
+const missingTasksQuery = [...tasksWindow.query.required, ...tasksWindow.query.optional].filter(
+    (name) => !tasksQuery.includes(name),
+);
+if (missingTasksQuery.length > 0) {
+    throw new Error(`케이스가 요구하는 질의를 추적 표면이 받지 않는다 — ${missingTasksQuery.join(", ")}`);
+}
+// 한 장에 담기지 않는 상한은 부른 쪽을 커서로 되돌려 보내므로 왕복을 줄이려던 조건이 왕복을 다시 만든다.
+if (tasksCase.bound.maxIds !== tasksCase.bound.pageLimitMax) {
+    throw new Error(
+        `식별자 상한과 목록 한 장의 상한이 다르다 — ` +
+            `식별자는 ${tasksCase.bound.maxIds} 이고 한 장은 ${tasksCase.bound.pageLimitMax} 이다`,
+    );
+}
+if (tasksWindow.query.constraints.ids.maxItems !== tasksCase.bound.maxIds) {
+    throw new Error(
+        `질의가 받는 상한과 근거가 적은 상한이 다르다 — ` +
+            `질의는 ${tasksWindow.query.constraints.ids.maxItems} 이고 근거는 ${tasksCase.bound.maxIds} 이다`,
+    );
+}
+// 없는 식별자의 결말을 적지 않으면 두 축이 같은 질의에 다른 길이의 배열을 낸다.
+const missingTaskPlaces = TASK_MISSING_PLACES.filter((place) => tasksCase.missing[place] === undefined);
+if (missingTaskPlaces.length > 0) {
+    throw new Error(`없는 식별자의 결말에 있어야 할 자리가 없다 — ${missingTaskPlaces.join(", ")}`);
+}
+if (!TASK_MISSING_BEHAVIORS.includes(tasksCase.missing.behavior)) {
+    throw new Error(`없는 식별자의 결말이 목록에 없는 값이다 — ${tasksCase.missing.behavior}`);
+}
+// 제목을 읽는 칸이 응답에 없으면 부른 쪽이 제목 표를 만들지 못한다.
+if (!tasksCase.shapes.taskListItem.fields.includes(tasksWindow.titleField)) {
+    throw new Error(`제목을 읽는 칸을 응답의 칸 목록이 갖지 않는다 — ${tasksWindow.titleField}`);
+}
+// 부른 쪽과 창구가 서로 다른 경로를 적으면 한쪽만 고쳐도 검사가 통과한다.
+const titleSource = ledgerCase.windows
+    .map((window) => window.taskTitleSource)
+    .find((source) => source !== undefined);
+if (titleSource === undefined) {
+    throw new Error("레시피 목록이 제목 표를 어느 창구에서 읽는지 적지 않는다");
+}
+if (routeKey(titleSource) !== routeKey(tasksWindow)) {
+    throw new Error(
+        `레시피 목록이 읽는 창구와 태스크 케이스의 창구가 다르다 — ` +
+            `${routeKey(titleSource)} 와 ${routeKey(tasksWindow)} 다`,
+    );
+}
+if (!tasksWindow.query.optional.includes(titleSource.query)) {
+    throw new Error(`레시피 목록이 쓰는 질의를 태스크 케이스가 적지 않는다 — ${titleSource.query}`);
+}
+
+console.log(
+    `태스크 집합 조회는 식별자 ${tasksCase.bound.maxIds}개까지 한 번에 받고 없는 식별자를 ` +
+        `${tasksCase.missing.behavior} 로 낸다`,
+);
 
 // 적용 이력이 사건에서도 오므로 그 사건을 읽는 자리를 계약이 갖지 않으면 한 축만 그 행을 만든다.
 const projectionCase = readCase("recipe.projection");

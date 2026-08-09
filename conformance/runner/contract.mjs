@@ -258,6 +258,37 @@ export function readDependencyPaths() {
     return readSurfacePaths("tracer-dependency.openapi.yaml").sort();
 }
 
+/** 추적 표면의 창구 하나가 받는 질의의 이름을 사전순으로 낸다. */
+export function readDependencyQueryNames(path, method) {
+    const spec = readFileSync(join(ROOT, "http", "tracer-dependency.openapi.yaml"), "utf8");
+    const verb = method.toLowerCase();
+    const block = [];
+    let inPath = false;
+    let inOperation = false;
+    for (const line of spec.split("\n")) {
+        const declared = /^ {2}(\/\S+):$/.exec(line);
+        if (declared) {
+            inPath = declared[1] === path;
+            inOperation = false;
+            continue;
+        }
+        if (/^ {0,3}\S/.test(line)) {
+            inPath = false;
+            inOperation = false;
+            continue;
+        }
+        if (!inPath) continue;
+        const declaredVerb = /^ {4}(get|post|put|patch|delete):$/.exec(line);
+        if (declaredVerb) {
+            inOperation = declaredVerb[1] === verb;
+            continue;
+        }
+        if (inOperation) block.push(line);
+    }
+    const found = [...block.join("\n").matchAll(/^ {8}- name: (\S+)\n {10}in: query$/gm)];
+    return found.map((match) => match[1]).sort();
+}
+
 /** 계약이 선언한 HTTP 경로 전부를 변수 이름을 지운 꼴로 사전순으로 낸다. */
 export function readDeclaredHttpPaths() {
     const declared = HTTP_SURFACES.flatMap(readSurfacePaths).map(normalizePathTemplate);

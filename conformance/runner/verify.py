@@ -21,6 +21,7 @@ from contract import (
     read_agent_tools,
     read_case,
     read_declared_http_paths,
+    read_dependency_query_names,
     read_axis_label_names,
     read_chat_ledger_axis_index,
     read_chat_thread_queue,
@@ -83,6 +84,9 @@ SEARCH_INDEX_PLACES = ["alias", "index", "documentId", "settings", "document", "
 MCP_AGENT_TOOLS = ["get_recipe", "report_recipe_outcome", "request_recipe_scan", "search_recipes"]
 # 적용 이력 행이 사건에서 오므로 그 사건이 실어야 하는 칸이 없으면 행을 만들 수 없다.
 PROJECTION_GUARDS = ["missingFields", "alreadyOpen", "redelivery"]
+# 없는 식별자의 결말은 빠뜨림과 자리표시자 둘뿐이며 계약이 그중 하나를 고른다.
+TASK_MISSING_BEHAVIORS = ["omitted", "null"]
+TASK_MISSING_PLACES = ["meaning", "behavior", "reason", "duplicates", "empty", "caller"]
 
 
 def has_activity_since(last_event_at: object, observed_at: object) -> bool:
@@ -948,6 +952,79 @@ def main() -> None:
     print(f"색인 아웃박스가 받는 대상은 {outbox_target} 하나이며 migration 이 그 값만 받는다")
     print(f"레시피와 정리의 창구 {len(ledger_case['windows'])}자리를 케이스와 에이전트 표면이 같게 적는다")
     print(f"낡음 판정의 사례 {len(archive_case['condition']['cases'])}개가 비교 규칙과 같은 답을 낸다")
+
+    # 레시피 목록의 제목 표가 인용한 태스크 수만큼 왕복을 만들지 않으려면 추적이 집합 조회를 열어야 한다.
+    tasks_case = read_case("tracer.tasks")
+    tasks_window = tasks_case["window"]
+    if normalize_path_template(tasks_window["path"]) not in declared_paths:
+        raise SystemExit(
+            f"케이스가 적은 태스크 집합 조회를 어느 HTTP 표면도 선언하지 않는다 — {tasks_window['path']}"
+        )
+    tasks_query = read_dependency_query_names(tasks_window["path"], tasks_window["method"])
+    missing_tasks_query = [
+        name
+        for name in [*tasks_window["query"]["required"], *tasks_window["query"]["optional"]]
+        if name not in tasks_query
+    ]
+    if missing_tasks_query:
+        raise SystemExit(
+            f"케이스가 요구하는 질의를 추적 표면이 받지 않는다 — {', '.join(missing_tasks_query)}"
+        )
+    # 한 장에 담기지 않는 상한은 부른 쪽을 커서로 되돌려 보내므로 왕복을 줄이려던 조건이 왕복을 다시 만든다.
+    bound = tasks_case["bound"]
+    if bound["maxIds"] != bound["pageLimitMax"]:
+        raise SystemExit(
+            f"식별자 상한과 목록 한 장의 상한이 다르다 — "
+            f"식별자는 {bound['maxIds']} 이고 한 장은 {bound['pageLimitMax']} 이다"
+        )
+    declared_max = tasks_window["query"]["constraints"]["ids"]["maxItems"]
+    if declared_max != bound["maxIds"]:
+        raise SystemExit(
+            f"질의가 받는 상한과 근거가 적은 상한이 다르다 — "
+            f"질의는 {declared_max} 이고 근거는 {bound['maxIds']} 이다"
+        )
+    # 없는 식별자의 결말을 적지 않으면 두 축이 같은 질의에 다른 길이의 배열을 낸다.
+    missing_task_places = [
+        place for place in TASK_MISSING_PLACES if place not in tasks_case["missing"]
+    ]
+    if missing_task_places:
+        raise SystemExit(
+            f"없는 식별자의 결말에 있어야 할 자리가 없다 — {', '.join(missing_task_places)}"
+        )
+    if tasks_case["missing"]["behavior"] not in TASK_MISSING_BEHAVIORS:
+        raise SystemExit(
+            f"없는 식별자의 결말이 목록에 없는 값이다 — {tasks_case['missing']['behavior']}"
+        )
+    # 제목을 읽는 칸이 응답에 없으면 부른 쪽이 제목 표를 만들지 못한다.
+    if tasks_window["titleField"] not in tasks_case["shapes"]["taskListItem"]["fields"]:
+        raise SystemExit(
+            f"제목을 읽는 칸을 응답의 칸 목록이 갖지 않는다 — {tasks_window['titleField']}"
+        )
+    # 부른 쪽과 창구가 서로 다른 경로를 적으면 한쪽만 고쳐도 검사가 통과한다.
+    title_source = next(
+        (
+            window["taskTitleSource"]
+            for window in ledger_case["windows"]
+            if "taskTitleSource" in window
+        ),
+        None,
+    )
+    if title_source is None:
+        raise SystemExit("레시피 목록이 제목 표를 어느 창구에서 읽는지 적지 않는다")
+    if route_key(title_source) != route_key(tasks_window):
+        raise SystemExit(
+            f"레시피 목록이 읽는 창구와 태스크 케이스의 창구가 다르다 — "
+            f"{route_key(title_source)} 와 {route_key(tasks_window)} 다"
+        )
+    if title_source["query"] not in tasks_window["query"]["optional"]:
+        raise SystemExit(
+            f"레시피 목록이 쓰는 질의를 태스크 케이스가 적지 않는다 — {title_source['query']}"
+        )
+
+    print(
+        f"태스크 집합 조회는 식별자 {bound['maxIds']}개까지 한 번에 받고 없는 식별자를 "
+        f"{tasks_case['missing']['behavior']} 로 낸다"
+    )
 
     # 적용 이력이 사건에서도 오므로 그 사건을 읽는 자리를 계약이 갖지 않으면 한 축만 그 행을 만든다.
     projection_case = read_case("recipe.projection")

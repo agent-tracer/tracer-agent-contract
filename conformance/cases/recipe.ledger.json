@@ -295,7 +295,16 @@
                 "items": "recipeWithStats[]",
                 "taskTitles": "인용된 태스크의 식별자를 제목으로 푸는 표이며 제목을 찾지 못한 식별자는 실리지 않는다"
             },
-            "taskTitleSource": "태스크는 추적 원장의 것이므로 제목은 질의가 아니라 추적의 GET /api/v1/tasks/{taskId} 로 읽는다. 닿지 않는 식별자는 표에서 빠지며 그것이 조회 실패는 아니다",
+            "taskTitleSource": {
+                "meaning": "태스크는 추적 원장의 것이므로 제목은 질의가 아니라 추적의 창구로 읽는다",
+                "method": "GET",
+                "path": "/api/v1/tasks",
+                "query": "ids",
+                "surface": "http/tracer-dependency.openapi.yaml",
+                "batched": "인용된 식별자를 모아 한 번에 묻는다. 식별자마다 단건 조회를 부르면 레시피가 인용한 태스크 수만큼 왕복이 생긴다",
+                "missing": "닿지 않는 식별자는 표에서 빠지며 그것이 조회 실패는 아니다",
+                "case": "conformance/cases/tracer.tasks.json"
+            },
             "order": "status 를 실으면 updated_at 의 내림차순이다. 실지 않으면 상태 선언 순서로 각 상태의 결과를 이어 붙이며 전체를 다시 정렬하지 않는다",
             "excludes": "지운 시각이 있는 레시피는 어느 상태로 물어도 나오지 않는다"
         },
