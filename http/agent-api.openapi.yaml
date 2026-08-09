@@ -557,60 +557,6 @@ paths:
         "404":
           $ref: "#/components/responses/ChatExecutionNotFound"
 
-  /api/agent/chat/executions/{executionId}/drafts:
-    post:
-      operationId: checkpointChatDraft
-      tags: [chat]
-      summary: 지금까지 만든 누적 답변을 원장에 통지한다
-      description: >-
-        이 창구의 주소와 자격 토큰은 실행 봉투가 싣는다. 사용자 세션이 아니라 실행 시도 하나에 묶인
-        토큰이 자격이므로 사용자 헤더를 읽지 않는다. 재시도가 붙인 시도 번호는 원장이 정하므로
-        살아 있는 시도가 아닌 통지는 stored가 거짓으로 온다.
-      parameters:
-        - $ref: "#/components/parameters/ExecutionId"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [token, attempt, draftSeq, text, phase]
-              properties:
-                token: { type: string, minLength: 1, maxLength: 200 }
-                attempt: { type: integer, minimum: 1 }
-                draftSeq: { type: integer, minimum: 1 }
-                text: { type: string, maxLength: 200000 }
-                phase:
-                  type: string
-                  enum: [starting, thinking, responding, tool, done]
-      responses:
-        "200":
-          description: 통지를 받았다
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessEnvelope"
-                  - type: object
-                    required: [data]
-                    properties:
-                      data:
-                        type: object
-                        required: [stored, terminal]
-                        properties:
-                          stored:
-                            type: boolean
-                            description: 이 통지가 원장의 누적 답변을 갱신했는지이며 지난 시도의 통지는 거짓이다
-                          terminal:
-                            type: boolean
-                            description: 이 실행이 이미 종결되었는지이며 참이면 실행기가 통지를 멈춘다
-        "400":
-          $ref: "#/components/responses/InvalidRequest"
-        "403":
-          $ref: "#/components/responses/DraftTokenRejected"
-        "404":
-          $ref: "#/components/responses/NotFound"
-
   /api/agent/chat/memories:
     get:
       operationId: recall_facts
@@ -1597,7 +1543,6 @@ components:
         - readApiBaseUrl
         - scopeToken
         - toolDescriptions
-        - draft
       properties:
         model: { type: string, minLength: 1 }
         apiKey:
@@ -1621,14 +1566,6 @@ components:
         toolDescriptions:
           type: object
           additionalProperties: { type: string }
-        draft:
-          type: object
-          description: 실행 시도 하나에만 유효한 draft 창구이며 평문은 실행기가 쓰고 지문은 원장이 든다
-          required: [url, token, tokenHash]
-          properties:
-            url: { type: string }
-            token: { type: string }
-            tokenHash: { type: string }
 
     JobExecutionEnvelope:
       type: object
