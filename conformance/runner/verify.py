@@ -26,10 +26,15 @@ from contract import (
     read_chat_thread_queue,
     read_job_ledger_axis_column,
     read_json,
+    read_ledger_tables,
+    read_mcp_tool_names,
     read_openapi_enum,
     read_redaction,
     read_scope_token,
+    read_search_index,
+    read_search_outbox_target,
     read_shared,
+    read_table_columns,
     read_identifier_rules,
     read_run_observation_rules,
     read_settlement,
@@ -67,7 +72,27 @@ SHARED = [
     "dispatch.plan.json",
     "ledger.availability.json",
 ]
-WIRE = ["envelope.json", "headers.json", "topics.json", "job.kinds.json"]
+WIRE = ["envelope.json", "headers.json", "topics.json", "job.kinds.json", "search.index.json"]
+# 레시피와 정리 제안의 원장이 에이전트 원장이므로 이 표들이 없으면 그 창구가 설 자리가 없다.
+LEDGER_TABLES = ["recipes", "recipe_applications", "task_cleanup_suggestions", "search_outbox"]
+# 얇은 적중의 이 두 칸은 문서의 칸이 아니라 문서의 식별자와 색인이 매긴 점수에서 온다.
+HIT_FIELDS_OUTSIDE_DOCUMENT = ["recipeId", "score"]
+INSTANT_PATTERN = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$"
+SEARCH_INDEX_PLACES = ["alias", "index", "documentId", "settings", "document", "query"]
+# 에이전트 상류가 없으면 등록되지 않아야 하는 MCP 도구이며 넷 다 에이전트 표면을 부른다.
+MCP_AGENT_TOOLS = ["get_recipe", "report_recipe_outcome", "request_recipe_scan", "search_recipes"]
+# 적용 이력 행이 사건에서 오므로 그 사건이 실어야 하는 칸이 없으면 행을 만들 수 없다.
+PROJECTION_GUARDS = ["missingFields", "alreadyOpen", "redelivery"]
+
+
+def has_activity_since(last_event_at: object, observed_at: object) -> bool:
+    """조건보다 뒤에 도착한 사건만 새 활동이다. 같은 시각은 새 활동이 아니다."""
+    # 시각의 표기가 한 벌이므로 글자 비교가 곧 시각 비교다.
+    if not isinstance(last_event_at, str) or re.match(INSTANT_PATTERN, last_event_at) is None:
+        return False
+    if not isinstance(observed_at, str) or re.match(INSTANT_PATTERN, observed_at) is None:
+        return True
+    return last_event_at > observed_at
 TOPIC_FIELDS = ["name", "key", "payload", "delivery"]
 STREAM_KEYS = [
     "meaning",
@@ -828,6 +853,150 @@ def main() -> None:
         f"단가를 아는 모델 {len(model_rates['base'])}개와 캐시 수명 "
         f"{len(cache['writeMultiplier'])}개를 계약이 갖는다 — "
         f"기본 수명 {cache['defaultTtl']} 의 쓰기 배수는 {cache['writeMultiplier'][cache['defaultTtl']]} 다"
+    )
+
+    # 레시피와 정리 제안의 원장이 에이전트 원장에 서지 않으면 새 창구가 읽을 자리가 없다.
+    ledger_tables = read_ledger_tables()
+    missing_ledger_tables = [name for name in LEDGER_TABLES if name not in ledger_tables]
+    if missing_ledger_tables:
+        raise SystemExit(f"창구가 읽는 표를 migration 이 세우지 않는다 — {', '.join(missing_ledger_tables)}")
+
+    search_index = read_search_index("recipes")
+    missing_search_index = [place for place in SEARCH_INDEX_PLACES if place not in search_index]
+    if missing_search_index:
+        raise SystemExit(f"검색 색인 선언에 있어야 할 자리가 없다 — {', '.join(missing_search_index)}")
+    document_fields = list(search_index["document"]["fields"])
+    match_fields = search_index["query"]["matchFields"]
+    stray_match_fields = [name for name in match_fields if name not in document_fields]
+    if stray_match_fields:
+        raise SystemExit(
+            f"검색이 색인 문서에 없는 칸을 뒤진다고 적는다 — {', '.join(stray_match_fields)}"
+        )
+    outbox_target = read_search_outbox_target()
+    declared_target = read_json("wire/search.index.json")["pipeline"]["outboxTarget"]
+    if outbox_target != declared_target:
+        raise SystemExit(
+            f"아웃박스가 받는 대상을 계약과 migration 이 다르게 적는다 — "
+            f"계약은 {declared_target} 이고 migration 은 {outbox_target or '제약 없음'} 이다"
+        )
+
+    ledger_case = read_case("recipe.ledger")
+    # 적중이 색인에 없는 칸을 싣겠다고 적으면 그 칸은 언제나 비어서 온다.
+    unbacked_hit_fields = [
+        name
+        for name in ledger_case["shapes"]["recipeSearchHit"]["fields"]
+        if name not in HIT_FIELDS_OUTSIDE_DOCUMENT and name not in document_fields
+    ]
+    if unbacked_hit_fields:
+        raise SystemExit(
+            f"얇은 적중이 색인 문서에 없는 칸을 싣는다고 적는다 — {', '.join(unbacked_hit_fields)}"
+        )
+
+    # 케이스가 적은 창구를 HTTP 표면이 열지 않으면 그 케이스는 아무것도 대조하지 않는다.
+    agent_route_keys = {route_key(route) for route in declared_routes}
+    unopened_windows = [
+        key
+        for key in (route_key(window) for window in ledger_case["windows"])
+        if key not in agent_route_keys
+    ]
+    if unopened_windows:
+        raise SystemExit(
+            f"케이스가 적은 창구를 에이전트 표면이 선언하지 않는다 — {', '.join(unopened_windows)}"
+        )
+
+    archive_case = read_case("cleanup.archive")
+    archive_window = archive_case["surfaces"]["archive"]
+    if normalize_path_template(archive_window["path"]) not in declared_paths:
+        raise SystemExit(
+            f"조건부 보관이 부르는 경로를 어느 HTTP 표면도 선언하지 않는다 — {archive_window['path']}"
+        )
+    # 두 케이스가 같은 거절을 다른 낱말로 적으면 부른 쪽이 한쪽만 알아본다.
+    rejection_codes = [rejection["code"] for rejection in ledger_case["rejections"]]
+    if archive_case["rejection"]["code"] not in rejection_codes:
+        raise SystemExit(
+            f"조건부 보관이 내는 {archive_case['rejection']['code']} 를 원장 케이스의 거절 목록이 갖지 않는다"
+        )
+    stray_transition_rejections = [
+        f"{action} 의 {declared['rejection']}"
+        for action, declared in ledger_case["transitions"]["recipe"].items()
+        if "rejection" in declared and declared["rejection"] not in rejection_codes
+    ]
+    if stray_transition_rejections:
+        raise SystemExit(
+            f"상태 전이가 거절 목록에 없는 코드를 낸다 — {', '.join(stray_transition_rejections)}"
+        )
+
+    # 낡음 판정을 글로만 적으면 두 축이 경계에서 갈리므로 사례의 답을 비교 규칙으로 다시 센다.
+    wrong_stale_cases = [
+        one["name"]
+        for one in archive_case["condition"]["cases"]
+        if has_activity_since(one["lastEventAt"], one["ifNoActivitySince"]) != one["hasActivity"]
+    ]
+    if wrong_stale_cases:
+        raise SystemExit(
+            f"낡음 판정의 사례가 비교 규칙과 다른 답을 적는다 — {' · '.join(wrong_stale_cases)}"
+        )
+
+    print(
+        f"레시피와 정리의 원장 표 {len(LEDGER_TABLES)}개를 migration 이 세운다 — "
+        f"{', '.join(LEDGER_TABLES)}"
+    )
+    print(
+        f"검색 색인 {search_index['alias']} 는 문서의 칸 {len(document_fields)}개를 갖고 "
+        f"그중 {len(match_fields)}개를 뒤진다"
+    )
+    print(f"색인 아웃박스가 받는 대상은 {outbox_target} 하나이며 migration 이 그 값만 받는다")
+    print(f"레시피와 정리의 창구 {len(ledger_case['windows'])}자리를 케이스와 에이전트 표면이 같게 적는다")
+    print(f"낡음 판정의 사례 {len(archive_case['condition']['cases'])}개가 비교 규칙과 같은 답을 낸다")
+
+    # 적용 이력이 사건에서도 오므로 그 사건을 읽는 자리를 계약이 갖지 않으면 한 축만 그 행을 만든다.
+    projection_case = read_case("recipe.projection")
+    ledger_topic = read_json("wire/topics.json")["ledgerEvents"]
+    if projection_case["source"]["topic"] != ledger_topic["name"]:
+        raise SystemExit(
+            f"프로젝터가 읽는 토픽을 케이스와 토픽 선언이 다르게 적는다 — "
+            f"케이스는 {projection_case['source']['topic']} 이고 선언은 {ledger_topic['name']} 이다"
+        )
+    agent_group = ledger_topic["consumerGroups"]["agentProjector"]
+    if projection_case["source"]["consumerGroup"] != agent_group:
+        raise SystemExit(
+            f"에이전트 프로젝터의 소비자 그룹을 케이스와 토픽 선언이 다르게 적는다 — "
+            f"케이스는 {projection_case['source']['consumerGroup']} 이고 선언은 {agent_group} 이다"
+        )
+    missing_guards = [name for name in PROJECTION_GUARDS if name not in projection_case["guards"]]
+    if missing_guards:
+        raise SystemExit(f"투영이 행을 만들지 않는 자리에 있어야 할 것이 없다 — {', '.join(missing_guards)}")
+    # 투영이 원장에 없는 칸에 쓰겠다고 적으면 그 축은 첫 사건에서 무너진다.
+    mapping = projection_case["mapping"]
+    application_columns = read_table_columns(mapping["table"])
+    stray_columns = [name for name in mapping["columns"] if name not in application_columns]
+    if stray_columns:
+        raise SystemExit(
+            f"투영이 {mapping['table']} 에 없는 칸에 쓴다고 적는다 — {', '.join(stray_columns)}"
+        )
+    unmapped_columns = [name for name in application_columns if name not in mapping["columns"]]
+    if unmapped_columns:
+        raise SystemExit(
+            f"투영이 {mapping['table']} 의 칸을 무엇으로 채우는지 적지 않는다 — {', '.join(unmapped_columns)}"
+        )
+
+    # 상류가 없으면 빠져야 하는 도구를 표면이 표시하지 않으면 플러그인이 그 목록을 손으로 적는다.
+    mcp_tools = read_mcp_tool_names()
+    if mcp_tools != MCP_AGENT_TOOLS:
+        raise SystemExit(
+            f"에이전트 표면을 부르는 MCP 도구의 표시가 계약과 다르다 — "
+            f"{', '.join(MCP_AGENT_TOOLS)} 여야 하는데 {', '.join(mcp_tools) or '없음'} 다"
+        )
+
+    print(
+        f"에이전트 프로젝터는 {projection_case['source']['topic']} 를 "
+        f"{projection_case['source']['consumerGroup']} 으로 읽어 "
+        f"{projection_case['selection']['kind']} 하나를 {mapping['table']} 의 "
+        f"칸 {len(application_columns)}개로 옮긴다"
+    )
+    print(
+        f"에이전트 상류가 있어야 서는 MCP 도구 {len(mcp_tools)}개를 표면이 표시한다 — "
+        f"{', '.join(mcp_tools)}"
     )
 
 

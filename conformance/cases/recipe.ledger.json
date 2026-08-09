@@ -1,0 +1,507 @@
+{
+    "name": "recipe.ledger",
+    "meaning": "레시피와 정리 제안의 원장이 에이전트 원장이므로 그 원장에 무엇을 적고 어느 창구가 무엇을 내는지를 대조한다. shapes 가 응답의 칸 목록을, ledgerWrite 가 실행이 원장에 적는 규칙을, windows 가 창구마다 봉투를 벗긴 data 의 모양을 shape 이름으로 가리킨다. 두 구현체가 이 파일에서 목록을 읽어 자기 응답과 대조한다.",
+    "notation": {
+        "shape": "shapes 의 이름 하나이며 그 칸 목록을 그대로 요구한다",
+        "shape[]": "그 모양의 배열이다"
+    },
+    "userHeader": {
+        "name": "x-monitor-user",
+        "defaultValue": "local"
+    },
+    "surface": "http/agent-api.openapi.yaml",
+    "ledger": "db/migrations/V0013__recipe.sql · db/migrations/V0014__task-cleanup.sql",
+    "shapes": {
+        "recipe": {
+            "meaning": "레시피 원장 행 하나이며 조회와 상태 변경이 모두 이 칸을 낸다. 적용 통계는 창구가 따로 싣는 값이라 이 모양에 없다",
+            "fields": [
+                "id",
+                "userId",
+                "status",
+                "title",
+                "intent",
+                "description",
+                "summaryMd",
+                "request",
+                "corrections",
+                "pitfalls",
+                "governingRules",
+                "steps",
+                "touchedFiles",
+                "contributingSlices",
+                "rationale",
+                "useWhen",
+                "inputs",
+                "outputs",
+                "recovery",
+                "language",
+                "rev",
+                "parentRecipeId",
+                "sourceJobId",
+                "userEdited",
+                "lastEditedBy",
+                "error",
+                "createdAt",
+                "updatedAt",
+                "resolvedAt"
+            ]
+        },
+        "recipeWithStats": {
+            "meaning": "목록 창구가 내는 레시피 하나이며 원장 행의 칸에 통계 하나를 더한다",
+            "fields": [
+                "id",
+                "userId",
+                "status",
+                "title",
+                "intent",
+                "description",
+                "summaryMd",
+                "request",
+                "corrections",
+                "pitfalls",
+                "governingRules",
+                "steps",
+                "touchedFiles",
+                "contributingSlices",
+                "rationale",
+                "useWhen",
+                "inputs",
+                "outputs",
+                "recovery",
+                "language",
+                "rev",
+                "parentRecipeId",
+                "sourceJobId",
+                "userEdited",
+                "lastEditedBy",
+                "error",
+                "createdAt",
+                "updatedAt",
+                "resolvedAt",
+                "stats"
+            ]
+        },
+        "recipeStats": {
+            "meaning": "적용 이력을 집계한 값이며 applicationCount 는 자기보고 여부와 무관한 총 수이고 decidedCount 는 그중 자기보고가 붙은 수다",
+            "fields": [
+                "applicationCount",
+                "decidedCount",
+                "successRate"
+            ],
+            "valueRules": {
+                "successRate": "decidedCount 가 0 이면 0 이고 아니면 결과가 completed 인 적용의 비율이다. 자기보고가 붙지 않은 적용은 분모에 들지 않는다"
+            }
+        },
+        "recipeApplication": {
+            "meaning": "레시피 하나가 태스크 하나에 쓰인 이력이며 결과는 에이전트의 자기보고로 채워진다",
+            "fields": [
+                "id",
+                "userId",
+                "recipeId",
+                "taskId",
+                "injectedVia",
+                "outcome",
+                "note",
+                "createdAt"
+            ],
+            "valueRules": {
+                "injectedVia": "도구가 레시피를 끌어와 만든 행은 pull 이고 자기보고가 즉석에서 만든 행은 manual 이다",
+                "outcome": "자기보고가 아직 붙지 않은 행은 비어 있다"
+            }
+        },
+        "recipeSearchHit": {
+            "meaning": "검색이 내는 얇은 적중이며 고르는 데 필요한 칸만 싣고 단계와 지적은 조회 창구로 미룬다",
+            "fields": [
+                "recipeId",
+                "title",
+                "intent",
+                "description",
+                "useWhen",
+                "score"
+            ]
+        },
+        "cleanupSuggestion": {
+            "meaning": "정리 제안 원장 행 하나이며 조회와 해소가 모두 이 칸을 낸다",
+            "fields": [
+                "id",
+                "userId",
+                "jobId",
+                "taskId",
+                "kind",
+                "currentValue",
+                "proposedValue",
+                "rationale",
+                "status",
+                "error",
+                "createdAt",
+                "resolvedAt"
+            ]
+        }
+    },
+    "ledgerWrite": {
+        "meaning": "레시피와 정리 제안을 만드는 것은 이 서비스의 잡 실행이며 만드는 자리는 자기 원장이다. 만드는 창구를 HTTP 로 열지 않으므로 규칙은 창구가 아니라 종결 단계가 지킨다.",
+        "noCreateWindow": {
+            "reason": "생산자와 원장이 같은 배포 단위 안에 있어 자기 자신을 HTTP 로 부를 이유가 없다. 창구를 열면 같은 규칙이 종결 단계와 창구 두 곳에 서고 두 자리가 갈린다.",
+            "consumers": "대화 도구는 만들기를 갖지 않고 해소만 갖는다. 화면과 MCP 도구도 만들기를 부르지 않으며 스캔을 요청하는 자리는 잡 접수 창구다.",
+            "producers": [
+                "recipe-scan 잡의 종결 단계가 레시피 후보를 적는다",
+                "task-cleanup 잡의 종결 단계가 정리 제안을 적는다"
+            ],
+            "authorIsGone": {
+                "meaning": "만드는 주체를 본문으로 받던 칸이 없어졌으므로 사람이 고쳤다는 표시를 무엇이 정하는지 다시 적는다",
+                "reason": "만드는 자리가 잡의 종결 단계 하나뿐이라 그 주체는 언제나 에이전트다. 주체를 인자로 받으면 사람이 만든 것처럼 적히는 길이 다시 열린다",
+                "createdBy": "종결 단계는 userEdited 를 거짓으로, lastEditedBy 를 agent 로 적는다",
+                "editedBy": "사람이 고치는 길은 PATCH 창구 하나뿐이며 그 창구가 userEdited 를 참으로, lastEditedBy 를 user 로 옮긴다"
+            }
+        },
+        "drafts": {
+            "recipe": {
+                "meaning": "레시피 하나를 적는 항목이며 식별자와 상태와 판은 종결 단계가 정한다",
+                "required": [
+                    "title",
+                    "intent",
+                    "description",
+                    "summaryMd",
+                    "request",
+                    "rationale",
+                    "contributingSlices"
+                ],
+                "optional": [
+                    "useWhen",
+                    "inputs",
+                    "outputs",
+                    "recovery",
+                    "corrections",
+                    "pitfalls",
+                    "governingRules",
+                    "steps",
+                    "touchedFiles",
+                    "language",
+                    "parentRecipeId",
+                    "parentRecipeSeenRev"
+                ],
+                "slice": [
+                    "taskId",
+                    "turnIds",
+                    "eventIds"
+                ],
+                "constraints": {
+                    "title": { "minLength": 1, "maxLength": 120 },
+                    "intent": { "minLength": 1, "maxLength": 200 },
+                    "description": { "minLength": 1, "maxLength": 400 },
+                    "summaryMd": { "minLength": 1, "maxLength": 4000 },
+                    "request": { "minLength": 1, "maxLength": 2000 },
+                    "rationale": { "minLength": 1, "maxLength": 500 },
+                    "contributingSlices": { "minItems": 1, "maxItems": 20 },
+                    "corrections": { "maxItems": 20 },
+                    "pitfalls": { "maxItems": 20 },
+                    "governingRules": { "maxItems": 50 },
+                    "steps": { "maxItems": 20, "consecutiveOrderFrom": 1 },
+                    "touchedFiles": { "maxItems": 30 },
+                    "useWhen": { "maxItems": 6 },
+                    "inputs": { "maxItems": 6 },
+                    "outputs": { "maxItems": 6 },
+                    "recovery": { "maxItems": 10 }
+                }
+            },
+            "cleanupSuggestion": {
+                "meaning": "정리 제안 하나를 적는 항목이다",
+                "required": [
+                    "taskId",
+                    "kind",
+                    "rationale"
+                ],
+                "optional": [],
+                "constraints": {
+                    "taskId": { "minLength": 1, "maxLength": 64 },
+                    "kind": { "enum": ["archive"] },
+                    "rationale": { "minLength": 1, "maxLength": 500 }
+                }
+            }
+        },
+        "derived": {
+            "meaning": "실행이 싣지 않고 종결 단계가 정하는 값이다. 실행마다 다른 값을 적으면 같은 산출물이 두 모양이 되므로 여기에 고정한다",
+            "recipe": {
+                "id": "종결 단계가 만든다. 모델이 낸 값을 쓰지 않는다",
+                "status": "candidate",
+                "rev": "부모가 있으면 부모의 rev 에 하나를 더하고 없으면 1 이다",
+                "parentRecipeId": "parentRecipeId 가 지금 이 사용자의 레시피를 가리키고 그 판이 parentRecipeSeenRev 와 같을 때만 적는다. 어긋나면 비운다",
+                "userEdited": "거짓이다",
+                "lastEditedBy": "agent",
+                "error": "비운다",
+                "resolvedAt": "비운다",
+                "deletedAt": "비운다",
+                "sourceJobId": "그 후보를 낸 잡의 식별자를 적는다"
+            },
+            "cleanupSuggestion": {
+                "id": "종결 단계가 만든다",
+                "status": "pending",
+                "jobId": "그 제안을 낸 잡의 식별자이며 없으면 빈 문자열이다",
+                "currentValue": "비운다",
+                "proposedValue": "비운다",
+                "error": "비운다",
+                "resolvedAt": "비운다",
+                "observedLastEventAt": "그 태스크의 마지막 사건 시각을 추적에 물어 적는다. 응답에는 싣지 않으며 수용 시점의 낡음 판정이 이 값을 본다"
+            }
+        },
+        "idempotency": {
+            "meaning": "잡 하나가 여러 번 시도되므로 같은 산출이 두 번 닿을 수 있다. 두 자리가 그때 원장을 늘리지 않는다",
+            "recipes": {
+                "key": "sourceJobId",
+                "rule": "그 값으로 적힌 후보가 이미 있으면 아무것도 쓰지 않고 그 후보를 그대로 둔다"
+            },
+            "cleanupSuggestions": {
+                "key": "taskId + kind",
+                "rule": "같은 태스크와 종류에 pending 인 제안이 있으면 그 행의 rationale 과 jobId 와 observedLastEventAt 을 새 것으로 고치고 새 행을 만들지 않는다",
+                "enforcedBy": "cleanup_pending_task_kind_unique",
+                "resolved": "accepted 이거나 dismissed 인 행은 건드리지 않고 새 pending 행을 만든다"
+            }
+        },
+        "transaction": {
+            "meaning": "원장 쓰기와 색인 반영의 원자성을 어디가 지키는지 계약이 정한다",
+            "boundary": "종결 단계 하나가 한 트랜잭션이다. 후보 전부와 그 색인 적재 행 전부를 함께 쓰고, 정리 종결은 제안 전부를 함께 쓴다",
+            "searchIndex": "색인 반영은 search_outbox 행으로 같은 커밋에 들어가고 배출기가 뒤에서 반영한다. 단계는 wire/search.index.json 이 갖는다",
+            "onFailure": "한 종결은 전부 쓰이거나 아무것도 쓰이지 않는다",
+            "crossLedger": "추적 원장을 걸치는 트랜잭션이 없다. 추적에 필요한 것은 공개 창구로만 오간다"
+        },
+        "unvalidated": {
+            "meaning": "인용은 근거이지 참조 무결성이 아니므로 존재를 검사하지 않는다. 검사하면 뒤늦게 지워진 이벤트 하나가 산출물 한 벌을 통째로 막는다",
+            "paths": [
+                "recipes[].contributingSlices[].taskId",
+                "recipes[].contributingSlices[].turnIds",
+                "recipes[].contributingSlices[].eventIds",
+                "recipes[].corrections[].evidence",
+                "recipes[].pitfalls[].evidence",
+                "recipes[].governingRules",
+                "recipes[].sourceJobId"
+            ]
+        }
+    },
+    "windows": [
+        {
+            "name": "레시피를 상태로 걸러 조회한다",
+            "method": "GET",
+            "path": "/api/agent/recipes",
+            "status": 200,
+            "query": {
+                "optional": ["status"],
+                "constraints": {
+                    "status": {
+                        "enum": ["candidate", "active", "dismissed", "superseded", "retired"]
+                    }
+                }
+            },
+            "data": {
+                "items": "recipeWithStats[]",
+                "taskTitles": "인용된 태스크의 식별자를 제목으로 푸는 표이며 제목을 찾지 못한 식별자는 실리지 않는다"
+            },
+            "taskTitleSource": "태스크는 추적 원장의 것이므로 제목은 질의가 아니라 추적의 GET /api/v1/tasks/{taskId} 로 읽는다. 닿지 않는 식별자는 표에서 빠지며 그것이 조회 실패는 아니다",
+            "order": "status 를 실으면 updated_at 의 내림차순이다. 실지 않으면 상태 선언 순서로 각 상태의 결과를 이어 붙이며 전체를 다시 정렬하지 않는다",
+            "excludes": "지운 시각이 있는 레시피는 어느 상태로 물어도 나오지 않는다"
+        },
+        {
+            "name": "레시피를 본문 유사도로 검색한다",
+            "method": "GET",
+            "path": "/api/agent/recipes/search",
+            "status": 200,
+            "query": {
+                "required": ["q"],
+                "optional": ["limit"],
+                "constraints": {
+                    "q": { "minLength": 1 },
+                    "limit": { "min": 1, "max": 10, "default": 3 }
+                }
+            },
+            "data": { "items": "recipeSearchHit[]" },
+            "order": "점수의 내림차순이다",
+            "empty": "다듬은 질의가 비면 색인을 부르지 않고 빈 목록을 낸다. 거절이 아니다",
+            "index": "wire/search.index.json 의 recipes 가 대상과 조건을 갖는다"
+        },
+        {
+            "name": "레시피 하나를 전문과 적용 이력까지 조회한다",
+            "method": "GET",
+            "path": "/api/agent/recipes/{id}",
+            "status": 200,
+            "data": {
+                "recipe": "recipe",
+                "stats": "recipeStats",
+                "applications": "recipeApplication[]"
+            }
+        },
+        {
+            "name": "후보 레시피를 채택한다",
+            "method": "POST",
+            "path": "/api/agent/recipes/{id}/accept",
+            "status": 200,
+            "data": { "recipe": "recipe" },
+            "effect": "상태를 active 로 옮기고 갱신 시각과 해소 시각을 함께 적는다. 부모가 있고 그 부모가 같은 사용자의 것이면 부모를 superseded 로 함께 옮기고 부모의 색인 반영도 적재한다"
+        },
+        {
+            "name": "후보 레시피를 보류한다",
+            "method": "POST",
+            "path": "/api/agent/recipes/{id}/dismiss",
+            "status": 200,
+            "data": { "recipe": "recipe" },
+            "effect": "상태를 dismissed 로 옮기고 갱신 시각과 해소 시각을 함께 적는다"
+        },
+        {
+            "name": "쓰이던 레시피를 폐기한다",
+            "method": "POST",
+            "path": "/api/agent/recipes/{id}/retire",
+            "status": 200,
+            "data": { "recipe": "recipe" },
+            "effect": "상태를 retired 로 옮기고 갱신 시각만 적는다. 해소 시각은 채택 시점의 값을 그대로 둔다"
+        },
+        {
+            "name": "채택된 레시피의 본문을 고친다",
+            "method": "PATCH",
+            "path": "/api/agent/recipes/{id}",
+            "status": 200,
+            "body": {
+                "required": [],
+                "optional": ["title", "intent", "description", "summaryMd"],
+                "constraints": {
+                    "title": { "minLength": 1, "maxLength": 120 },
+                    "intent": { "minLength": 1, "maxLength": 200 },
+                    "description": { "minLength": 1, "maxLength": 400 },
+                    "summaryMd": { "minLength": 1, "maxLength": 4000 },
+                    "minProperties": 1
+                }
+            },
+            "data": { "recipe": "recipe" },
+            "effect": "실은 칸만 고치고 rev 를 하나 올리며 userEdited 를 참으로, lastEditedBy 를 user 로 적는다"
+        },
+        {
+            "name": "지울 수 있는 레시피를 지운다",
+            "method": "DELETE",
+            "path": "/api/agent/recipes/{id}",
+            "status": 200,
+            "data": {
+                "deleted": "언제나 참이다",
+                "id": "지운 레시피의 식별자다"
+            },
+            "effect": "행을 지우지 않고 지운 시각을 적는다. 색인 반영을 적재하면 배출기가 대상을 찾지 못해 검색 문서를 지운다"
+        },
+        {
+            "name": "레시피를 쓴 결과를 자기보고한다",
+            "method": "POST",
+            "path": "/api/agent/recipes/{id}/outcome",
+            "status": 200,
+            "body": {
+                "required": ["taskId", "outcome"],
+                "optional": ["note"],
+                "constraints": {
+                    "taskId": { "minLength": 1 },
+                    "outcome": { "enum": ["completed", "abandoned", "superseded"] },
+                    "note": { "minLength": 1, "maxLength": 2000 }
+                }
+            },
+            "data": { "application": "recipeApplication" },
+            "effect": "그 태스크에 이 레시피의 적용 이력이 있으면 그 행에 결과를 적고, 없으면 injectedVia 가 manual 인 행 하나를 만들어 적는다. 다시 보고하면 앞의 결과를 덮는다"
+        },
+        {
+            "name": "정리 제안을 상태로 걸러 조회한다",
+            "method": "GET",
+            "path": "/api/agent/cleanup/suggestions",
+            "status": 200,
+            "query": {
+                "optional": ["status"],
+                "constraints": {
+                    "status": { "enum": ["pending", "accepted", "dismissed"] }
+                }
+            },
+            "data": { "suggestions": "cleanupSuggestion[]" },
+            "order": "status 를 실으면 created_at 의 내림차순이다. 실지 않으면 상태 선언 순서로 이어 붙이며 전체를 다시 정렬하지 않는다",
+            "dedupe": "결합한 결과에서 pending 인 행만 taskId 와 kind 의 쌍으로 첫 행을 남긴다. 다른 상태의 행은 중복 제거 대상이 아니다"
+        },
+        {
+            "name": "정리 제안을 수용한다",
+            "method": "POST",
+            "path": "/api/agent/cleanup/suggestions/{id}/accept",
+            "status": 200,
+            "data": { "suggestion": "cleanupSuggestion" },
+            "effect": "cleanup.archive 케이스가 이 창구의 순서와 낡음 판정과 보상을 갖는다"
+        },
+        {
+            "name": "정리 제안을 기각한다",
+            "method": "POST",
+            "path": "/api/agent/cleanup/suggestions/{id}/dismiss",
+            "status": 200,
+            "data": { "suggestion": "cleanupSuggestion" },
+            "effect": "상태를 dismissed 로 옮기고 해소 시각을 적는다. 태스크를 건드리지 않으므로 추적을 부르지 않는다"
+        }
+    ],
+    "transitions": {
+        "meaning": "상태를 옮기는 창구는 지금의 상태를 먼저 본다. 조건을 적지 않으면 두 구현체가 같은 요청에 하나는 성공하고 하나는 거절한다",
+        "recipe": {
+            "accept": { "from": ["candidate"], "to": "active", "rejection": "recipe.not-candidate" },
+            "dismiss": { "from": ["candidate"], "to": "dismissed", "rejection": "recipe.not-candidate" },
+            "retire": { "from": ["active"], "to": "retired", "rejection": "recipe.not-active" },
+            "edit": { "from": ["active"], "to": "active", "rejection": "recipe.not-active" },
+            "delete": { "from": ["dismissed", "retired"], "to": "지운 시각을 적는다", "rejection": "recipe.not-deletable" },
+            "supersede": { "from": ["candidate", "active"], "to": "superseded", "trigger": "자식 후보를 채택할 때만 일어나며 부르는 창구가 따로 없다" }
+        },
+        "cleanupSuggestion": {
+            "accept": { "from": ["pending"], "to": "accepted", "repeat": "이미 accepted 인 제안은 아무것도 바꾸지 않고 그대로 낸다" },
+            "dismiss": { "from": ["pending"], "to": "dismissed" }
+        }
+    },
+    "ownership": {
+        "meaning": "남의 것은 존재 자체를 알리지 않는다",
+        "rule": "행이 있으나 그 행의 userId 가 부른 사용자와 다르면 없는 것과 같은 404 를 낸다",
+        "appliesTo": [
+            "/api/agent/recipes/{id}",
+            "/api/agent/recipes/{id}/accept",
+            "/api/agent/recipes/{id}/dismiss",
+            "/api/agent/recipes/{id}/retire",
+            "/api/agent/recipes/{id}/outcome",
+            "/api/agent/cleanup/suggestions/{id}/accept",
+            "/api/agent/cleanup/suggestions/{id}/dismiss"
+        ],
+        "parentException": "채택이 읽는 부모가 남의 것이면 거절하지 않고 부모가 없는 것으로 보아 채택만 한다"
+    },
+    "rejections": [
+        {
+            "name": "본문이나 질의가 스키마를 만족하지 않는다",
+            "status": 400,
+            "code": "validation_error",
+            "message": "Invalid request"
+        },
+        {
+            "name": "레시피가 없거나 남의 것이다",
+            "status": 404,
+            "code": "not_found",
+            "message": "Recipe not found"
+        },
+        {
+            "name": "정리 제안이 없거나 남의 것이다",
+            "status": 404,
+            "code": "not_found",
+            "message": "Cleanup suggestion not found"
+        },
+        {
+            "name": "후보가 아닌 레시피를 채택하거나 보류한다",
+            "status": 409,
+            "code": "recipe.not-candidate",
+            "message": "Recipe is not a candidate"
+        },
+        {
+            "name": "채택되지 않은 레시피를 폐기하거나 고친다",
+            "status": 409,
+            "code": "recipe.not-active",
+            "message": "Recipe is not active"
+        },
+        {
+            "name": "보류하거나 폐기하지 않은 레시피를 지운다",
+            "status": 400,
+            "code": "recipe.not-deletable",
+            "message": "Recipe is not deletable"
+        },
+        {
+            "name": "제안이 관측한 뒤에 활동이 있어 수용이 서지 못한다",
+            "status": 409,
+            "code": "cleanup.stale",
+            "message": "Task has activity since the suggestion observed it"
+        }
+    ]
+}

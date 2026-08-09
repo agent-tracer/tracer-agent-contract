@@ -19,6 +19,11 @@ import {
     readChatThreadQueue,
     readJobLedgerAxisColumn,
     readJson,
+    readLedgerTables,
+    readMcpToolNames,
+    readSearchIndex,
+    readSearchOutboxTarget,
+    readTableColumns,
     readText,
     readToolBindingPaths,
     readToolSurfaces,
@@ -61,7 +66,26 @@ const SHARED = [
     "dispatch.plan.json",
     "ledger.availability.json",
 ];
-const WIRE = ["envelope.json", "headers.json", "topics.json", "job.kinds.json"];
+const WIRE = ["envelope.json", "headers.json", "topics.json", "job.kinds.json", "search.index.json"];
+// 레시피와 정리 제안의 원장이 에이전트 원장이므로 이 표들이 없으면 그 창구가 설 자리가 없다.
+const LEDGER_TABLES = ["recipes", "recipe_applications", "task_cleanup_suggestions", "search_outbox"];
+// 얇은 적중의 이 두 칸은 문서의 칸이 아니라 문서의 식별자와 색인이 매긴 점수에서 온다.
+const HIT_FIELDS_OUTSIDE_DOCUMENT = ["recipeId", "score"];
+const INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+// 에이전트 상류가 없으면 등록되지 않아야 하는 MCP 도구이며 넷 다 에이전트 표면을 부른다.
+const MCP_AGENT_TOOLS = ["get_recipe", "report_recipe_outcome", "request_recipe_scan", "search_recipes"];
+// 적용 이력 행이 사건에서 오므로 그 사건이 실어야 하는 칸이 없으면 행을 만들 수 없다.
+const PROJECTION_GUARDS = ["missingFields", "alreadyOpen", "redelivery"];
+
+/**
+ * 조건보다 뒤에 도착한 사건만 새 활동이다. 같은 시각은 새 활동이 아니다.
+ * 시각의 표기가 한 벌이므로 글자 비교가 곧 시각 비교다.
+ */
+function hasActivitySince(lastEventAt, observedAt) {
+    if (typeof lastEventAt !== "string" || !INSTANT_PATTERN.test(lastEventAt)) return false;
+    if (typeof observedAt !== "string" || !INSTANT_PATTERN.test(observedAt)) return true;
+    return lastEventAt > observedAt;
+}
 const TOPIC_FIELDS = ["name", "key", "payload", "delivery"];
 const STREAM_KEYS = [
     "meaning",
@@ -797,3 +821,135 @@ console.log(
         `기본 수명 ${modelRates.cache.defaultTtl} 의 쓰기 배수는 ` +
         `${modelRates.cache.writeMultiplier[modelRates.cache.defaultTtl]} 다`,
 );
+
+// 레시피와 정리 제안의 원장이 에이전트 원장에 서지 않으면 새 창구가 읽을 자리가 없다.
+const ledgerTables = readLedgerTables();
+const missingLedgerTables = LEDGER_TABLES.filter((name) => !ledgerTables.includes(name));
+if (missingLedgerTables.length > 0) {
+    throw new Error(`창구가 읽는 표를 migration 이 세우지 않는다 — ${missingLedgerTables.join(", ")}`);
+}
+
+const searchIndex = readSearchIndex("recipes");
+const SEARCH_INDEX_PLACES = ["alias", "index", "documentId", "settings", "document", "query"];
+const missingSearchIndex = SEARCH_INDEX_PLACES.filter((place) => searchIndex?.[place] === undefined);
+if (missingSearchIndex.length > 0) {
+    throw new Error(`검색 색인 선언에 있어야 할 자리가 없다 — ${missingSearchIndex.join(", ")}`);
+}
+const documentFields = Object.keys(searchIndex.document.fields);
+const matchFields = searchIndex.query.matchFields;
+const strayMatchFields = matchFields.filter((name) => !documentFields.includes(name));
+if (strayMatchFields.length > 0) {
+    throw new Error(`검색이 색인 문서에 없는 칸을 뒤진다고 적는다 — ${strayMatchFields.join(", ")}`);
+}
+const outboxTarget = readSearchOutboxTarget();
+const declaredTarget = readJson("wire/search.index.json").pipeline.outboxTarget;
+if (outboxTarget !== declaredTarget) {
+    throw new Error(
+        `아웃박스가 받는 대상을 계약과 migration 이 다르게 적는다 — ` +
+            `계약은 ${declaredTarget} 이고 migration 은 ${outboxTarget ?? "제약 없음"} 이다`,
+    );
+}
+
+const ledgerCase = readCase("recipe.ledger");
+// 적중이 색인에 없는 칸을 싣겠다고 적으면 그 칸은 언제나 비어서 온다.
+const unbackedHitFields = ledgerCase.shapes.recipeSearchHit.fields.filter(
+    (name) => !HIT_FIELDS_OUTSIDE_DOCUMENT.includes(name) && !documentFields.includes(name),
+);
+if (unbackedHitFields.length > 0) {
+    throw new Error(`얇은 적중이 색인 문서에 없는 칸을 싣는다고 적는다 — ${unbackedHitFields.join(", ")}`);
+}
+
+// 케이스가 적은 창구를 HTTP 표면이 열지 않으면 그 케이스는 아무것도 대조하지 않는다.
+const agentRouteKeys = new Set(declaredRoutes.map(routeKey));
+const unopenedWindows = ledgerCase.windows
+    .map((window) => routeKey({ method: window.method, path: window.path }))
+    .filter((key) => !agentRouteKeys.has(key));
+if (unopenedWindows.length > 0) {
+    throw new Error(`케이스가 적은 창구를 에이전트 표면이 선언하지 않는다 — ${unopenedWindows.join(", ")}`);
+}
+
+const archiveCase = readCase("cleanup.archive");
+const archiveWindow = archiveCase.surfaces.archive;
+if (!declaredPaths.has(normalizePathTemplate(archiveWindow.path))) {
+    throw new Error(`조건부 보관이 부르는 경로를 어느 HTTP 표면도 선언하지 않는다 — ${archiveWindow.path}`);
+}
+// 두 케이스가 같은 거절을 다른 낱말로 적으면 부른 쪽이 한쪽만 알아본다.
+const rejectionCodes = ledgerCase.rejections.map((rejection) => rejection.code);
+if (!rejectionCodes.includes(archiveCase.rejection.code)) {
+    throw new Error(`조건부 보관이 내는 ${archiveCase.rejection.code} 를 원장 케이스의 거절 목록이 갖지 않는다`);
+}
+const strayTransitionRejections = Object.entries(ledgerCase.transitions.recipe)
+    .filter(([, declared]) => declared.rejection !== undefined && !rejectionCodes.includes(declared.rejection))
+    .map(([action, declared]) => `${action} 의 ${declared.rejection}`);
+if (strayTransitionRejections.length > 0) {
+    throw new Error(`상태 전이가 거절 목록에 없는 코드를 낸다 — ${strayTransitionRejections.join(", ")}`);
+}
+
+// 낡음 판정을 글로만 적으면 두 축이 경계에서 갈리므로 사례의 답을 비교 규칙으로 다시 센다.
+const wrongStaleCases = archiveCase.condition.cases
+    .filter((one) => hasActivitySince(one.lastEventAt, one.ifNoActivitySince) !== one.hasActivity)
+    .map((one) => one.name);
+if (wrongStaleCases.length > 0) {
+    throw new Error(`낡음 판정의 사례가 비교 규칙과 다른 답을 적는다 — ${wrongStaleCases.join(" · ")}`);
+}
+
+console.log(`레시피와 정리의 원장 표 ${LEDGER_TABLES.length}개를 migration 이 세운다 — ${LEDGER_TABLES.join(", ")}`);
+console.log(
+    `검색 색인 ${searchIndex.alias} 는 문서의 칸 ${documentFields.length}개를 갖고 그중 ${matchFields.length}개를 뒤진다`,
+);
+console.log(`색인 아웃박스가 받는 대상은 ${outboxTarget} 하나이며 migration 이 그 값만 받는다`);
+console.log(`레시피와 정리의 창구 ${ledgerCase.windows.length}자리를 케이스와 에이전트 표면이 같게 적는다`);
+console.log(`낡음 판정의 사례 ${archiveCase.condition.cases.length}개가 비교 규칙과 같은 답을 낸다`);
+
+// 적용 이력이 사건에서도 오므로 그 사건을 읽는 자리를 계약이 갖지 않으면 한 축만 그 행을 만든다.
+const projectionCase = readCase("recipe.projection");
+const ledgerTopic = readJson("wire/topics.json").ledgerEvents;
+if (projectionCase.source.topic !== ledgerTopic.name) {
+    throw new Error(
+        `프로젝터가 읽는 토픽을 케이스와 토픽 선언이 다르게 적는다 — ` +
+            `케이스는 ${projectionCase.source.topic} 이고 선언은 ${ledgerTopic.name} 이다`,
+    );
+}
+if (projectionCase.source.consumerGroup !== ledgerTopic.consumerGroups.agentProjector) {
+    throw new Error(
+        `에이전트 프로젝터의 소비자 그룹을 케이스와 토픽 선언이 다르게 적는다 — ` +
+            `케이스는 ${projectionCase.source.consumerGroup} 이고 선언은 ${ledgerTopic.consumerGroups.agentProjector} 이다`,
+    );
+}
+const missingGuards = PROJECTION_GUARDS.filter((name) => projectionCase.guards[name] === undefined);
+if (missingGuards.length > 0) {
+    throw new Error(`투영이 행을 만들지 않는 자리에 있어야 할 것이 없다 — ${missingGuards.join(", ")}`);
+}
+// 투영이 원장에 없는 칸에 쓰겠다고 적으면 그 축은 첫 사건에서 무너진다.
+const applicationColumns = readTableColumns(projectionCase.mapping.table);
+const strayColumns = Object.keys(projectionCase.mapping.columns).filter(
+    (name) => !applicationColumns.includes(name),
+);
+if (strayColumns.length > 0) {
+    throw new Error(
+        `투영이 ${projectionCase.mapping.table} 에 없는 칸에 쓴다고 적는다 — ${strayColumns.join(", ")}`,
+    );
+}
+const unmappedColumns = applicationColumns.filter(
+    (name) => projectionCase.mapping.columns[name] === undefined,
+);
+if (unmappedColumns.length > 0) {
+    throw new Error(
+        `투영이 ${projectionCase.mapping.table} 의 칸을 무엇으로 채우는지 적지 않는다 — ${unmappedColumns.join(", ")}`,
+    );
+}
+
+// 상류가 없으면 빠져야 하는 도구를 표면이 표시하지 않으면 플러그인이 그 목록을 손으로 적는다.
+const mcpTools = readMcpToolNames();
+if (mcpTools.join() !== MCP_AGENT_TOOLS.join()) {
+    throw new Error(
+        `에이전트 표면을 부르는 MCP 도구의 표시가 계약과 다르다 — ` +
+            `${MCP_AGENT_TOOLS.join(", ")} 여야 하는데 ${mcpTools.join(", ") || "없음"} 다`,
+    );
+}
+
+console.log(
+    `에이전트 프로젝터는 ${projectionCase.source.topic} 를 ${projectionCase.source.consumerGroup} 으로 읽어 ` +
+        `${projectionCase.selection.kind} 하나를 ${projectionCase.mapping.table} 의 칸 ${applicationColumns.length}개로 옮긴다`,
+);
+console.log(`에이전트 상류가 있어야 서는 MCP 도구 ${mcpTools.length}개를 표면이 표시한다 — ${mcpTools.join(", ")}`);

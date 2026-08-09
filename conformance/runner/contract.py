@@ -16,6 +16,8 @@ AXIS_SURFACE_ROOTS = ["agent", "conformance/cases", "db", "http", "wire", "workf
 AXIS_SURFACE_SUFFIXES = (".json", ".yaml", ".md", ".sql")
 JOB_AXIS_COLUMN_PATTERN = r'ALTER TABLE "ai_jobs" ADD COLUMN[^;]*"backend"[^;]*;'
 CHAT_AXIS_INDEX_PATTERN = r'CREATE INDEX[^;]*"chat_executions"[^;]*"requested_backend"[^;]*;'
+CREATE_TABLE_PATTERN = r'CREATE TABLE(?: IF NOT EXISTS)? "(\w+)"'
+OUTBOX_TARGET_PATTERN = r"""CHECK \("target" = '(\w+)'\)"""
 
 
 def contract_root() -> Path:
@@ -51,6 +53,47 @@ def list_axis_surfaces() -> list[str]:
 def list_migrations() -> list[str]:
     """migration 파일의 이름을 번호 순서로 낸다."""
     return sorted(path.name for path in (ROOT / "db" / "migrations").glob("*.sql"))
+
+
+def read_ledger_tables() -> list[str]:
+    """migration 이 세우는 표의 이름을 사전순으로 낸다."""
+    found: set[str] = set()
+    for name in list_migrations():
+        found.update(re.findall(CREATE_TABLE_PATTERN, read_text(f"db/migrations/{name}")))
+    return sorted(found)
+
+
+def read_table_columns(table: str) -> list[str]:
+    """표 하나가 갖는 칸의 이름을 선언한 순서로 낸다."""
+    for name in list_migrations():
+        block = re.search(
+            rf'CREATE TABLE(?: IF NOT EXISTS)? "{table}" \(([^;]*)\);',
+            read_text(f"db/migrations/{name}"),
+        )
+        if block is None:
+            continue
+        return re.findall(r'^ {4}"(\w+)"', block.group(1), re.MULTILINE)
+    return []
+
+
+def read_search_outbox_target() -> str | None:
+    """색인 아웃박스가 받는 대상 하나를 낸다. 제약이 없으면 None 이다."""
+    for name in list_migrations():
+        declared = re.search(OUTBOX_TARGET_PATTERN, read_text(f"db/migrations/{name}"))
+        if declared is not None:
+            return declared.group(1)
+    return None
+
+
+def read_search_index(name: str) -> Any:
+    """검색 색인 하나의 선언을 읽는다."""
+    return read_json("wire/search.index.json")["indices"][name]
+
+
+def read_mcp_tool_names() -> list[str]:
+    """에이전트 표면이 MCP 도구의 자리라고 표시한 이름을 사전순으로 낸다."""
+    spec = read_text("http/agent-api.openapi.yaml")
+    return sorted(re.findall(r"^ {6}x-mcp-tool: (\S+)$", spec, re.MULTILINE))
 
 
 def read_job_ledger_axis_column() -> str | None:

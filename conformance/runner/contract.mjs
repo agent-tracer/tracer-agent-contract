@@ -11,6 +11,8 @@ const AXIS_SURFACE_ROOTS = ["agent", "conformance/cases", "db", "http", "wire", 
 const AXIS_SURFACE_SUFFIXES = [".json", ".yaml", ".md", ".sql"];
 const JOB_AXIS_COLUMN_PATTERN = /ALTER TABLE "ai_jobs" ADD COLUMN[^;]*"backend"[^;]*;/;
 const CHAT_AXIS_INDEX_PATTERN = /CREATE INDEX[^;]*"chat_executions"[^;]*"requested_backend"[^;]*;/s;
+const CREATE_TABLE_PATTERN = /CREATE TABLE(?: IF NOT EXISTS)? "(\w+)"/g;
+const OUTBOX_TARGET_PATTERN = /CHECK \("target" = '(\w+)'\)/;
 
 /** 계약 뿌리의 절대 경로이며 스위트를 붙인 구현체는 이 아래만 읽는다. */
 export function contractRoot() {
@@ -76,6 +78,49 @@ export function readChatThreadQueue() {
 /** migration 파일의 이름을 번호 순서로 낸다. */
 export function listMigrations() {
     return readdirSync(join(ROOT, "db", "migrations")).filter((name) => name.endsWith(".sql")).sort();
+}
+
+/** migration 이 세우는 표의 이름을 사전순으로 낸다. */
+export function readLedgerTables() {
+    const found = new Set();
+    for (const name of listMigrations()) {
+        for (const declared of readText(`db/migrations/${name}`).matchAll(CREATE_TABLE_PATTERN)) {
+            found.add(declared[1]);
+        }
+    }
+    return [...found].sort();
+}
+
+/** 표 하나가 갖는 칸의 이름을 선언한 순서로 낸다. */
+export function readTableColumns(table) {
+    for (const name of listMigrations()) {
+        const block = new RegExp(`CREATE TABLE(?: IF NOT EXISTS)? "${table}" \\(([^;]*)\\);`).exec(
+            readText(`db/migrations/${name}`),
+        );
+        if (block === null) continue;
+        return [...block[1].matchAll(/^ {4}"(\w+)"/gm)].map((found) => found[1]);
+    }
+    return [];
+}
+
+/** 색인 아웃박스가 받는 대상 하나를 낸다. 제약이 없으면 null 이다. */
+export function readSearchOutboxTarget() {
+    for (const name of listMigrations()) {
+        const declared = OUTBOX_TARGET_PATTERN.exec(readText(`db/migrations/${name}`));
+        if (declared !== null) return declared[1];
+    }
+    return null;
+}
+
+/** 검색 색인 하나의 선언을 읽는다. */
+export function readSearchIndex(name) {
+    return readJson("wire/search.index.json").indices[name];
+}
+
+/** 에이전트 표면이 MCP 도구의 자리라고 표시한 이름을 사전순으로 낸다. */
+export function readMcpToolNames() {
+    const spec = readText("http/agent-api.openapi.yaml");
+    return [...spec.matchAll(/^ {6}x-mcp-tool: (\S+)$/gm)].map((found) => found[1]).sort();
 }
 
 /** 워커가 여는 SDK 지표 창구의 포트와 시간 단위를 낸다. */

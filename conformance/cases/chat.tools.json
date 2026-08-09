@@ -15,23 +15,23 @@
     },
     "tools": {
         "read": [
-            "find_recipes",
             "find_tasks",
             "get_event",
-            "get_recipe",
             "get_rule_evidence",
             "get_task",
             "get_timeline",
-            "list_cleanup_suggestions",
             "list_memos",
-            "list_recipes",
             "list_rules",
             "list_tags",
             "search_events",
             "search_tasks"
         ],
         "agentRead": [
-            "get_job"
+            "find_recipes",
+            "get_job",
+            "get_recipe",
+            "list_cleanup_suggestions",
+            "list_recipes"
         ],
         "memory": [
             "recall_facts"
@@ -48,8 +48,8 @@
         ]
     },
     "counts": {
-        "read": 14,
-        "agentRead": 1,
+        "read": 10,
+        "agentRead": 5,
         "memory": 1,
         "confirm": 8
     }

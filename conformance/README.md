@@ -65,6 +65,9 @@ Node에서는 `conformance/runner/contract.mjs`를, Python에서는 `conformance
 | `chat.intake` | 대화 턴 접수의 본문 제약, 멱등 해시가 먹는 바이트, 거절 사유의 상태와 코드 |
 | `chat.query` | 대화 조회 창구마다 봉투를 벗긴 `data`의 칸, 재생 계산의 규칙, 열린 연결의 프레임 |
 | `job.intake` | 잡 접수의 본문 제약, 잡 종류별 도메인 입력, 조회 창구의 칸과 정렬, 거절 사유 |
+| `recipe.ledger` | 레시피와 정리 제안을 원장에 적는 규칙, 조회·해소 창구의 칸, 상태 전이와 거절 |
+| `recipe.projection` | 사건 원장의 주입 사건이 적용 이력 행이 되는 자리, 토픽과 소비자 그룹과 칸의 대응 |
+| `cleanup.archive` | 두 원장을 걸치는 수용의 순서, 낡음 판정, 조건이 깨졌을 때의 보상과 수렴 |
 | `divergence` | 두 구현체가 아직 다른 자리 |
 
 `divergence`는 통과·실패를 가리는 케이스가 아니라 **Python 구현이 아직 정본을 따라가지 못한

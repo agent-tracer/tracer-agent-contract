@@ -1,0 +1,109 @@
+{
+    "name": "cleanup.archive",
+    "meaning": "정리 제안을 수용하면 제안은 에이전트 원장에 남고 태스크는 추적 원장에 있다. 두 원장을 한 트랜잭션으로 묶을 수 없으므로 판정의 정본이 어디이고 조건이 깨졌을 때 무엇을 되돌리는지를 계약이 정한다.",
+    "surfaces": {
+        "accept": {
+            "method": "POST",
+            "path": "/api/agent/cleanup/suggestions/{id}/accept",
+            "surface": "http/agent-api.openapi.yaml"
+        },
+        "archive": {
+            "method": "POST",
+            "path": "/api/v1/tasks/{taskId}/archive",
+            "surface": "http/tracer-dependency.openapi.yaml"
+        }
+    },
+    "authority": {
+        "meaning": "태스크의 활동을 아는 쪽만 낡음을 판정할 수 있다",
+        "rule": "판정의 정본은 태스크를 소유한 추적이다. 에이전트는 자기가 관측한 시각을 조건으로 실어 보낼 뿐 스스로 판정하지 않는다",
+        "reason": "에이전트가 추적 원장을 읽지 않으므로 에이전트가 판정하면 그 판정은 언제나 낡은 사본을 본다"
+    },
+    "sequence": {
+        "meaning": "화면은 수용 창구를 한 번만 부르고 그 뒤의 순서는 에이전트가 밟는다",
+        "steps": [
+            {
+                "order": 1,
+                "does": "제안을 자기 원장에서 조회한다",
+                "ledger": "agent-db",
+                "notFound": "행이 없거나 남의 것이면 404 로 끝난다",
+                "alreadyAccepted": "이미 accepted 이면 아무것도 바꾸지 않고 그 제안을 그대로 낸다"
+            },
+            {
+                "order": 2,
+                "does": "제안을 accepted 로 적고 해소 시각을 적는다",
+                "ledger": "agent-db"
+            },
+            {
+                "order": 3,
+                "does": "추적의 보관 창구를 부르며 ifNoActivitySince 에 제안의 observedLastEventAt 을 싣는다",
+                "ledger": "event-db",
+                "onReject": "cleanup.stale 을 받으면 2 를 되돌리고 같은 코드를 부른 쪽에 낸다"
+            }
+        ],
+        "callerCalls": 1
+    },
+    "condition": {
+        "meaning": "조건은 제안이 그 태스크에서 본 마지막 사건의 시각이며 추적이 자기 원장의 마지막 사건 시각과 견준다",
+        "field": "ifNoActivitySince",
+        "from": "task_cleanup_suggestions.observed_last_event_at",
+        "against": "추적이 아는 그 태스크의 마지막 사건 시각",
+        "comparison": "마지막 사건 시각이 조건보다 뒤일 때만 새 활동으로 본다. 같은 시각은 새 활동이 아니다",
+        "absentBody": "본문을 싣지 않으면 마지막 사건을 보지 않고 보관한다. 대화 도구의 보관은 이 갈래를 쓴다",
+        "cases": [
+            {
+                "name": "마지막 사건이 없으면 조건과 무관하게 새 활동이 없다",
+                "lastEventAt": null,
+                "ifNoActivitySince": null,
+                "hasActivity": false
+            },
+            {
+                "name": "조건이 비었고 마지막 사건이 있으면 새 활동으로 본다",
+                "lastEventAt": "2026-01-01T00:01:00.000Z",
+                "ifNoActivitySince": null,
+                "hasActivity": true
+            },
+            {
+                "name": "조건보다 뒤에 도착한 사건은 새 활동이다",
+                "lastEventAt": "2026-01-01T00:02:00.000Z",
+                "ifNoActivitySince": "2026-01-01T00:01:00.000Z",
+                "hasActivity": true
+            },
+            {
+                "name": "조건과 같은 시각의 사건은 새 활동이 아니다",
+                "lastEventAt": "2026-01-01T00:01:00.000Z",
+                "ifNoActivitySince": "2026-01-01T00:01:00.000Z",
+                "hasActivity": false
+            },
+            {
+                "name": "조건보다 이른 사건은 새 활동이 아니다",
+                "lastEventAt": "2026-01-01T00:00:00.000Z",
+                "ifNoActivitySince": "2026-01-01T00:01:00.000Z",
+                "hasActivity": false
+            },
+            {
+                "name": "태스크가 추적에 없으면 견줄 활동이 없으므로 조건이 깨지지 않는다",
+                "lastEventAt": "태스크 없음",
+                "ifNoActivitySince": "2026-01-01T00:01:00.000Z",
+                "hasActivity": false
+            }
+        ]
+    },
+    "rejection": {
+        "status": 409,
+        "code": "cleanup.stale",
+        "message": "Task has activity since the suggestion observed it",
+        "compensation": "에이전트는 제안의 accepted 와 해소 시각을 되돌려 pending 으로 남긴다",
+        "propagation": "부른 쪽은 에이전트 창구에서 같은 상태와 같은 코드를 받는다"
+    },
+    "idempotency": {
+        "meaning": "2 와 3 사이에서 끊기면 제안은 수용이고 태스크는 미보관으로 남는다. 그 상태를 재시도가 수렴시킨다",
+        "archiveIsIdempotent": "이미 보관된 태스크를 다시 보관해도 성공이다. 보관은 상태를 한 번만 옮기고 두 번째 호출은 아무것도 바꾸지 않는다",
+        "acceptIsIdempotent": "이미 accepted 인 제안을 다시 수용해도 원장을 바꾸지 않고 그 제안을 그대로 낸다",
+        "convergence": "끊긴 뒤 같은 수용을 다시 부르면 1 에서 이미 수용임을 보고 3 만 다시 밟는다"
+    },
+    "sideEffects": {
+        "meaning": "보관은 태스크의 검색 문서를 바꾸므로 추적이 자기 색인 반영을 적재한다",
+        "owner": "추적이 자기 원장의 search_outbox 에 target 이 task 인 행을 같은 커밋에 적는다",
+        "agentSide": "에이전트는 이 보관으로 자기 색인을 건드리지 않는다. 제안은 색인 대상이 아니다"
+    }
+}
