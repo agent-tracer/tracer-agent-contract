@@ -22,6 +22,7 @@
 - 정렬: `t.updated_at DESC, t.id DESC`.
 - 상한: 기본 30, 최대 100. 0 이하이거나 유한수가 아니면 30, 그 밖에는 정수로 내린 뒤 100 이하로 제한한다.
 - 전체 개수는 같은 filter와 같은 `LEFT JOIN`, `s.hidden_at IS NULL`, 보관 조건을 적용하되 cursor와 상한을 제외해 별도 `COUNT`한다.
+- `ids`가 있으면 `t.id IN (:...ids)`를 추가하고 cursor와 상한을 적용하지 않는다. id는 1개 이상 100개 이하이며 그 밖의 값은 `validation_error`로 거절한다. 상한이 한 장의 상한과 같으므로 걸린 행이 언제나 한 장에 들어가고 `nextCursor`는 `null`이다. 추적은 이 조건을 아직 구현하지 않았고 계약이 먼저 선언했다.
 
 ## 2. `GET /api/v1/tasks/{taskId}`
 
@@ -92,7 +93,7 @@
 - recipe 조회: `recipes`에서 `user_id = :userId AND status = :status AND deleted_at IS NULL`, `updated_at DESC`. 상한 지정 없음.
 - `status`가 있으면 위 조회를 한 번 실행한다. 없으면 정의된 모든 recipe status별로 병렬 조회하고 status 정의 순서대로 결과 배열을 이어 붙인다. 전체 결과에 대한 재정렬은 없다.
 - 각 recipe의 통계 조회: `recipe_applications`에서 `recipe_id = :recipeId`, `created_at DESC`. 상한 지정 없음. recipe마다 한 번씩 실행한다.
-- 인용 task 제목은 질의가 아니다. `tasks`는 추적 원장의 표이므로 recipe에서 모은 중복 없는 task id마다 추적의 `GET /api/v1/tasks/{taskId}`를 부르고 제목을 읽는다. id가 없으면 부르지 않는다. 닿지 않거나 남의 것인 id는 표에서 빠지며 그것이 조회 실패는 아니다.
+- 인용 task 제목은 질의가 아니다. `tasks`는 추적 원장의 표이므로 recipe에서 모은 중복 없는 task id를 추적의 `GET /api/v1/tasks?ids=`에 실어 한 번에 묻고 제목을 읽는다. id가 100개를 넘으면 100개씩 나눠 부른다. id가 없으면 부르지 않는다. 닿지 않거나 남의 것인 id는 표에서 빠지며 그것이 조회 실패는 아니다.
 - `JOIN`은 사용하지 않는다.
 
 ## 10. `GET /api/agent/cleanup/suggestions`

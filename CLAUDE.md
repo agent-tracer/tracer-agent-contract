@@ -13,7 +13,7 @@
 - `conformance/` — 케이스·강제 수준·Node/Python 검사기
 - `VERSION` — 계약 판
 
-레시피와 정리 제안의 원장은 에이전트 원장입니다. 그래서 그 표의 DDL은 `db/`가, 창구는 `http/agent-api.openapi.yaml`이, 검색 색인은 `wire/search.index.json`이, 사건에서 적용 이력을 만드는 프로젝터는 `conformance/cases/recipe.projection.json`이 갖습니다. 추적에 남는 것은 태스크의 조건부 보관 하나이며 `http/tracer-dependency.openapi.yaml`이 갖습니다.
+레시피와 정리 제안의 원장은 에이전트 원장입니다. 그래서 그 표의 DDL은 `db/`가, 창구는 `http/agent-api.openapi.yaml`이, 검색 색인은 `wire/search.index.json`이, 사건에서 적용 이력을 만드는 프로젝터는 `conformance/cases/recipe.projection.json`이 갖습니다. 추적에 남는 것은 태스크의 조건부 보관과 인용된 태스크의 제목을 푸는 집합 조회이며 `http/tracer-dependency.openapi.yaml`이 갖습니다. 집합 조회는 계약이 먼저 선언했고 추적 구현이 아직 없습니다.
 
 `agent/shared/`는 두 구현체가 같은 절차를 밟아야 하는 규칙을 갖습니다.
 
