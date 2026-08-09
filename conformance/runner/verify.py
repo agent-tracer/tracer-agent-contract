@@ -58,6 +58,7 @@ SHARED = [
     "error.subtypes.json",
     "execution.vocabulary.json",
     "execution.budget.json",
+    "execution.limits.json",
     "model.envelope.json",
     "model.rates.json",
     "redaction.json",
@@ -663,7 +664,20 @@ def main() -> None:
         f"{len(scope_token['payload']['fields'])}개 칸을 "
         f"{scope_token['signature']['algorithm']} 으로 서명한다"
     )
+    execution_limits = read_shared("execution.limits.json")["kinds"]
+    limit_kinds = sorted(execution_limits)
+    if limit_kinds != sorted(AGENTS):
+        raise SystemExit(f"실행 한도를 적은 종류가 에이전트 목록과 다르다 — {', '.join(limit_kinds)}")
+
     model_rates = read_shared("model.rates.json")
+    unpriced_defaults = [
+        f"{kind}: {model}"
+        for kind, limits in execution_limits.items()
+        for model in (limits.get("defaultModel"), limits.get("fallbackModel"))
+        if model is not None and model not in model_rates["base"]
+    ]
+    if unpriced_defaults:
+        raise SystemExit(f"실행 한도가 단가를 모르는 모델을 가리킨다 — {', '.join(unpriced_defaults)}")
     cache = model_rates["cache"]
     if cache["defaultTtl"] not in cache["writeMultiplier"]:
         raise SystemExit(f"기본 캐시 수명 {cache['defaultTtl']} 의 배수를 계약이 적지 않는다")
@@ -684,6 +698,8 @@ def main() -> None:
         f"{declared['overrides']} ← {declared['setting']}" for declared in carried_envelope.values()
     )
     print(f"설정이 봉투를 덮는 자리 {len(carried_envelope)}개를 계약이 갖는다 — {overridden}")
+    limits_named = " · ".join(f"{kind}({execution_limits[kind]['maxTurns']}턴)" for kind in limit_kinds)
+    print(f"실행 한도를 계약이 갖는 종류 {len(limit_kinds)}개 — {limits_named}")
     print(
         f"단가를 아는 모델 {len(model_rates['base'])}개와 캐시 수명 "
         f"{len(cache['writeMultiplier'])}개를 계약이 갖는다 — "

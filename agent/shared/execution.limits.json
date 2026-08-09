@@ -1,0 +1,58 @@
+{
+  "meaning": "실행 하나가 태울 수 있는 예산과 턴과 출력과 벽시계를 두 구현체가 같은 자리에서 읽게 한다. 값이 갈리면 같은 요청이 한 축에서만 상한에 닿아 도구를 잃고, 어느 쪽이 옳은지 판단할 자리가 없다.",
+  "unit": {
+    "budgetUsd": "이 실행 전체가 태울 수 있는 달러이며 닿으면 도구를 거두고 결론만 받는다.",
+    "maxTurns": "폭주를 끊는 그물이며 예산이 아니다. 모델에게 알리는 수가 이 값이고 하드 상한은 execution.budget.json 의 turnRule 이 정한다.",
+    "maxOutputTokens": "한 호출이 낼 수 있는 출력 토큰이며 모델별로 다른 값은 model.envelope.json 이 갖는다.",
+    "deadlineMs": "벽시계 백스톱이며 도구를 부르는 턴이 몇 분인 것은 정상이다.",
+    "stallMs": "마지막 진행 이후 이만큼 소식이 없으면 멈춘 것으로 보고 끊는다.",
+    "effort": "모델에 실어 보내는 추론 노력이며 값의 목록은 model.envelope.json 이 갖는다."
+  },
+  "kinds": {
+    "chat": {
+      "defaultModel": "claude-sonnet-4-6",
+      "budgetUsd": 1.2,
+      "maxTurns": 14,
+      "maxOutputTokens": 4000,
+      "deadlineMs": 600000,
+      "stallMs": 120000
+    },
+    "recipe-scan": {
+      "defaultModel": "claude-sonnet-4-6",
+      "fallbackModel": "claude-haiku-4-5",
+      "budgetUsd": 2.0,
+      "maxTurns": 15,
+      "maxOutputTokens": 16000,
+      "deadlineMs": 720000,
+      "effort": "low"
+    },
+    "title-suggestion": {
+      "defaultModel": "claude-haiku-4-5",
+      "fallbackModel": "claude-haiku-4-5",
+      "budgetUsd": 0.2,
+      "maxTurns": 12,
+      "maxOutputTokens": 4000,
+      "deadlineMs": 300000
+    },
+    "task-cleanup": {
+      "defaultModel": "claude-haiku-4-5",
+      "fallbackModel": "claude-haiku-4-5",
+      "budgetUsd": 0.5,
+      "maxTurns": 16,
+      "maxOutputTokens": 16000,
+      "deadlineMs": 600000
+    }
+  },
+  "absent": {
+    "meaning": "한 축에만 있는 칸이며 없는 축은 그 칸을 읽지 않는다.",
+    "fallbackModel": "chat 은 대체 모델을 두지 않는다. 대화는 사용자가 다시 보내는 것이 대체이므로 다른 모델로 조용히 바꾸지 않는다.",
+    "stallMs": "chat 밖의 종류는 침묵을 따로 끊지 않고 deadlineMs 가 백스톱이다.",
+    "effort": "적지 않은 종류는 공급자의 기본값을 쓴다."
+  },
+  "notOwnedHere": {
+    "allowedModels": "사용자가 고를 수 있는 모델 목록은 설정 화면을 가진 축만 갖는다. 두 축이 모두 갖게 되면 이 파일로 옮긴다.",
+    "modelRates": "단가는 model.rates.json 이 갖는다.",
+    "reservation": "예약된 몫과 마무리 자리는 execution.budget.json 이 갖는다."
+  },
+  "verification": "구현체는 자기 실행 카탈로그의 네 종류가 이 파일과 칸마다 같은지 보는 검사를 갖는다. 한 축이 값을 올려도 다른 축이 알지 못하면 같은 요청의 결과가 갈린다."
+}

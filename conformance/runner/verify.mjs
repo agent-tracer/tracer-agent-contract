@@ -52,6 +52,7 @@ const SHARED = [
     "error.subtypes.json",
     "execution.vocabulary.json",
     "execution.budget.json",
+    "execution.limits.json",
     "model.envelope.json",
     "model.rates.json",
     "redaction.json",
@@ -626,7 +627,20 @@ console.log(
     `실행에 매인 자격은 ${scopeToken.prefix} 로 시작해 ${scopeToken.payload.fields.length}개 칸을 ` +
         `${scopeToken.signature.algorithm} 으로 서명한다`,
 );
+const executionLimits = readShared("execution.limits.json").kinds;
+const limitKinds = Object.keys(executionLimits);
+if (limitKinds.sort().join() !== [...AGENTS].sort().join()) {
+    throw new Error(`실행 한도를 적은 종류가 에이전트 목록과 다르다 — ${limitKinds.join(", ")}`);
+}
+
 const modelRates = readShared("model.rates.json");
+const unpricedDefaults = Object.entries(executionLimits)
+    .flatMap(([kind, limits]) => [limits.defaultModel, limits.fallbackModel].map((model) => ({ kind, model })))
+    .filter(({ model }) => model !== undefined && modelRates.base[model] === undefined);
+if (unpricedDefaults.length > 0) {
+    const named = unpricedDefaults.map(({ kind, model }) => `${kind}: ${model}`).join(", ");
+    throw new Error(`실행 한도가 단가를 모르는 모델을 가리킨다 — ${named}`);
+}
 if (modelRates.cache.writeMultiplier[modelRates.cache.defaultTtl] === undefined) {
     throw new Error(
         `기본 캐시 수명 ${modelRates.cache.defaultTtl} 의 배수를 계약이 적지 않는다`,
@@ -652,6 +666,10 @@ const overridden = Object.values(carriedEnvelope)
     .map((declared) => `${declared.overrides} ← ${declared.setting}`)
     .join(" · ");
 console.log(`설정이 봉투를 덮는 자리 ${Object.keys(carriedEnvelope).length}개를 계약이 갖는다 — ${overridden}`);
+console.log(
+    `실행 한도를 계약이 갖는 종류 ${limitKinds.length}개 — `
+        + limitKinds.map((kind) => `${kind}(${executionLimits[kind].maxTurns}턴)`).join(" · "),
+);
 console.log(
     `단가를 아는 모델 ${Object.keys(modelRates.base).length}개와 캐시 수명 ` +
         `${Object.keys(modelRates.cache.writeMultiplier).length}개를 계약이 갖는다 — ` +
