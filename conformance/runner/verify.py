@@ -664,6 +664,14 @@ def main() -> None:
         f"{len(scope_token['payload']['fields'])}개 칸을 "
         f"{scope_token['signature']['algorithm']} 으로 서명한다"
     )
+    # 재생 상한이 요약 트리거보다 작으면 정상 흐름이 늘 상한에 닿아 신호가 되지 못한다.
+    chat_summary = read_json("agent/chat/summary.json")
+    if chat_summary["consumption"]["maxReplayMessages"] <= chat_summary["production"]["trigger"]["messages"]:
+        raise SystemExit(
+            f"재생 상한 {chat_summary['consumption']['maxReplayMessages']} 가 요약 트리거 "
+            f"{chat_summary['production']['trigger']['messages']} 보다 넉넉하지 않다"
+        )
+
     # 도구 인자의 상한은 스키마가 강제하지 못하므로 설명에 그 수가 있어야 모델에게 닿는다.
     silent_arg_limits = [
         f"{agent}.{tool}.{name}"

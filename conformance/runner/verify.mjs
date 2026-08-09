@@ -627,6 +627,15 @@ console.log(
     `실행에 매인 자격은 ${scopeToken.prefix} 로 시작해 ${scopeToken.payload.fields.length}개 칸을 ` +
         `${scopeToken.signature.algorithm} 으로 서명한다`,
 );
+// 재생 상한이 요약 트리거보다 작으면 정상 흐름이 늘 상한에 닿아 신호가 되지 못한다.
+const chatSummary = readJson("agent/chat/summary.json");
+if (!(chatSummary.consumption.maxReplayMessages > chatSummary.production.trigger.messages)) {
+    throw new Error(
+        `재생 상한 ${chatSummary.consumption.maxReplayMessages} 가 요약 트리거 `
+            + `${chatSummary.production.trigger.messages} 보다 넉넉하지 않다`,
+    );
+}
+
 // 도구 인자의 상한은 스키마가 강제하지 못하므로 설명에 그 수가 있어야 모델에게 닿는다.
 const silentArgLimits = AGENTS.flatMap((agent) =>
     Object.entries(readAgentTools(agent).tools ?? {}).flatMap(([tool, declared]) =>
