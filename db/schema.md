@@ -53,9 +53,36 @@ docker run --rm -v "$PWD/db/migrations:/flyway/sql:ro" \
 - `agent_run_observations.backend`: 그 시도를 실제로 태운 축이며 실행이 끝난 뒤에 행과 함께 남는다.
 - `chat_threads.backend`: 그 스레드의 턴을 맡은 축이며 아직 정해지지 않았으면 비어 있다.
 
+## 레시피 도메인
+
+- `recipes`: 레시피 한 편의 본문과 상태와 판을 담는다. `deleted_at` 이 있는 행은 조회에 잡히지 않으므로 목록 창구가 읽는 색인은 그 조건을 담은 `recipes_live_user_status` 다. `status` 의 값 목록은 HTTP 표면의 `RecipeStatus` 가 갖는다.
+- `recipe_applications`: 레시피 하나가 어느 태스크에 쓰였고 그 결과가 무엇이었는지를 한 행으로 담는다. `outcome` 이 비어 있는 행은 적용은 되었으나 아직 자기보고가 붙지 않은 것이다.
+
+레시피를 만드는 주체가 에이전트이므로 이 두 표는 에이전트 원장에 선다. 추적은 이 표를 읽지 않고 공개 `agent-api` 로만 묻는다.
+
+## 정리 제안 도메인
+
+- `task_cleanup_suggestions`: 태스크 하나에 걸린 정리 제안을 담는다. `observed_last_event_at` 은 제안을 만든 스캔이 그 태스크에서 본 마지막 사건 시각이며, 수락 창구가 이 값을 추적의 조건부 보관에 그대로 실어 보낸다.
+
+같은 사용자와 태스크와 종류에 대기 중인 제안은 `cleanup_pending_task_kind_unique` 가 하나로 묶는다. 판정의 정본은 태스크를 소유한 추적이 갖고 이 표는 제안과 그 해소만 갖는다.
+
+## 검색 색인 반영
+
+- `search_outbox`: 색인 반영 요청을 도메인 커밋과 같은 트랜잭션에 담는 표다. OpenSearch 쓰기가 트랜잭션에 참여하지 못하므로 행으로 남기고 배출기가 재시도한다.
+
+에이전트 원장이 소유한 색인 대상은 `recipe` 하나이며 `search_outbox_target_check` 가 그 값만 받는다. 태스크와 메모는 추적이 자기 원장의 같은 이름 표에서 배출한다. 배출 뒤의 단계는 `wire/search.index.json` 이 갖는다.
+
 ## 설정 도메인
 
 - `app_settings`: 에이전트 실행에 쓰는 설정값을 scope 와 key 한 쌍으로 담는다.
+
+## 같은 스키마 안의 참조
+
+`recipes.source_job_id` 는 이 스키마의 `ai_jobs.id` 를 가리키지만 외래 키 제약을 두지 않는다. 근거는 셋이다.
+
+- 이 칸은 잡을 조회하는 열쇠가 아니라 같은 실행이 두 번 접수되었는지 가르는 표식이다. 창구는 `sourceJobId` 를 길이만 제한한 문자열로 받으며 잡 원장에 있는 값인지 묻지 않는다.
+- 제약을 걸면 잡에 없는 값이 400 이 아니라 데이터베이스 오류로 바뀐다. 거절의 자리가 창구에서 원장으로 내려가면 두 구현체가 같은 입력에 다른 응답을 낸다.
+- 레시피는 자기를 낸 잡보다 오래 살아야 한다. 계약은 잡 원장의 보존 기간을 정하지 않으므로 잡 행을 지우는 배포에서 제약이 레시피를 함께 잡는다.
 
 ## 외부 표 참조
 
@@ -69,3 +96,9 @@ docker run --rm -v "$PWD/db/migrations:/flyway/sql:ro" \
 - `ai_jobs.task_id` → `tasks.id`
 - `ai_job_steps.user_id` → `users.user_id`
 - `agent_run_observations.user_id` → `users.user_id`
+- `recipes.user_id` → `users.user_id`
+- `recipe_applications.user_id` → `users.user_id`
+- `recipe_applications.task_id` → `tasks.id`
+- `task_cleanup_suggestions.user_id` → `users.user_id`
+- `task_cleanup_suggestions.task_id` → `tasks.id`
+- `search_outbox.user_id` → `users.user_id`
