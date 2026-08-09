@@ -664,6 +664,19 @@ def main() -> None:
         f"{len(scope_token['payload']['fields'])}개 칸을 "
         f"{scope_token['signature']['algorithm']} 으로 서명한다"
     )
+    # 보고의 칸 목록은 두 축이 자기 모양을 대조하는 자리이므로 없어지면 그 대조가 조용히 사라진다.
+    for agent in AGENTS:
+        report = (read_agent_tools(agent).get("orchestration") or {}).get("workerReport")
+        if report is None:
+            continue
+        named = [
+            key
+            for key, value in report.items()
+            if key.lower().endswith("required") and isinstance(value, list) and value
+        ]
+        if not named:
+            raise SystemExit(f"{agent} 의 전문가 보고가 채워야 할 칸을 하나도 적지 않는다")
+
     # 모델에게 알린 상한과 실제로 주는 몫의 최댓값이 갈리면 상한을 알려 주는 목적 자체가 사라진다.
     depth_names = ["shallow", "normal", "deep"]
     for agent in AGENTS:

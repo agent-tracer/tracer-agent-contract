@@ -627,6 +627,18 @@ console.log(
     `실행에 매인 자격은 ${scopeToken.prefix} 로 시작해 ${scopeToken.payload.fields.length}개 칸을 ` +
         `${scopeToken.signature.algorithm} 으로 서명한다`,
 );
+// 보고의 칸 목록은 두 축이 자기 모양을 대조하는 자리이므로 없어지면 그 대조가 조용히 사라진다.
+for (const agent of AGENTS) {
+    const report = readAgentTools(agent).orchestration?.workerReport;
+    if (report === undefined) continue;
+    const named = Object.entries(report)
+        .filter(([key]) => key.endsWith("required") || key.endsWith("Required"))
+        .filter(([, value]) => Array.isArray(value) && value.length > 0);
+    if (named.length === 0) {
+        throw new Error(`${agent} 의 전문가 보고가 채워야 할 칸을 하나도 적지 않는다`);
+    }
+}
+
 // 모델에게 알린 상한과 실제로 주는 몫의 최댓값이 갈리면 상한을 알려 주는 목적 자체가 사라진다.
 const DEPTH_NAMES = ["shallow", "normal", "deep"];
 for (const agent of AGENTS) {
