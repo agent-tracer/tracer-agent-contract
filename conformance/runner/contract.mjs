@@ -301,43 +301,6 @@ export function readSchemaFields(schemaName) {
     };
 }
 
-/** 리스를 쥔 실행기의 이름을 요구하는 창구를 사전순으로 낸다. */
-export function readLeaseOwnerPaths() {
-    const spec = readFileSync(join(ROOT, "http", "agent-api.openapi.yaml"), "utf8");
-    const paths = [];
-    let path = null;
-    let body = [];
-    const flush = () => {
-        if (path !== null && body.join("\n").includes("LeaseOwnerHeader")) paths.push(path);
-    };
-    for (const line of spec.split("\n")) {
-        const declared = /^ {2}(\/\S+):$/.exec(line);
-        if (declared) {
-            flush();
-            path = declared[1];
-            body = [];
-            continue;
-        }
-        if (path === null) continue;
-        if (/^ {0,3}\S/.test(line)) {
-            flush();
-            path = null;
-            continue;
-        }
-        body.push(line);
-    }
-    flush();
-    return paths.sort();
-}
-
-/** 그 창구가 이름 없는 요청을 어느 응답으로 거절한다고 선언했는지 낸다. */
-export function readLeaseOwnerRejectionRef() {
-    const spec = readFileSync(join(ROOT, "http", "agent-api.openapi.yaml"), "utf8");
-    const declared = /\n {4}LeaseOwnerMissing:\n(?: {6}.*\n)*? {14}code: (\S+)\n {14}message: (.*)\n/.exec(spec);
-    if (declared === null) throw new Error("LeaseOwnerMissing 이 거절의 낱말을 선언하지 않는다");
-    return { code: declared[1], message: declared[2] };
-}
-
 /** OpenAPI 가 선언한 이름 붙은 enum 하나의 값을 낸다. */
 export function readOpenApiEnum(schemaName) {
     const spec = readFileSync(join(ROOT, "http", "agent-api.openapi.yaml"), "utf8");

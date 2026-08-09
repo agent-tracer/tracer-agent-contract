@@ -163,12 +163,6 @@
             "message": "Idempotency key was already used with different job input"
         },
         {
-            "name": "규칙 생성의 근거 이벤트가 그 태스크의 것이 아니다",
-            "status": 400,
-            "code": "job.invalid-rule-anchor",
-            "message": "Rule generation anchor event does not belong to the task"
-        },
-        {
             "name": "실행할 모델 자격이 그 사용자에게 없다",
             "status": 400,
             "code": "job.llm-key-missing",
@@ -451,8 +445,6 @@
         "rejection": "job.lease-owner-missing",
         "paths": [
             "/api/agent/jobs/{id}/start",
-            "/api/agent/jobs/{id}/lease",
-            "/api/agent/jobs/{id}/release",
             "/api/agent/jobs/{id}/results",
             "/api/agent/jobs/{id}/fail"
         ]

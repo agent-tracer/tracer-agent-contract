@@ -329,46 +329,6 @@ def read_schema_fields(schema_name: str) -> dict[str, list[str]]:
     }
 
 
-def read_lease_owner_paths() -> list[str]:
-    """리스를 쥔 실행기의 이름을 요구하는 창구를 사전순으로 낸다."""
-    spec = (ROOT / "http" / "agent-api.openapi.yaml").read_text(encoding="utf-8")
-    paths: list[str] = []
-    path: str | None = None
-    body: list[str] = []
-
-    def flush() -> None:
-        if path is not None and "LeaseOwnerHeader" in "\n".join(body):
-            paths.append(path)
-
-    for line in spec.split("\n"):
-        declared = re.match(r"^ {2}(/\S+):$", line)
-        if declared:
-            flush()
-            path = declared.group(1)
-            body = []
-            continue
-        if path is None:
-            continue
-        if re.match(r"^ {0,3}\S", line):
-            flush()
-            path = None
-            continue
-        body.append(line)
-    flush()
-    return sorted(paths)
-
-
-def read_lease_owner_rejection_ref() -> dict[str, str]:
-    """그 창구가 이름 없는 요청을 어느 응답으로 거절한다고 선언했는지 낸다."""
-    spec = (ROOT / "http" / "agent-api.openapi.yaml").read_text(encoding="utf-8")
-    declared = re.search(
-        r"\n    LeaseOwnerMissing:\n(?: {6}.*\n)*? {14}code: (\S+)\n {14}message: (.*)\n", spec
-    )
-    if declared is None:
-        raise AssertionError("LeaseOwnerMissing 이 거절의 낱말을 선언하지 않는다")
-    return {"code": declared.group(1), "message": declared.group(2)}
-
-
 def read_tool_binding_paths() -> list[dict[str, str]]:
     """대화 도구가 어느 경로의 뷰인지를 도구 이름 순으로 낸다."""
     bindings = read_agent_tools("chat")["bindings"]["bindings"]
