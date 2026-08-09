@@ -7,10 +7,10 @@
       "area": "agent",
       "summary": "실행 도중 쌓인 오래된 도구 결과를 비우는 주체가 한 축에만 있다",
       "canonical": "python",
-      "ts": "에이전트 SDK 의 자동 압축에 맡긴다. 임계값은 실행 중 Query.getContextUsage 로 조회되고 압축 시점은 PreCompact 와 PostCompact 훅으로 관측되므로 구현체가 볼 수 없는 것은 아니다. 끄고 직접 편집하는 값은 settings.json 이 갖는데 운영 프로파일이 settingSources 를 비워 그 파일을 읽지 않는다.",
+      "ts": "에이전트 SDK 의 자동 압축에 맡긴다. 임계값은 실행 중 Query.getContextUsage 로 조회되고 압축 시점은 PreCompact 와 PostCompact 훅으로 관측된다. 끄는 값 autoCompactEnabled 는 질의 옵션의 settings 로 넘길 수 있으며 그 칸은 settingSources 와 독립이다. 즉 끄지 못해서가 아니라 아직 끄고 자기 정책을 세우지 않았다.",
       "python": "ContextEditingMiddleware 가 chat 과 recipe-scan 의 표준 실행 체인 안에서 앞선 도구 결과를 비운다. 비우는 자리는 프롬프트 캐시 경계 안쪽이므로 정리가 실행되는 호출은 그 접두사를 다시 쓴다",
-      "resolution": "좁히려면 운영 프로파일이 봉인한 settingSources 를 여는 결정이 먼저이며, 그 봉인은 디스크 설정이 모델과 permissions 와 도구 표면을 바꾸지 못하게 하려는 것이므로 이 갈림보다 무겁다. 봉인을 유지하는 동안에는 계약이 trigger 와 keep 을 값으로 갖고 python 축이 그것을 따르는 것까지만 할 수 있다.",
-      "note": "이 갈림은 SDK 가 강제한 것이 아니라 이 저장소의 운영 정책이 닫은 자리다. 두 말은 다르므로 근거를 섞지 않는다."
+      "resolution": "계약이 정리 문턱과 남길 도구 결과 개수를 값으로 갖고, ts 축이 settings 로 자동 압축을 끈 뒤 그 정책으로 자기 문맥 편집을 세우면 닫힌다. 먼저 운영 프로파일에서 그 옵션이 실제로 걸리는지 실행으로 확인한다.",
+      "note": "이 항목은 앞서 운영 프로파일이 설정 통로를 봉인해 닫혔다고 적혔으나 그것은 틀린 근거였다. settingSources 가 막는 것은 파일시스템 설정이고 settings 는 다른 칸이다."
     },
     {
       "id": "agent.model.retry",

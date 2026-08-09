@@ -1,123 +1,125 @@
 {
-    "meaning": "실행 하나가 여러 호출에 걸쳐 예산을 나누는 규칙이다. maxTurns 는 실행 전체의 턴 총량이며 노드마다 다시 주어지는 상한이 아니다. 두 축이 같은 계획에서 같은 턴과 같은 달러를 내야 하므로 떼는 순서와 나머지를 돌려주는 규칙까지 정한다.",
-    "reservation": {
-        "meaning": "팬아웃 전에 떼어 두어 전문가 배분에서 제외하는 몫이다. 비율은 뗄 당시의 잔량에 곱하므로 뗄 순서가 바뀌면 같은 비율이 다른 액수가 된다.",
-        "order": [
-            "repair",
-            "survey",
-            "synthesisFloor"
-        ],
-        "repair": {
-            "turns": 2,
-            "budgetShare": 0.2,
-            "reason": "검증에 걸린 산출을 한 번 고칠 최소 턴과, 그때 남은 예산에서 떼는 비율이다."
-        },
-        "survey": {
-            "turns": 3,
-            "budgetShare": 0.1,
-            "reason": "조사 계획을 세우는 턴과 그 몫이며, 규모를 읽는 도구 호출과 그 답을 보고 배분하는 턴을 함께 담는다."
-        },
-        "synthesisFloor": {
-            "turns": 3,
-            "budgetShare": 0,
-            "reason": "전문가에게 넘기지 않고 종합이 갖는 바닥 턴이며 달러는 따로 떼지 않는다."
-        }
+  "meaning": "실행 하나가 여러 호출에 걸쳐 예산을 나누는 규칙이다. maxTurns 는 실행 전체의 턴 총량이며 노드마다 다시 주어지는 상한이 아니다. 두 축이 같은 계획에서 같은 턴과 같은 달러를 내야 하므로 떼는 순서와 나머지를 돌려주는 규칙까지 정한다.",
+  "reservation": {
+    "meaning": "팬아웃 전에 떼어 두어 전문가 배분에서 제외하는 몫이다. 비율은 뗄 당시의 잔량에 곱하므로 뗄 순서가 바뀌면 같은 비율이 다른 액수가 된다.",
+    "order": [
+      "repair",
+      "survey",
+      "synthesisFloor"
+    ],
+    "repair": {
+      "turns": 2,
+      "attempts": 1,
+      "attemptsReason": "검증에 걸린 산출을 다시 받는 횟수이며 산문이 아니라 이 수가 정본이다. 두 축이 같은 수로 도는 것은 지금 우연이므로 여기서 정한다.",
+      "budgetShare": 0.2,
+      "reason": "검증에 걸린 산출을 한 번 고칠 최소 턴과, 그때 남은 예산에서 떼는 비율이다."
     },
-    "turnLedger": {
-        "meaning": "실행 하나가 갖는 턴의 총량과 그 소진 규칙이다.",
-        "totalIsWholeExecution": true,
-        "lease": "호출마다 그 시점의 잔량에서 몫을 떼어 그 호출의 상한으로 준다.",
-        "settle": "호출이 끝나면 떼어 준 몫에 실제 지출을 대조해 잔량을 되돌린다.",
-        "settleWithoutReport": "공급자가 실제 턴 수나 비용을 보고하지 않으면 떼어 준 몫 전부를 쓴 것으로 본다.",
-        "settleFromUsage": "실패한 호출이라도 토큰 사용량을 보고했으면 그 사용량과 실제로 답한 모델의 단가로 비용을 셈해 정산한다. 사용량을 아는데도 몫 전부를 쓴 것으로 보면 남은 단계가 쓰지 않은 돈까지 잃는다. 턴 수는 사용량으로 알 수 없으므로 그대로 몫 전부를 쓴 것으로 본다.",
-        "reservationReturn": "예약분은 정산 때 잔량으로 되돌리며, 뗄 때 이미 잔량에서 뺐으므로 정산에서 두 번 빼지 않는다."
+    "survey": {
+      "turns": 3,
+      "budgetShare": 0.1,
+      "reason": "조사 계획을 세우는 턴과 그 몫이며, 규모를 읽는 도구 호출과 그 답을 보고 배분하는 턴을 함께 담는다."
     },
-    "weightAllocation": {
-        "meaning": "전문가 셋에 턴을 나눌 때 weight 요청과 가용 턴의 관계에 따라 내림에서 생기는 나머지를 돌려주는 규칙이다. 두 축이 같은 계획에서 같은 배열을 내야 하므로 언어의 정렬 안정성에 맡기지 않고 동률의 순서까지 정한다.",
-        "whenRequestFitsAvailable": "요청 합이 가용 이하면 항목마다 요청한 만큼 그대로 준다.",
-        "whenAvailableBelowCount": "가용이 항목 수보다 적으면 최소 1턴씩도 다 줄 수 없으므로, weight 가 큰 순서로 1턴씩만 주고 나머지 항목은 0이다. 동률이면 인덱스가 작은 쪽을 먼저 준다.",
-        "otherwise": {
-            "floor": "항목마다 1턴을 먼저 깔아 준다.",
-            "proportional": "남은 가용을 항목의 (weight-1) 비례로 나눠 내림해서 얹는다.",
-            "remainder": "내림에서 남고 배분되지 않은 턴을 weight 가 큰 순서로 하나씩 돌려준다. 동률이면 인덱스가 작은 쪽을 먼저 받는다."
-        },
-        "budgetFollowsTurns": "달러는 항목이 배분받은 턴이 전체 배분 턴에서 차지하는 비율만큼 나눈다. 배분된 턴이 모두 0이면 달러도 모두 0이다."
-    },
-    "orchestratorFailureDemotion": {
-        "meaning": "계획 단계가 실패했을 때 실행이 취하는 모양이다.",
-        "onPlanFailure": "계획 호출이 실패하면 빈 계획으로 낮추고, 그 실행은 전문가를 하나도 부르지 않은 채 빈 결과로 끝난다.",
-        "outcome": "낮춘 실행은 실패가 아니라 성공이다.",
-        "trajectory": "낮춘 사실은 실행 어휘의 node.failed 로 궤적에 남으며 이후 노드는 이어서 실행되지 않는다.",
-        "emptyResultReason": {
-            "meaning": "빈 결과로 끝난 실행이 왜 비었는지를 적는 어휘이며, 저장할 패턴이 없던 실행과 생성이 실패한 실행을 원장에서 구분한다.",
-            "values": {
-                "no-pattern": "조사 계획이 비었거나 후보가 만들어지지 않았고 실행 자체는 정상이었다.",
-                "insufficient-evidence": "조사는 실행됐으나 근거가 모자라 후보를 세울 수 없었다. probe 가 exhausted 로 끝난 경우를 포함한다.",
-                "generation-degraded": "계획·조사·검증·전달 가운데 한 단계가 실패해 빈 결과로 끝났다. 재시도 소진, repair 재실패, 산출 전달 실패가 여기 든다."
-            },
-            "recording": "실행은 이 사유를 궤적 관측에 남긴다. 사유가 no-pattern 이 아닌 실행을 성공으로 접더라도 원장에서는 구분된다.",
-            "default": "no-pattern"
-        }
-    },
-    "pacing": {
-        "meaning": "모델이 남은 몫을 보고 답의 밀도를 정하도록 실행이 건네는 문장이다. 두 축이 같은 자리에서 같은 문장을 주어야 같은 계획에서 같은 밀도가 나온다. 이 문장은 종료를 결정하지 않으며 예산을 세는 것은 turnLedger 가 갖는다.",
-        "unit": "모델 호출 턴",
-        "progressNotice": {
-            "template": "You have used {used} of {total} tool-calling turns; converge as you approach the limit.",
-            "when": "도구를 여는 시점마다 그때까지 쓴 턴과 총량을 넣어 건넨다",
-            "placeholders": [
-                "used",
-                "total"
-            ],
-            "reason": "총량만 알리면 모델이 자기 위치를 모르므로 쓴 만큼을 함께 준다"
-        },
-        "landingDirective": {
-            "when": "예산이 종료에 닿아 도구를 더 열지 않는 시점에 건넨다",
-            "structured": "The execution budget is exhausted. Stop calling tools and produce the final structured output now using only what you already verified.",
-            "freeText": "The execution budget is exhausted. Stop calling tools and write your final answer to the user now in plain prose, using only what you already retrieved.",
-            "reason": "도구만 닫고 지시를 주지 않으면 모델이 도구 실패로 읽고 같은 호출을 되풀이한다"
-        },
-        "landingReserve": {
-            "calls": 2,
-            "meaning": "종료는 도구만 닫으므로 마무리 호출 하나가 그 뒤에 남는다. 그 호출이 지금까지 가장 비쌌던 호출만큼 들 수 있다고 보고 그만큼을 미리 뗀다.",
-            "rule": "쓴 값에 가장 비쌌던 호출의 calls 배를 더해 상한에 닿으면 종료한다. 턴도 같은 수를 미리 떼어 마무리 호출이 설 자리를 남긴다.",
-            "reason": "마무리 몫을 남기지 않으면 상한이 종료보다 먼저 걸려 실행이 답 없이 실패한다.",
-            "providerBackstop": 2,
-            "providerBackstopMeaning": "공급자에게 넘기는 자기 달러 상한은 이 배수만큼 위에 둔다. 실행을 조이는 것은 종료이고 공급자 상한은 폭주만 끊는 백스톱이다.",
-            "providerBackstopReason": "같은 값을 넘기면 공급자가 호출 도중에 끊어 종료가 마무리 호출을 낼 틈이 없다. 배수와 가산을 한 값에 겸하게 두면 두 축이 같은 이름에서 다른 수를 만든다.",
-            "turnRule": "실행은 모델에게 maxTurns 를 알리고 그와 별개로 마무리 호출 calls 개가 설 자리를 하드 상한에 남긴다. 즉 하드 상한은 maxTurns + calls 이고 모델이 아는 수는 maxTurns 다.",
-            "turnRuleReason": "달러와 턴 가운데 한쪽만 조이면 다른 쪽이 먼저 소진되어 마무리 지시 없이 산출 없는 실패로 끝난다. 종료 시점을 낮추어 몫을 만드는 방법도 마무리 호출의 자리는 남기지만 모델이 일할 수 있는 턴을 calls 만큼 줄이므로 두 축의 실행이 같은 maxTurns 에서 다른 양의 일을 한다. 그래서 계약이 방법을 고른다.",
-            "providerBackstopChannel": "달러에만 건다. 턴 몫의 근거는 calls 하나이며 이 값을 턴에 쓰지 않는다."
-        }
-    },
-    "wallClock": {
-        "meaning": "단계 하나가 진전 없이 머물 수 있는 상한이며 실행 데드라인에 곱하는 비율로 적는다. 전문가 하나가 데드라인 전부를 쓰면 종합이 굶으므로 두 축이 같은 비율을 읽는다.",
-        "survey": 0.15,
-        "probe": 0.3,
-        "synthesis": 0.5,
-        "probeMinFraction": {
-            "value": 0.3,
-            "reason": "달러 몫이 아주 작은 전문가도 이만큼은 받아, 몫에 비례한 상한이 조사를 시작도 못 할 만큼 짧아지지 않는다."
-        }
-    },
-    "pricing": {
-        "meaning": "예산 집행이 어느 모델의 단가를 쓰는지와, 그 단가를 모를 때의 결말이다.",
-        "model": {
-            "value": "actual",
-            "reason": "대체 모델로 넘어간 응답은 요청 모델과 단가가 다르므로 실제로 응답한 모델로 센다."
-        },
-        "onUnpricedModel": {
-            "value": "fail",
-            "reason": "값을 셀 수 없으면 예산 상한이 그 실행에서 무의미해지므로 계속하지 않고 끊는다.",
-            "subtype": "budget_exceeded"
-        }
-    },
-    "limits": {
-        "meaning": "실행 하나를 조이는 자리가 무엇인지 적는다. 세 값이 같은 일을 나눠 맡지 않는다.",
-        "budgetUsd": "비용을 조이는 유일한 자리다. 닿기 전에 도구를 거두고 결론만 받는 종료로 끝낸다.",
-        "maxTurns": "폭주만 끊는 느슨한 그물이며 비용을 조이는 자리가 아니다. 허용 모델 가운데 가장 느린 것이 결론에 닿고도 남을 만큼 둔다.",
-        "deadlineMs": "벽시계 백스톱이며 멈춘 실행만 끊는다.",
-        "tiering": "절감은 상한을 조여서가 아니라 종류마다 허용 모델을 좁게 두어 얻는다.",
-        "caching": "턴이 늘수록 접두사가 다시 실리므로 캐시 경계가 없으면 상한이 느슨할수록 비용이 는다."
+    "synthesisFloor": {
+      "turns": 3,
+      "budgetShare": 0,
+      "reason": "전문가에게 넘기지 않고 종합이 갖는 바닥 턴이며 달러는 따로 떼지 않는다."
     }
+  },
+  "turnLedger": {
+    "meaning": "실행 하나가 갖는 턴의 총량과 그 소진 규칙이다.",
+    "totalIsWholeExecution": true,
+    "lease": "호출마다 그 시점의 잔량에서 몫을 떼어 그 호출의 상한으로 준다.",
+    "settle": "호출이 끝나면 떼어 준 몫에 실제 지출을 대조해 잔량을 되돌린다.",
+    "settleWithoutReport": "공급자가 실제 턴 수나 비용을 보고하지 않으면 떼어 준 몫 전부를 쓴 것으로 본다.",
+    "settleFromUsage": "실패한 호출이라도 토큰 사용량을 보고했으면 그 사용량과 실제로 답한 모델의 단가로 비용을 셈해 정산한다. 사용량을 아는데도 몫 전부를 쓴 것으로 보면 남은 단계가 쓰지 않은 돈까지 잃는다. 턴 수는 사용량으로 알 수 없으므로 그대로 몫 전부를 쓴 것으로 본다.",
+    "reservationReturn": "예약분은 정산 때 잔량으로 되돌리며, 뗄 때 이미 잔량에서 뺐으므로 정산에서 두 번 빼지 않는다."
+  },
+  "weightAllocation": {
+    "meaning": "전문가 셋에 턴을 나눌 때 weight 요청과 가용 턴의 관계에 따라 내림에서 생기는 나머지를 돌려주는 규칙이다. 두 축이 같은 계획에서 같은 배열을 내야 하므로 언어의 정렬 안정성에 맡기지 않고 동률의 순서까지 정한다.",
+    "whenRequestFitsAvailable": "요청 합이 가용 이하면 항목마다 요청한 만큼 그대로 준다.",
+    "whenAvailableBelowCount": "가용이 항목 수보다 적으면 최소 1턴씩도 다 줄 수 없으므로, weight 가 큰 순서로 1턴씩만 주고 나머지 항목은 0이다. 동률이면 인덱스가 작은 쪽을 먼저 준다.",
+    "otherwise": {
+      "floor": "항목마다 1턴을 먼저 깔아 준다.",
+      "proportional": "남은 가용을 항목의 (weight-1) 비례로 나눠 내림해서 얹는다.",
+      "remainder": "내림에서 남고 배분되지 않은 턴을 weight 가 큰 순서로 하나씩 돌려준다. 동률이면 인덱스가 작은 쪽을 먼저 받는다."
+    },
+    "budgetFollowsTurns": "달러는 항목이 배분받은 턴이 전체 배분 턴에서 차지하는 비율만큼 나눈다. 배분된 턴이 모두 0이면 달러도 모두 0이다."
+  },
+  "orchestratorFailureDemotion": {
+    "meaning": "계획 단계가 실패했을 때 실행이 취하는 모양이다.",
+    "onPlanFailure": "계획 호출이 실패하면 빈 계획으로 낮추고, 그 실행은 전문가를 하나도 부르지 않은 채 빈 결과로 끝난다.",
+    "outcome": "낮춘 실행은 실패가 아니라 성공이다.",
+    "trajectory": "낮춘 사실은 실행 어휘의 node.failed 로 궤적에 남으며 이후 노드는 이어서 실행되지 않는다.",
+    "emptyResultReason": {
+      "meaning": "빈 결과로 끝난 실행이 왜 비었는지를 적는 어휘이며, 저장할 패턴이 없던 실행과 생성이 실패한 실행을 원장에서 구분한다.",
+      "values": {
+        "no-pattern": "조사 계획이 비었거나 후보가 만들어지지 않았고 실행 자체는 정상이었다.",
+        "insufficient-evidence": "조사는 실행됐으나 근거가 모자라 후보를 세울 수 없었다. probe 가 exhausted 로 끝난 경우를 포함한다.",
+        "generation-degraded": "계획·조사·검증·전달 가운데 한 단계가 실패해 빈 결과로 끝났다. 재시도 소진, repair 재실패, 산출 전달 실패가 여기 든다."
+      },
+      "recording": "실행은 이 사유를 궤적 관측에 남긴다. 사유가 no-pattern 이 아닌 실행을 성공으로 접더라도 원장에서는 구분된다.",
+      "default": "no-pattern"
+    }
+  },
+  "pacing": {
+    "meaning": "모델이 남은 몫을 보고 답의 밀도를 정하도록 실행이 건네는 문장이다. 두 축이 같은 자리에서 같은 문장을 주어야 같은 계획에서 같은 밀도가 나온다. 이 문장은 종료를 결정하지 않으며 예산을 세는 것은 turnLedger 가 갖는다.",
+    "unit": "모델 호출 턴",
+    "progressNotice": {
+      "template": "You have used {used} of {total} tool-calling turns; converge as you approach the limit.",
+      "when": "도구를 여는 시점마다 그때까지 쓴 턴과 총량을 넣어 건넨다",
+      "placeholders": [
+        "used",
+        "total"
+      ],
+      "reason": "총량만 알리면 모델이 자기 위치를 모르므로 쓴 만큼을 함께 준다"
+    },
+    "landingDirective": {
+      "when": "예산이 종료에 닿아 도구를 더 열지 않는 시점에 건넨다",
+      "structured": "The execution budget is exhausted. Stop calling tools and produce the final structured output now using only what you already verified.",
+      "freeText": "The execution budget is exhausted. Stop calling tools and write your final answer to the user now in plain prose, using only what you already retrieved.",
+      "reason": "도구만 닫고 지시를 주지 않으면 모델이 도구 실패로 읽고 같은 호출을 되풀이한다"
+    },
+    "landingReserve": {
+      "calls": 2,
+      "meaning": "종료는 도구만 닫으므로 마무리 호출 하나가 그 뒤에 남는다. 그 호출이 지금까지 가장 비쌌던 호출만큼 들 수 있다고 보고 그만큼을 미리 뗀다.",
+      "rule": "쓴 값에 가장 비쌌던 호출의 calls 배를 더해 상한에 닿으면 종료한다. 턴도 같은 수를 미리 떼어 마무리 호출이 설 자리를 남긴다.",
+      "reason": "마무리 몫을 남기지 않으면 상한이 종료보다 먼저 걸려 실행이 답 없이 실패한다.",
+      "providerBackstop": 2,
+      "providerBackstopMeaning": "공급자에게 넘기는 자기 달러 상한은 이 배수만큼 위에 둔다. 실행을 조이는 것은 종료이고 공급자 상한은 폭주만 끊는 백스톱이다.",
+      "providerBackstopReason": "같은 값을 넘기면 공급자가 호출 도중에 끊어 종료가 마무리 호출을 낼 틈이 없다. 배수와 가산을 한 값에 겸하게 두면 두 축이 같은 이름에서 다른 수를 만든다.",
+      "turnRule": "실행은 모델에게 maxTurns 를 알리고 그와 별개로 마무리 호출 calls 개가 설 자리를 하드 상한에 남긴다. 즉 하드 상한은 maxTurns + calls 이고 모델이 아는 수는 maxTurns 다.",
+      "turnRuleReason": "달러와 턴 가운데 한쪽만 조이면 다른 쪽이 먼저 소진되어 마무리 지시 없이 산출 없는 실패로 끝난다. 종료 시점을 낮추어 몫을 만드는 방법도 마무리 호출의 자리는 남기지만 모델이 일할 수 있는 턴을 calls 만큼 줄이므로 두 축의 실행이 같은 maxTurns 에서 다른 양의 일을 한다. 그래서 계약이 방법을 고른다.",
+      "providerBackstopChannel": "달러에만 건다. 턴 몫의 근거는 calls 하나이며 이 값을 턴에 쓰지 않는다."
+    }
+  },
+  "wallClock": {
+    "meaning": "단계 하나가 진전 없이 머물 수 있는 상한이며 실행 데드라인에 곱하는 비율로 적는다. 전문가 하나가 데드라인 전부를 쓰면 종합이 굶으므로 두 축이 같은 비율을 읽는다.",
+    "survey": 0.15,
+    "probe": 0.3,
+    "synthesis": 0.5,
+    "probeMinFraction": {
+      "value": 0.3,
+      "reason": "달러 몫이 아주 작은 전문가도 이만큼은 받아, 몫에 비례한 상한이 조사를 시작도 못 할 만큼 짧아지지 않는다."
+    }
+  },
+  "pricing": {
+    "meaning": "예산 집행이 어느 모델의 단가를 쓰는지와, 그 단가를 모를 때의 결말이다.",
+    "model": {
+      "value": "actual",
+      "reason": "대체 모델로 넘어간 응답은 요청 모델과 단가가 다르므로 실제로 응답한 모델로 센다."
+    },
+    "onUnpricedModel": {
+      "value": "fail",
+      "reason": "값을 셀 수 없으면 예산 상한이 그 실행에서 무의미해지므로 계속하지 않고 끊는다.",
+      "subtype": "budget_exceeded"
+    }
+  },
+  "limits": {
+    "meaning": "실행 하나를 조이는 자리가 무엇인지 적는다. 세 값이 같은 일을 나눠 맡지 않는다.",
+    "budgetUsd": "비용을 조이는 유일한 자리다. 닿기 전에 도구를 거두고 결론만 받는 종료로 끝낸다.",
+    "maxTurns": "폭주만 끊는 느슨한 그물이며 비용을 조이는 자리가 아니다. 허용 모델 가운데 가장 느린 것이 결론에 닿고도 남을 만큼 둔다.",
+    "deadlineMs": "벽시계 백스톱이며 멈춘 실행만 끊는다.",
+    "tiering": "절감은 상한을 조여서가 아니라 종류마다 허용 모델을 좁게 두어 얻는다.",
+    "caching": "턴이 늘수록 접두사가 다시 실리므로 캐시 경계가 없으면 상한이 느슨할수록 비용이 는다."
+  }
 }
