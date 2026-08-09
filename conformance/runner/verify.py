@@ -664,6 +664,29 @@ def main() -> None:
         f"{len(scope_token['payload']['fields'])}개 칸을 "
         f"{scope_token['signature']['algorithm']} 으로 서명한다"
     )
+    # 모델에게 알린 상한과 실제로 주는 몫의 최댓값이 갈리면 상한을 알려 주는 목적 자체가 사라진다.
+    depth_names = ["shallow", "normal", "deep"]
+    for agent in AGENTS:
+        orchestration = read_agent_tools(agent).get("orchestration") or {}
+        if "workerMaxTurns" not in orchestration:
+            continue
+        shares = next(
+            (
+                value
+                for value in orchestration.values()
+                if isinstance(value, dict) and all(name in value for name in depth_names)
+            ),
+            None,
+        )
+        if shares is None:
+            raise SystemExit(f"{agent} 이 전문가 몫을 적지 않고 상한만 알린다")
+        largest = max(shares[name] for name in depth_names)
+        if largest != orchestration["workerMaxTurns"]:
+            raise SystemExit(
+                f"{agent} 이 모델에게 알린 상한 {orchestration['workerMaxTurns']} 와 "
+                f"가장 깊은 몫 {largest} 가 다르다"
+            )
+
     execution_limits = read_shared("execution.limits.json")["kinds"]
     limit_kinds = sorted(execution_limits)
     if limit_kinds != sorted(AGENTS):

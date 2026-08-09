@@ -82,12 +82,11 @@
             ]
         },
         "workerReport": {
-            "required": [
-                "taskId",
-                "archivable",
-                "reason",
-                "citedEventIds"
-            ]
+            "meaning": "검토 전문가 하나가 올리는 보고의 상한이며 모델이 읽는 자리에도 이 수가 실려야 한다.",
+            "maxReasonChars": 400,
+            "maxCitedEventIds": 6,
+            "lengthUnit": "codePoint",
+            "lengthUnitSource": "agent/shared/text.limits.json 이 단위의 정본이다."
         },
         "redispatchRequest": {
             "required": [

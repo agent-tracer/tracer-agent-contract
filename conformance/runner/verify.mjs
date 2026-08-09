@@ -627,6 +627,24 @@ console.log(
     `실행에 매인 자격은 ${scopeToken.prefix} 로 시작해 ${scopeToken.payload.fields.length}개 칸을 ` +
         `${scopeToken.signature.algorithm} 으로 서명한다`,
 );
+// 모델에게 알린 상한과 실제로 주는 몫의 최댓값이 갈리면 상한을 알려 주는 목적 자체가 사라진다.
+const DEPTH_NAMES = ["shallow", "normal", "deep"];
+for (const agent of AGENTS) {
+    const orchestration = readAgentTools(agent).orchestration;
+    if (orchestration?.workerMaxTurns === undefined) continue;
+    const shares = Object.entries(orchestration).find(([, value]) =>
+        value !== null && typeof value === "object" && DEPTH_NAMES.every((name) => name in value));
+    if (shares === undefined) {
+        throw new Error(`${agent} 이 전문가 몫을 적지 않고 상한만 알린다`);
+    }
+    const largest = Math.max(...DEPTH_NAMES.map((name) => shares[1][name]));
+    if (largest !== orchestration.workerMaxTurns) {
+        throw new Error(
+            `${agent} 이 모델에게 알린 상한 ${orchestration.workerMaxTurns} 와 가장 깊은 몫 ${largest} 가 다르다`,
+        );
+    }
+}
+
 const executionLimits = readShared("execution.limits.json").kinds;
 const limitKinds = Object.keys(executionLimits);
 if (limitKinds.sort().join() !== [...AGENTS].sort().join()) {
