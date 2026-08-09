@@ -10,6 +10,7 @@ import {
     readAgentOutput,
     readAgentPrompt,
     readAgentTools,
+    readAxisColumn,
     readCase,
     readDependencyQueryNames,
     readIdentifierRules,
@@ -22,8 +23,10 @@ import {
     readJson,
     readLedgerTables,
     readMcpToolNames,
+    readSearchBodyRule,
     readSearchIndex,
     readSearchOutboxTarget,
+    readSearchPipelineStage,
     readTableColumns,
     readText,
     readToolBindingPaths,
@@ -70,6 +73,28 @@ const SHARED = [
 const WIRE = ["envelope.json", "headers.json", "topics.json", "job.kinds.json", "search.index.json"];
 // 레시피와 정리 제안의 원장이 에이전트 원장이므로 이 표들이 없으면 그 창구가 설 자리가 없다.
 const LEDGER_TABLES = ["recipes", "recipe_applications", "task_cleanup_suggestions", "search_outbox"];
+// 배경 작업이 만드는 행이며 축이 없으면 어느 축이 만든 행인지 원장에 남지 않는다.
+const AXIS_LEDGER_TABLES = ["recipe_applications", "search_outbox"];
+// 이름과 열쇠를 구현체가 자기 축으로 파생시키므로 자리표시자가 한 벌로 정해져 있어야 한다.
+const AXIS_PLACEHOLDER = "{axis}";
+// 축을 걸러 읽어야 하는 자리이며 하나라도 빠지면 그 자리가 두 축의 행을 함께 본다.
+const AXIS_READ_SITES = [
+    "detailApplications",
+    "detailStats",
+    "listStats",
+    "outcomeOpenApplication",
+    "projectionAlreadyOpen",
+    "recipeSearch",
+    "searchOutboxDrain",
+];
+// 축을 걸러 읽는 자리가 가리킬 수 있는 곳이며 축을 갖는 원장 표 둘과 색인 하나다.
+const AXIS_READ_SOURCES = ["recipe_applications", "search_outbox", "recipes"];
+// 배출기가 자기 축의 행만 집는 주기와 크기이며 값이 없으면 두 축이 각자 정한다.
+const DRAIN_PLACES = ["batchSize", "intervalMs", "advisoryLock"];
+// 색인을 세우는 절차이며 이 자리가 없으면 두 축이 경합에서 다르게 실패한다.
+const BOOTSTRAP_PLACES = ["steps", "startupOrder", "aliasReason", "existsReason", "lookupFailure", "onFailure"];
+// settings 는 색인 생성 요청에 그대로 실리므로 이 이름이 그 아래 있으면 본문이 산문을 나른다.
+const PROSE_KEYS_IN_BODY = ["meaning", "reason", "note", "from"];
 // 얇은 적중의 이 두 칸은 문서의 칸이 아니라 문서의 식별자와 색인이 매긴 점수에서 온다.
 const HIT_FIELDS_OUTSIDE_DOCUMENT = ["recipeId", "score"];
 const INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
@@ -156,6 +181,15 @@ const RETIRED_ATTRIBUTES = [
     "agent_tracer.variant.id",
 ];
 
+
+/** 본문에 그대로 실리는 자리에 산문의 이름이 있으면 그 경로를 낸다. */
+function proseKeysUnder(node, path) {
+    if (node === null || typeof node !== "object") return [];
+    if (Array.isArray(node)) return node.flatMap((item, index) => proseKeysUnder(item, `${path}[${index}]`));
+    return Object.entries(node).flatMap(([key, nested]) =>
+        PROSE_KEYS_IN_BODY.includes(key) ? [`${path}.${key}`] : proseKeysUnder(nested, `${path}.${key}`),
+    );
+}
 
 /** 칸 이름과 그 수 사이에 이만큼 안에서 만나야 그 수가 그 칸을 말한 것으로 본다. */
 const LIMIT_PROXIMITY = 160;
@@ -833,6 +867,19 @@ if (missingLedgerTables.length > 0) {
     throw new Error(`창구가 읽는 표를 migration 이 세우지 않는다 — ${missingLedgerTables.join(", ")}`);
 }
 
+// 배경 작업의 행에 축이 없으면 어느 축이 만든 행인지 원장에 남지 않아 두 축의 결과를 견줄 수 없다.
+const axisLedgerColumns = AXIS_LEDGER_TABLES.map((table) => [table, readAxisColumn(table)]);
+const tablesWithoutAxis = axisLedgerColumns.filter(([, declared]) => declared === null).map(([table]) => table);
+if (tablesWithoutAxis.length > 0) {
+    throw new Error(`배경 작업의 원장이 축의 칸을 갖지 않는다 — ${tablesWithoutAxis.join(", ")} 에 backend 가 없다`);
+}
+const nullableAxisColumns = axisLedgerColumns
+    .filter(([, declared]) => !declared.includes("NOT NULL"))
+    .map(([table]) => table);
+if (nullableAxisColumns.length > 0) {
+    throw new Error(`배경 작업의 원장에서 축은 비어 있을 수 없다 — ${nullableAxisColumns.join(", ")}`);
+}
+
 const searchIndex = readSearchIndex("recipes");
 const SEARCH_INDEX_PLACES = ["alias", "index", "documentId", "settings", "document", "query"];
 const missingSearchIndex = SEARCH_INDEX_PLACES.filter((place) => searchIndex?.[place] === undefined);
@@ -845,6 +892,75 @@ const strayMatchFields = matchFields.filter((name) => !documentFields.includes(n
 if (strayMatchFields.length > 0) {
     throw new Error(`검색이 색인 문서에 없는 칸을 뒤진다고 적는다 — ${strayMatchFields.join(", ")}`);
 }
+// 두 축이 같은 레시피를 색인하므로 문서 식별자와 질의가 함께 축을 가르지 않으면 문서가 서로를 덮는다.
+if (!String(searchIndex.documentId.template ?? "").includes(AXIS_PLACEHOLDER)) {
+    throw new Error(
+        `색인의 문서 식별자가 축을 담지 않아 두 축의 문서가 서로를 덮는다 — ${searchIndex.documentId.template ?? "없음"}`,
+    );
+}
+const missingAxisIndexPlaces = [
+    ...(searchIndex.document.fields.backend === undefined ? ["문서의 backend 칸"] : []),
+    ...(searchIndex.query.axisFilter === undefined ? ["질의의 axisFilter"] : []),
+];
+if (missingAxisIndexPlaces.length > 0) {
+    throw new Error(
+        `검색이 자기 축의 문서만 보게 하는 자리가 없다 — ${missingAxisIndexPlaces.join(", ")}`,
+    );
+}
+
+// settings 는 색인을 세우는 요청에 그대로 실리므로 그 아래의 산문 한 줄이 색인 생성을 거절시킨다.
+const bodyRule = readSearchBodyRule();
+const proseInBody = bodyRule.verbatim.flatMap((place) => proseKeysUnder(searchIndex[place], place));
+if (proseInBody.length > 0) {
+    throw new Error(`색인 본문에 그대로 실리는 자리에 산문이 있다 — ${proseInBody.join(", ")}`);
+}
+// 매핑이 받는 이름과 산문의 이름을 가르지 않으면 한 축이 산문을 매핑에 실어도 이름만으로는 알 수 없다.
+const declaredFieldKeys = [...bodyRule.mappingKeys, ...bodyRule.proseKeys];
+const strayFieldKeys = Object.entries(searchIndex.document.fields).flatMap(([field, declared]) =>
+    Object.keys(declared)
+        .filter((key) => !declaredFieldKeys.includes(key))
+        .map((key) => `${field}.${key}`),
+);
+if (strayFieldKeys.length > 0) {
+    throw new Error(
+        `색인 문서의 칸이 본문인지 산문인지 정해지지 않은 이름을 쓴다 — ${strayFieldKeys.join(", ")}`,
+    );
+}
+
+// 색인을 세우지 못하는 자리를 정하지 않으면 두 축이 같은 경합에서 다르게 실패한다.
+const missingBootstrap = BOOTSTRAP_PLACES.filter((place) => searchIndex.bootstrap?.[place] === undefined);
+if (missingBootstrap.length > 0) {
+    throw new Error(`색인을 세우는 절차에 있어야 할 자리가 없다 — ${missingBootstrap.join(", ")}`);
+}
+
+// 배출의 주기와 크기와 열쇠를 계약이 갖지 않으면 두 구현체가 각자 적어 같은 쓰기가 다른 때에 보인다.
+const drainStage = readSearchPipelineStage("drain");
+const missingDrainPlaces = DRAIN_PLACES.filter((place) => drainStage[place] === undefined);
+if (missingDrainPlaces.length > 0) {
+    throw new Error(`배출 단계에 있어야 할 자리가 없다 — ${missingDrainPlaces.join(", ")}`);
+}
+const drainLock = drainStage.advisoryLock;
+const lockAxes = Object.keys(drainLock.byAxis ?? {});
+if (lockAxes.join() !== AXIS_VALUES.join()) {
+    throw new Error(
+        `배출기의 자문 잠금 열쇠를 축마다 적어야 한다 — ` +
+            `${AXIS_VALUES.join(", ")} 여야 하는데 ${lockAxes.join(", ") || "없음"} 다`,
+    );
+}
+const strayLockKeys = AXIS_VALUES.filter(
+    (name) => drainLock.byAxis[name] !== drainLock.base + drainLock.axisOffset[name],
+);
+if (strayLockKeys.length > 0) {
+    throw new Error(
+        `자문 잠금 열쇠가 base 와 axisOffset 에서 파생되지 않는다 — ` +
+            strayLockKeys.map((name) => `${name} 은 ${drainLock.byAxis[name]}`).join(", "),
+    );
+}
+const lockKeys = AXIS_VALUES.map((name) => drainLock.byAxis[name]);
+if (new Set(lockKeys).size !== lockKeys.length) {
+    throw new Error(`두 축이 같은 자문 잠금 열쇠를 잡으면 한 축의 배출기만 실행된다 — ${lockKeys.join(", ")}`);
+}
+
 const outboxTarget = readSearchOutboxTarget();
 const declaredTarget = readJson("wire/search.index.json").pipeline.outboxTarget;
 if (outboxTarget !== declaredTarget) {
@@ -870,6 +986,34 @@ const unopenedWindows = ledgerCase.windows
     .filter((key) => !agentRouteKeys.has(key));
 if (unopenedWindows.length > 0) {
     throw new Error(`케이스가 적은 창구를 에이전트 표면이 선언하지 않는다 — ${unopenedWindows.join(", ")}`);
+}
+
+// 축을 걸러야 하는 자리를 하나라도 빠뜨리면 두 축을 나란히 띄운 배치에서만 값이 겹쳐 세어진다.
+const axisScope = ledgerCase.axisScope;
+if (axisScope.ledgerTables.join() !== AXIS_LEDGER_TABLES.join()) {
+    throw new Error(
+        `축의 칸을 갖는 원장 표를 케이스와 검사기가 다르게 적는다 — ` +
+            `${AXIS_LEDGER_TABLES.join(", ")} 여야 하는데 ${axisScope.ledgerTables.join(", ") || "없음"} 다`,
+    );
+}
+const declaredAxisSites = axisScope.sites.map((site) => site.id);
+if ([...declaredAxisSites].sort().join() !== AXIS_READ_SITES.join()) {
+    throw new Error(
+        `축을 걸러 읽어야 하는 자리의 목록이 검사기와 다르다 — ` +
+            `${AXIS_READ_SITES.join(", ")} 여야 하는데 ${declaredAxisSites.join(", ") || "없음"} 다`,
+    );
+}
+const strayAxisSources = axisScope.sites
+    .filter((site) => !AXIS_READ_SOURCES.includes(site.source))
+    .map((site) => `${site.id} 의 ${site.source}`);
+if (strayAxisSources.length > 0) {
+    throw new Error(`축을 걸러 읽는 자리가 축을 갖지 않는 곳을 가리킨다 — ${strayAxisSources.join(", ")}`);
+}
+const unopenedAxisSites = axisScope.sites
+    .filter((site) => site.window !== undefined && !agentRouteKeys.has(routeKey(site.window)))
+    .map((site) => `${site.id} 의 ${routeKey(site.window)}`);
+if (unopenedAxisSites.length > 0) {
+    throw new Error(`축을 걸러 읽는 자리가 표면에 없는 창구를 가리킨다 — ${unopenedAxisSites.join(", ")}`);
 }
 
 const archiveCase = readCase("cleanup.archive");
@@ -899,10 +1043,26 @@ if (wrongStaleCases.length > 0) {
 
 console.log(`레시피와 정리의 원장 표 ${LEDGER_TABLES.length}개를 migration 이 세운다 — ${LEDGER_TABLES.join(", ")}`);
 console.log(
+    `배경 작업의 원장 표 ${AXIS_LEDGER_TABLES.length}개가 축의 칸을 갖는다 — ${AXIS_LEDGER_TABLES.join(", ")}`,
+);
+console.log(
     `검색 색인 ${searchIndex.alias} 는 문서의 칸 ${documentFields.length}개를 갖고 그중 ${matchFields.length}개를 뒤진다`,
+);
+console.log(
+    `색인은 문서 식별자 ${searchIndex.documentId.template} 와 문서의 backend 칸으로 두 축을 가른다`,
+);
+console.log(
+    `색인 본문에 그대로 실리는 자리 ${bodyRule.verbatim.length}개와 선언에서 만드는 자리 ${bodyRule.derived.length}개를 계약이 가른다`,
+);
+console.log(
+    `배출기는 ${drainStage.intervalMs}ms 마다 ${drainStage.batchSize}개를 소진하고 축마다 다른 자문 잠금을 잡는다 — ` +
+        AXIS_VALUES.map((name) => `${name} ${drainLock.byAxis[name]}`).join(" · "),
 );
 console.log(`색인 아웃박스가 받는 대상은 ${outboxTarget} 하나이며 migration 이 그 값만 받는다`);
 console.log(`레시피와 정리의 창구 ${ledgerCase.windows.length}자리를 케이스와 에이전트 표면이 같게 적는다`);
+console.log(
+    `축을 걸러 읽는 자리 ${AXIS_READ_SITES.length}개를 케이스가 적는다 — ${AXIS_READ_SITES.join(", ")}`,
+);
 console.log(`낡음 판정의 사례 ${archiveCase.condition.cases.length}개가 비교 규칙과 같은 답을 낸다`);
 
 // 레시피 목록의 제목 표가 인용한 태스크 수만큼 왕복을 만들지 않으려면 추적이 집합 조회를 열어야 한다.
@@ -974,10 +1134,32 @@ if (projectionCase.source.topic !== ledgerTopic.name) {
             `케이스는 ${projectionCase.source.topic} 이고 선언은 ${ledgerTopic.name} 이다`,
     );
 }
-if (projectionCase.source.consumerGroup !== ledgerTopic.consumerGroups.agentProjector) {
+const projectorGroups = ledgerTopic.consumerGroups.agentProjector;
+const groupAxes = Object.keys(projectorGroups.byAxis ?? {});
+if (groupAxes.join() !== AXIS_VALUES.join()) {
+    throw new Error(
+        `에이전트 프로젝터의 소비자 그룹을 축마다 적어야 한다 — ` +
+            `${AXIS_VALUES.join(", ")} 여야 하는데 ${groupAxes.join(", ") || "없음"} 다`,
+    );
+}
+const strayGroupNames = AXIS_VALUES.filter(
+    (name) => projectorGroups.byAxis[name] !== projectorGroups.template.replace(AXIS_PLACEHOLDER, name),
+);
+if (strayGroupNames.length > 0) {
+    throw new Error(
+        `소비자 그룹의 이름이 ${projectorGroups.template} 에서 파생되지 않는다 — ` +
+            strayGroupNames.map((name) => `${name} 은 ${projectorGroups.byAxis[name]}`).join(", "),
+    );
+}
+const groupMismatch = AXIS_VALUES.filter(
+    (name) => (projectionCase.source.consumerGroupByAxis ?? {})[name] !== projectorGroups.byAxis[name],
+);
+if (groupMismatch.length > 0) {
     throw new Error(
         `에이전트 프로젝터의 소비자 그룹을 케이스와 토픽 선언이 다르게 적는다 — ` +
-            `케이스는 ${projectionCase.source.consumerGroup} 이고 선언은 ${ledgerTopic.consumerGroups.agentProjector} 이다`,
+            groupMismatch
+                .map((name) => `${name} 은 케이스가 ${(projectionCase.source.consumerGroupByAxis ?? {})[name] ?? "없음"} 이고 선언은 ${projectorGroups.byAxis[name]} 이다`)
+                .join(" · "),
     );
 }
 const missingGuards = PROJECTION_GUARDS.filter((name) => projectionCase.guards[name] === undefined);
@@ -1013,7 +1195,8 @@ if (mcpTools.join() !== MCP_AGENT_TOOLS.join()) {
 }
 
 console.log(
-    `에이전트 프로젝터는 ${projectionCase.source.topic} 를 ${projectionCase.source.consumerGroup} 으로 읽어 ` +
-        `${projectionCase.selection.kind} 하나를 ${projectionCase.mapping.table} 의 칸 ${applicationColumns.length}개로 옮긴다`,
+    `에이전트 프로젝터는 ${projectionCase.source.topic} 를 축마다 다른 그룹으로 읽어 ` +
+        `${projectionCase.selection.kind} 하나를 ${projectionCase.mapping.table} 의 칸 ${applicationColumns.length}개로 옮긴다 — ` +
+        AXIS_VALUES.map((name) => `${name} ${projectorGroups.byAxis[name]}`).join(" · "),
 );
 console.log(`에이전트 상류가 있어야 서는 MCP 도구 ${mcpTools.length}개를 표면이 표시한다 — ${mcpTools.join(", ")}`);

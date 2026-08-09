@@ -9,9 +9,9 @@ const HTTP_SURFACES = ["agent-api.openapi.yaml", "tracer-dependency.openapi.yaml
 const AGENT_FILES = ["agent.json", "prompt.json", "tool.json", "output.json", "cases.json", "summary.json"];
 const AXIS_SURFACE_ROOTS = ["agent", "conformance/cases", "db", "http", "wire", "workflow"];
 const AXIS_SURFACE_SUFFIXES = [".json", ".yaml", ".md", ".sql"];
-const JOB_AXIS_COLUMN_PATTERN = /ALTER TABLE "ai_jobs" ADD COLUMN[^;]*"backend"[^;]*;/;
 const CHAT_AXIS_INDEX_PATTERN = /CREATE INDEX[^;]*"chat_executions"[^;]*"requested_backend"[^;]*;/s;
 const CREATE_TABLE_PATTERN = /CREATE TABLE(?: IF NOT EXISTS)? "(\w+)"/g;
+const ADD_COLUMN_PATTERN = /ALTER TABLE "(\w+)" ADD COLUMN(?: IF NOT EXISTS)? "(\w+)"/g;
 const OUTBOX_TARGET_PATTERN = /CHECK \("target" = '(\w+)'\)/;
 
 /** 계약 뿌리의 절대 경로이며 스위트를 붙인 구현체는 이 아래만 읽는다. */
@@ -46,13 +46,19 @@ function walk(relative) {
     );
 }
 
-/** 잡 원장에 축의 칸을 더하는 선언을 낸다. */
-export function readJobLedgerAxisColumn() {
+/** 표 하나에 축의 칸을 더하는 선언을 낸다. 더한 자리가 없으면 null 이다. */
+export function readAxisColumn(table) {
+    const pattern = new RegExp(`ALTER TABLE "${table}" ADD COLUMN[^;]*"backend"[^;]*;`);
     for (const name of listMigrations()) {
-        const declared = JOB_AXIS_COLUMN_PATTERN.exec(readText(`db/migrations/${name}`));
+        const declared = pattern.exec(readText(`db/migrations/${name}`));
         if (declared !== null) return declared[0];
     }
     return null;
+}
+
+/** 잡 원장에 축의 칸을 더하는 선언을 낸다. */
+export function readJobLedgerAxisColumn() {
+    return readAxisColumn("ai_jobs");
 }
 
 /** 대화 실행 원장이 축으로 대기 줄을 가르는 색인 선언을 낸다. */
@@ -91,16 +97,20 @@ export function readLedgerTables() {
     return [...found].sort();
 }
 
-/** 표 하나가 갖는 칸의 이름을 선언한 순서로 낸다. */
+/** 표 하나가 갖는 칸의 이름을 낸다. 세울 때의 칸을 선언한 순서로 내고 뒤에 더한 칸을 잇는다. */
 export function readTableColumns(table) {
+    const found = new Set();
     for (const name of listMigrations()) {
-        const block = new RegExp(`CREATE TABLE(?: IF NOT EXISTS)? "${table}" \\(([^;]*)\\);`).exec(
-            readText(`db/migrations/${name}`),
-        );
-        if (block === null) continue;
-        return [...block[1].matchAll(/^ {4}"(\w+)"/gm)].map((found) => found[1]);
+        const declared = readText(`db/migrations/${name}`);
+        const block = new RegExp(`CREATE TABLE(?: IF NOT EXISTS)? "${table}" \\(([^;]*)\\);`).exec(declared);
+        if (block !== null) {
+            for (const column of block[1].matchAll(/^ {4}"(\w+)"/gm)) found.add(column[1]);
+        }
+        for (const added of declared.matchAll(ADD_COLUMN_PATTERN)) {
+            if (added[1] === table) found.add(added[2]);
+        }
     }
-    return [];
+    return [...found];
 }
 
 /** 색인 아웃박스가 받는 대상 하나를 낸다. 제약이 없으면 null 이다. */
@@ -115,6 +125,16 @@ export function readSearchOutboxTarget() {
 /** 검색 색인 하나의 선언을 읽는다. */
 export function readSearchIndex(name) {
     return readJson("wire/search.index.json").indices[name];
+}
+
+/** 색인 반영 단계 하나의 선언을 읽는다. 그 이름의 단계가 없으면 빈 대응표다. */
+export function readSearchPipelineStage(name) {
+    return readJson("wire/search.index.json").pipeline.stages.find((stage) => stage.name === name) ?? {};
+}
+
+/** 색인 파일에서 무엇이 본문이고 무엇이 산문인지를 가르는 규칙을 읽는다. */
+export function readSearchBodyRule() {
+    return readJson("wire/search.index.json").bodyRule ?? {};
 }
 
 /** 에이전트 표면이 MCP 도구의 자리라고 표시한 이름을 사전순으로 낸다. */

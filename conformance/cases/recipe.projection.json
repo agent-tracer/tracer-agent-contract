@@ -9,8 +9,12 @@
     "source": {
         "topic": "ingest.events",
         "topicDeclaration": "wire/topics.json 의 ledgerEvents",
-        "consumerGroup": "agent-projector-db",
-        "consumerGroupReason": "추적 프로젝터와 그룹을 나누지 않으면 한 프로젝터가 읽은 메시지를 다른 프로젝터가 받지 못한다",
+        "consumerGroupByAxis": {
+            "ts": "agent-projector-db-ts",
+            "python": "agent-projector-db-python"
+        },
+        "consumerGroupDeclaration": "wire/topics.json 의 ledgerEvents.consumerGroups.agentProjector",
+        "consumerGroupReason": "추적 프로젝터와 그룹을 나누지 않으면 한 프로젝터가 읽은 메시지를 다른 프로젝터가 받지 못한다. 두 축도 서로에게 같은 관계이므로 축마다 그룹을 나눈다",
         "messageKey": "taskId",
         "keyReason": "같은 태스크의 사건이 한 파티션에 모이므로 그 태스크의 순서가 지켜진다",
         "delivery": "적어도 한 번이다"
@@ -28,9 +32,10 @@
             "reason": "행의 식별자와 대상이 없으면 만들 수 있는 행이 없다"
         },
         "alreadyOpen": {
-            "rule": "같은 태스크에 같은 레시피의 적용 행이 이미 있으면 새로 만들지 않는다",
+            "rule": "같은 축의 같은 태스크에 같은 레시피의 적용 행이 이미 있으면 새로 만들지 않는다",
             "reason": "같은 레시피를 한 태스크에서 여러 번 끌어와도 분모가 부풀지 않아야 성공률이 뜻을 갖는다",
-            "lookup": "태스크로 적용 행을 모아 그중 recipeId 가 같은 행이 있는지 본다"
+            "lookup": "자기 축의 행 가운데 태스크로 적용 행을 모아 그중 recipeId 가 같은 행이 있는지 본다",
+            "axisReason": "축을 거르지 않으면 상대 축이 먼저 만든 행 때문에 이 축이 자기 행을 만들지 못한다. 두 축의 투영을 견주는 배치에서 먼저 읽은 축만 이력을 갖는다"
         },
         "redelivery": {
             "rule": "같은 사건이 다시 오면 alreadyOpen 이 걸려 행이 늘지 않는다",
@@ -40,8 +45,15 @@
     "mapping": {
         "meaning": "고른 사건 하나가 recipe_applications 행 하나가 되며 어느 칸이 어디서 오는지를 여기에 고정한다",
         "table": "recipe_applications",
+        "rowIdentity": {
+            "keys": ["backend", "id"],
+            "meaning": "행 하나를 가리키는 열쇠이며 쓰기는 이 두 칸으로 같은 행인지 가른다",
+            "reason": "id 는 사건이 싣고 오는 값이라 두 축이 같은 사건에서 같은 값을 얻는다. id 하나만 열쇠로 삼으면 뒤에 투영한 축이 앞선 축의 행을 덮는다",
+            "enforcedBy": "recipe_applications_pkey"
+        },
         "columns": {
             "id": { "from": "payload.applicationId", "meaning": "행의 식별자를 사건이 싣고 오므로 프로젝터가 새로 만들지 않는다" },
+            "backend": { "from": "프로젝터의 축 상수", "meaning": "이 행을 만든 축이며 사건이 축을 싣지 않으므로 만든 자리가 자기 값을 적는다" },
             "user_id": { "from": "record.userId" },
             "recipe_id": { "from": "payload.recipeId" },
             "task_id": { "from": "record.taskId" },
@@ -60,8 +72,12 @@
         "absentRow": "행이 없으면 자기보고 창구가 injectedVia 가 manual 인 행 하나를 만들어 적는다. 그 행은 사건에서 오지 않았으므로 anchorEventId 와 anchorSeq 가 비어 있다"
     },
     "axes": {
-        "meaning": "이 프로젝터는 두 축에 각각 선다",
-        "rule": "두 축이 같은 토픽을 같은 그룹 이름으로 읽는다. 한 배포에 한 축만 서므로 그룹 이름이 같아도 서로를 밀지 않는다",
-        "note": "두 축을 나란히 띄워 비교할 때는 배포가 그룹 이름에 접두사를 달리 주어 두 축이 서로의 진행을 밀지 않게 한다"
+        "meaning": "이 프로젝터는 두 축에 각각 서고 두 축이 같은 원장과 같은 토픽을 본다",
+        "group": "두 축이 같은 토픽을 축마다 다른 그룹으로 읽는다. 그룹 이름은 wire/topics.json 의 template 에서 파생하며 구현체가 완성된 이름을 적지 않는다",
+        "groupReason": "한 그룹을 나눠 쓰면 파티션이 두 축에 갈려 한 사건을 한 축만 투영한다",
+        "row": "행은 자기 축의 값을 backend 에 적고 읽는 자리는 자기 축의 행만 본다",
+        "rowReason": "행에 축이 없으면 어느 축이 만든 이력인지 원장에 남지 않아 두 축의 투영을 견줄 수 없다",
+        "singleAxis": "한 축만 선 배포에서 backend 는 상수이고 상대 축의 행이 없으므로 그 배포의 결과는 축을 더하기 전과 같다",
+        "deploymentDoesNotName": "배포가 그룹 이름이나 축의 값을 따로 주지 않는다. 두 값 모두 구현체의 축 상수에서 나온다"
     }
 }

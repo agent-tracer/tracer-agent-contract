@@ -19,6 +19,7 @@ from contract import (
     read_agent_output,
     read_agent_prompt,
     read_agent_tools,
+    read_axis_column,
     read_case,
     read_declared_http_paths,
     read_dependency_query_names,
@@ -32,8 +33,10 @@ from contract import (
     read_openapi_enum,
     read_redaction,
     read_scope_token,
+    read_search_body_rule,
     read_search_index,
     read_search_outbox_target,
+    read_search_pipeline_stage,
     read_shared,
     read_table_columns,
     read_identifier_rules,
@@ -76,6 +79,28 @@ SHARED = [
 WIRE = ["envelope.json", "headers.json", "topics.json", "job.kinds.json", "search.index.json"]
 # 레시피와 정리 제안의 원장이 에이전트 원장이므로 이 표들이 없으면 그 창구가 설 자리가 없다.
 LEDGER_TABLES = ["recipes", "recipe_applications", "task_cleanup_suggestions", "search_outbox"]
+# 배경 작업이 만드는 행이며 축이 없으면 어느 축이 만든 행인지 원장에 남지 않는다.
+AXIS_LEDGER_TABLES = ["recipe_applications", "search_outbox"]
+# 이름과 열쇠를 구현체가 자기 축으로 파생시키므로 자리표시자가 한 벌로 정해져 있어야 한다.
+AXIS_PLACEHOLDER = "{axis}"
+# 축을 걸러 읽어야 하는 자리이며 하나라도 빠지면 그 자리가 두 축의 행을 함께 본다.
+AXIS_READ_SITES = [
+    "detailApplications",
+    "detailStats",
+    "listStats",
+    "outcomeOpenApplication",
+    "projectionAlreadyOpen",
+    "recipeSearch",
+    "searchOutboxDrain",
+]
+# 축을 걸러 읽는 자리가 가리킬 수 있는 곳이며 축을 갖는 원장 표 둘과 색인 하나다.
+AXIS_READ_SOURCES = ["recipe_applications", "search_outbox", "recipes"]
+# 배출기가 자기 축의 행만 집는 주기와 크기이며 값이 없으면 두 축이 각자 정한다.
+DRAIN_PLACES = ["batchSize", "intervalMs", "advisoryLock"]
+# 색인을 세우는 절차이며 이 자리가 없으면 두 축이 경합에서 다르게 실패한다.
+BOOTSTRAP_PLACES = ["steps", "startupOrder", "aliasReason", "existsReason", "lookupFailure", "onFailure"]
+# settings 는 색인 생성 요청에 그대로 실리므로 이 이름이 그 아래 있으면 본문이 산문을 나른다.
+PROSE_KEYS_IN_BODY = ["meaning", "reason", "note", "from"]
 # 얇은 적중의 이 두 칸은 문서의 칸이 아니라 문서의 식별자와 색인이 매긴 점수에서 온다.
 HIT_FIELDS_OUTSIDE_DOCUMENT = ["recipeId", "score"]
 INSTANT_PATTERN = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$"
@@ -179,6 +204,25 @@ RETIRED_ATTRIBUTES = [
     "agent_tracer.variant.id",
 ]
 
+
+
+def prose_keys_under(node: object, path: str) -> list[str]:
+    """본문에 그대로 실리는 자리에 산문의 이름이 있으면 그 경로를 낸다."""
+    if isinstance(node, list):
+        return [
+            found
+            for index, item in enumerate(node)
+            for found in prose_keys_under(item, f"{path}[{index}]")
+        ]
+    if not isinstance(node, dict):
+        return []
+    found: list[str] = []
+    for key, nested in node.items():
+        if key in PROSE_KEYS_IN_BODY:
+            found.append(f"{path}.{key}")
+        else:
+            found.extend(prose_keys_under(nested, f"{path}.{key}"))
+    return found
 
 
 LIMIT_PROXIMITY = 160
@@ -865,6 +909,21 @@ def main() -> None:
     if missing_ledger_tables:
         raise SystemExit(f"창구가 읽는 표를 migration 이 세우지 않는다 — {', '.join(missing_ledger_tables)}")
 
+    # 배경 작업의 행에 축이 없으면 어느 축이 만든 행인지 원장에 남지 않아 두 축의 결과를 견줄 수 없다.
+    axis_ledger_columns = [(table, read_axis_column(table)) for table in AXIS_LEDGER_TABLES]
+    tables_without_axis = [table for table, declared in axis_ledger_columns if declared is None]
+    if tables_without_axis:
+        raise SystemExit(
+            f"배경 작업의 원장이 축의 칸을 갖지 않는다 — {', '.join(tables_without_axis)} 에 backend 가 없다"
+        )
+    nullable_axis_columns = [
+        table for table, declared in axis_ledger_columns if "NOT NULL" not in declared
+    ]
+    if nullable_axis_columns:
+        raise SystemExit(
+            f"배경 작업의 원장에서 축은 비어 있을 수 없다 — {', '.join(nullable_axis_columns)}"
+        )
+
     search_index = read_search_index("recipes")
     missing_search_index = [place for place in SEARCH_INDEX_PLACES if place not in search_index]
     if missing_search_index:
@@ -876,6 +935,76 @@ def main() -> None:
         raise SystemExit(
             f"검색이 색인 문서에 없는 칸을 뒤진다고 적는다 — {', '.join(stray_match_fields)}"
         )
+    # 두 축이 같은 레시피를 색인하므로 문서 식별자와 질의가 함께 축을 가르지 않으면 문서가 서로를 덮는다.
+    document_id = search_index["documentId"]
+    if AXIS_PLACEHOLDER not in str(document_id.get("template", "")):
+        raise SystemExit(
+            "색인의 문서 식별자가 축을 담지 않아 두 축의 문서가 서로를 덮는다 — "
+            f"{document_id.get('template', '없음')}"
+        )
+    missing_axis_index_places = [
+        *(["문서의 backend 칸"] if "backend" not in search_index["document"]["fields"] else []),
+        *(["질의의 axisFilter"] if "axisFilter" not in search_index["query"] else []),
+    ]
+    if missing_axis_index_places:
+        raise SystemExit(
+            f"검색이 자기 축의 문서만 보게 하는 자리가 없다 — {', '.join(missing_axis_index_places)}"
+        )
+
+    # settings 는 색인을 세우는 요청에 그대로 실리므로 그 아래의 산문 한 줄이 색인 생성을 거절시킨다.
+    body_rule = read_search_body_rule()
+    prose_in_body = [
+        found
+        for place in body_rule["verbatim"]
+        for found in prose_keys_under(search_index[place], place)
+    ]
+    if prose_in_body:
+        raise SystemExit(f"색인 본문에 그대로 실리는 자리에 산문이 있다 — {', '.join(prose_in_body)}")
+    # 매핑이 받는 이름과 산문의 이름을 가르지 않으면 한 축이 산문을 매핑에 실어도 이름만으로는 알 수 없다.
+    declared_field_keys = [*body_rule["mappingKeys"], *body_rule["proseKeys"]]
+    stray_field_keys = [
+        f"{field}.{key}"
+        for field, declared in search_index["document"]["fields"].items()
+        for key in declared
+        if key not in declared_field_keys
+    ]
+    if stray_field_keys:
+        raise SystemExit(
+            f"색인 문서의 칸이 본문인지 산문인지 정해지지 않은 이름을 쓴다 — {', '.join(stray_field_keys)}"
+        )
+
+    # 색인을 세우지 못하는 자리를 정하지 않으면 두 축이 같은 경합에서 다르게 실패한다.
+    missing_bootstrap = [
+        place for place in BOOTSTRAP_PLACES if place not in search_index.get("bootstrap", {})
+    ]
+    if missing_bootstrap:
+        raise SystemExit(f"색인을 세우는 절차에 있어야 할 자리가 없다 — {', '.join(missing_bootstrap)}")
+
+    # 배출의 주기와 크기와 열쇠를 계약이 갖지 않으면 두 구현체가 각자 적어 같은 쓰기가 다른 때에 보인다.
+    drain_stage = read_search_pipeline_stage("drain")
+    missing_drain_places = [place for place in DRAIN_PLACES if place not in drain_stage]
+    if missing_drain_places:
+        raise SystemExit(f"배출 단계에 있어야 할 자리가 없다 — {', '.join(missing_drain_places)}")
+    drain_lock = drain_stage["advisoryLock"]
+    lock_axes = list(drain_lock.get("byAxis", {}))
+    if lock_axes != AXIS_VALUES:
+        raise SystemExit(
+            "배출기의 자문 잠금 열쇠를 축마다 적어야 한다 — "
+            f"{', '.join(AXIS_VALUES)} 여야 하는데 {', '.join(lock_axes) or '없음'} 다"
+        )
+    stray_lock_keys = [
+        name
+        for name in AXIS_VALUES
+        if drain_lock["byAxis"][name] != drain_lock["base"] + drain_lock["axisOffset"][name]
+    ]
+    if stray_lock_keys:
+        detail = ", ".join(f"{name} 은 {drain_lock['byAxis'][name]}" for name in stray_lock_keys)
+        raise SystemExit(f"자문 잠금 열쇠가 base 와 axisOffset 에서 파생되지 않는다 — {detail}")
+    lock_keys = [drain_lock["byAxis"][name] for name in AXIS_VALUES]
+    if len(set(lock_keys)) != len(lock_keys):
+        named = ", ".join(str(key) for key in lock_keys)
+        raise SystemExit(f"두 축이 같은 자문 잠금 열쇠를 잡으면 한 축의 배출기만 실행된다 — {named}")
+
     outbox_target = read_search_outbox_target()
     declared_target = read_json("wire/search.index.json")["pipeline"]["outboxTarget"]
     if outbox_target != declared_target:
@@ -906,6 +1035,40 @@ def main() -> None:
     if unopened_windows:
         raise SystemExit(
             f"케이스가 적은 창구를 에이전트 표면이 선언하지 않는다 — {', '.join(unopened_windows)}"
+        )
+
+    # 축을 걸러야 하는 자리를 하나라도 빠뜨리면 두 축을 나란히 띄운 배치에서만 값이 겹쳐 세어진다.
+    axis_scope = ledger_case["axisScope"]
+    if axis_scope["ledgerTables"] != AXIS_LEDGER_TABLES:
+        declared = ", ".join(axis_scope["ledgerTables"]) or "없음"
+        raise SystemExit(
+            "축의 칸을 갖는 원장 표를 케이스와 검사기가 다르게 적는다 — "
+            f"{', '.join(AXIS_LEDGER_TABLES)} 여야 하는데 {declared} 다"
+        )
+    declared_axis_sites = [site["id"] for site in axis_scope["sites"]]
+    if sorted(declared_axis_sites) != AXIS_READ_SITES:
+        declared = ", ".join(declared_axis_sites) or "없음"
+        raise SystemExit(
+            "축을 걸러 읽어야 하는 자리의 목록이 검사기와 다르다 — "
+            f"{', '.join(AXIS_READ_SITES)} 여야 하는데 {declared} 다"
+        )
+    stray_axis_sources = [
+        f"{site['id']} 의 {site['source']}"
+        for site in axis_scope["sites"]
+        if site["source"] not in AXIS_READ_SOURCES
+    ]
+    if stray_axis_sources:
+        raise SystemExit(
+            f"축을 걸러 읽는 자리가 축을 갖지 않는 곳을 가리킨다 — {', '.join(stray_axis_sources)}"
+        )
+    unopened_axis_sites = [
+        f"{site['id']} 의 {route_key(site['window'])}"
+        for site in axis_scope["sites"]
+        if "window" in site and route_key(site["window"]) not in agent_route_keys
+    ]
+    if unopened_axis_sites:
+        raise SystemExit(
+            f"축을 걸러 읽는 자리가 표면에 없는 창구를 가리킨다 — {', '.join(unopened_axis_sites)}"
         )
 
     archive_case = read_case("cleanup.archive")
@@ -946,11 +1109,26 @@ def main() -> None:
         f"{', '.join(LEDGER_TABLES)}"
     )
     print(
+        f"배경 작업의 원장 표 {len(AXIS_LEDGER_TABLES)}개가 축의 칸을 갖는다 — "
+        f"{', '.join(AXIS_LEDGER_TABLES)}"
+    )
+    print(
         f"검색 색인 {search_index['alias']} 는 문서의 칸 {len(document_fields)}개를 갖고 "
         f"그중 {len(match_fields)}개를 뒤진다"
     )
+    print(f"색인은 문서 식별자 {document_id['template']} 와 문서의 backend 칸으로 두 축을 가른다")
+    print(
+        f"색인 본문에 그대로 실리는 자리 {len(body_rule['verbatim'])}개와 "
+        f"선언에서 만드는 자리 {len(body_rule['derived'])}개를 계약이 가른다"
+    )
+    locks = " · ".join(f"{name} {drain_lock['byAxis'][name]}" for name in AXIS_VALUES)
+    print(
+        f"배출기는 {drain_stage['intervalMs']}ms 마다 {drain_stage['batchSize']}개를 소진하고 "
+        f"축마다 다른 자문 잠금을 잡는다 — {locks}"
+    )
     print(f"색인 아웃박스가 받는 대상은 {outbox_target} 하나이며 migration 이 그 값만 받는다")
     print(f"레시피와 정리의 창구 {len(ledger_case['windows'])}자리를 케이스와 에이전트 표면이 같게 적는다")
+    print(f"축을 걸러 읽는 자리 {len(AXIS_READ_SITES)}개를 케이스가 적는다 — {', '.join(AXIS_READ_SITES)}")
     print(f"낡음 판정의 사례 {len(archive_case['condition']['cases'])}개가 비교 규칙과 같은 답을 낸다")
 
     # 레시피 목록의 제목 표가 인용한 태스크 수만큼 왕복을 만들지 않으려면 추적이 집합 조회를 열어야 한다.
@@ -1034,12 +1212,35 @@ def main() -> None:
             f"프로젝터가 읽는 토픽을 케이스와 토픽 선언이 다르게 적는다 — "
             f"케이스는 {projection_case['source']['topic']} 이고 선언은 {ledger_topic['name']} 이다"
         )
-    agent_group = ledger_topic["consumerGroups"]["agentProjector"]
-    if projection_case["source"]["consumerGroup"] != agent_group:
+    projector_groups = ledger_topic["consumerGroups"]["agentProjector"]
+    group_axes = list(projector_groups.get("byAxis", {}))
+    if group_axes != AXIS_VALUES:
         raise SystemExit(
-            f"에이전트 프로젝터의 소비자 그룹을 케이스와 토픽 선언이 다르게 적는다 — "
-            f"케이스는 {projection_case['source']['consumerGroup']} 이고 선언은 {agent_group} 이다"
+            "에이전트 프로젝터의 소비자 그룹을 축마다 적어야 한다 — "
+            f"{', '.join(AXIS_VALUES)} 여야 하는데 {', '.join(group_axes) or '없음'} 다"
         )
+    stray_group_names = [
+        name
+        for name in AXIS_VALUES
+        if projector_groups["byAxis"][name]
+        != projector_groups["template"].replace(AXIS_PLACEHOLDER, name)
+    ]
+    if stray_group_names:
+        detail = ", ".join(f"{name} 은 {projector_groups['byAxis'][name]}" for name in stray_group_names)
+        raise SystemExit(
+            f"소비자 그룹의 이름이 {projector_groups['template']} 에서 파생되지 않는다 — {detail}"
+        )
+    projected_groups = projection_case["source"].get("consumerGroupByAxis", {})
+    group_mismatch = [
+        name for name in AXIS_VALUES if projected_groups.get(name) != projector_groups["byAxis"][name]
+    ]
+    if group_mismatch:
+        detail = " · ".join(
+            f"{name} 은 케이스가 {projected_groups.get(name) or '없음'} 이고 "
+            f"선언은 {projector_groups['byAxis'][name]} 이다"
+            for name in group_mismatch
+        )
+        raise SystemExit(f"에이전트 프로젝터의 소비자 그룹을 케이스와 토픽 선언이 다르게 적는다 — {detail}")
     missing_guards = [name for name in PROJECTION_GUARDS if name not in projection_case["guards"]]
     if missing_guards:
         raise SystemExit(f"투영이 행을 만들지 않는 자리에 있어야 할 것이 없다 — {', '.join(missing_guards)}")
@@ -1065,11 +1266,11 @@ def main() -> None:
             f"{', '.join(MCP_AGENT_TOOLS)} 여야 하는데 {', '.join(mcp_tools) or '없음'} 다"
         )
 
+    groups = " · ".join(f"{name} {projector_groups['byAxis'][name]}" for name in AXIS_VALUES)
     print(
-        f"에이전트 프로젝터는 {projection_case['source']['topic']} 를 "
-        f"{projection_case['source']['consumerGroup']} 으로 읽어 "
+        f"에이전트 프로젝터는 {projection_case['source']['topic']} 를 축마다 다른 그룹으로 읽어 "
         f"{projection_case['selection']['kind']} 하나를 {mapping['table']} 의 "
-        f"칸 {len(application_columns)}개로 옮긴다"
+        f"칸 {len(application_columns)}개로 옮긴다 — {groups}"
     )
     print(
         f"에이전트 상류가 있어야 서는 MCP 도구 {len(mcp_tools)}개를 표면이 표시한다 — "

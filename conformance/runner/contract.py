@@ -14,9 +14,9 @@ HTTP_SURFACES = ["agent-api.openapi.yaml", "tracer-dependency.openapi.yaml"]
 AGENT_FILES = ["agent.json", "prompt.json", "tool.json", "output.json", "cases.json", "summary.json"]
 AXIS_SURFACE_ROOTS = ["agent", "conformance/cases", "db", "http", "wire", "workflow"]
 AXIS_SURFACE_SUFFIXES = (".json", ".yaml", ".md", ".sql")
-JOB_AXIS_COLUMN_PATTERN = r'ALTER TABLE "ai_jobs" ADD COLUMN[^;]*"backend"[^;]*;'
 CHAT_AXIS_INDEX_PATTERN = r'CREATE INDEX[^;]*"chat_executions"[^;]*"requested_backend"[^;]*;'
 CREATE_TABLE_PATTERN = r'CREATE TABLE(?: IF NOT EXISTS)? "(\w+)"'
+ADD_COLUMN_PATTERN = r'ALTER TABLE "(\w+)" ADD COLUMN(?: IF NOT EXISTS)? "(\w+)"'
 OUTBOX_TARGET_PATTERN = r"""CHECK \("target" = '(\w+)'\)"""
 
 
@@ -64,16 +64,18 @@ def read_ledger_tables() -> list[str]:
 
 
 def read_table_columns(table: str) -> list[str]:
-    """표 하나가 갖는 칸의 이름을 선언한 순서로 낸다."""
+    """표 하나가 갖는 칸의 이름을 낸다. 세울 때의 칸을 선언한 순서로 내고 뒤에 더한 칸을 잇는다."""
+    found: dict[str, None] = {}
     for name in list_migrations():
-        block = re.search(
-            rf'CREATE TABLE(?: IF NOT EXISTS)? "{table}" \(([^;]*)\);',
-            read_text(f"db/migrations/{name}"),
-        )
-        if block is None:
-            continue
-        return re.findall(r'^ {4}"(\w+)"', block.group(1), re.MULTILINE)
-    return []
+        declared = read_text(f"db/migrations/{name}")
+        block = re.search(rf'CREATE TABLE(?: IF NOT EXISTS)? "{table}" \(([^;]*)\);', declared)
+        if block is not None:
+            for column in re.findall(r'^ {4}"(\w+)"', block.group(1), re.MULTILINE):
+                found[column] = None
+        for owner, column in re.findall(ADD_COLUMN_PATTERN, declared):
+            if owner == table:
+                found[column] = None
+    return list(found)
 
 
 def read_search_outbox_target() -> str | None:
@@ -90,19 +92,36 @@ def read_search_index(name: str) -> Any:
     return read_json("wire/search.index.json")["indices"][name]
 
 
+def read_search_pipeline_stage(name: str) -> Any:
+    """색인 반영 단계 하나의 선언을 읽는다. 그 이름의 단계가 없으면 빈 대응표다."""
+    stages = read_json("wire/search.index.json")["pipeline"]["stages"]
+    return next((stage for stage in stages if stage["name"] == name), {})
+
+
+def read_search_body_rule() -> Any:
+    """색인 파일에서 무엇이 본문이고 무엇이 산문인지를 가르는 규칙을 읽는다."""
+    return read_json("wire/search.index.json").get("bodyRule", {})
+
+
 def read_mcp_tool_names() -> list[str]:
     """에이전트 표면이 MCP 도구의 자리라고 표시한 이름을 사전순으로 낸다."""
     spec = read_text("http/agent-api.openapi.yaml")
     return sorted(re.findall(r"^ {6}x-mcp-tool: (\S+)$", spec, re.MULTILINE))
 
 
-def read_job_ledger_axis_column() -> str | None:
-    """잡 원장에 축의 칸을 더하는 선언을 낸다."""
+def read_axis_column(table: str) -> str | None:
+    """표 하나에 축의 칸을 더하는 선언을 낸다. 더한 자리가 없으면 None 이다."""
+    pattern = rf'ALTER TABLE "{table}" ADD COLUMN[^;]*"backend"[^;]*;'
     for name in list_migrations():
-        declared = re.search(JOB_AXIS_COLUMN_PATTERN, read_text(f"db/migrations/{name}"))
+        declared = re.search(pattern, read_text(f"db/migrations/{name}"))
         if declared is not None:
             return declared.group(0)
     return None
+
+
+def read_job_ledger_axis_column() -> str | None:
+    """잡 원장에 축의 칸을 더하는 선언을 낸다."""
+    return read_axis_column("ai_jobs")
 
 
 def read_chat_ledger_axis_index() -> str | None:

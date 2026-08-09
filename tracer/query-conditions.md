@@ -92,7 +92,7 @@
 
 - recipe 조회: `recipes`에서 `user_id = :userId AND status = :status AND deleted_at IS NULL`, `updated_at DESC`. 상한 지정 없음.
 - `status`가 있으면 위 조회를 한 번 실행한다. 없으면 정의된 모든 recipe status별로 병렬 조회하고 status 정의 순서대로 결과 배열을 이어 붙인다. 전체 결과에 대한 재정렬은 없다.
-- 각 recipe의 통계 조회: `recipe_applications`에서 `recipe_id = :recipeId`, `created_at DESC`. 상한 지정 없음. recipe마다 한 번씩 실행한다.
+- 각 recipe의 통계 조회: `recipe_applications`에서 `backend = :backend AND recipe_id = :recipeId`, `created_at DESC`. 상한 지정 없음. recipe마다 한 번씩 실행한다. `backend`는 요청이 싣는 값이 아니라 구현체의 축 상수다.
 - 인용 task 제목은 질의가 아니다. `tasks`는 추적 원장의 표이므로 recipe에서 모은 중복 없는 task id를 추적의 `GET /api/v1/tasks?ids=`에 실어 한 번에 묻고 제목을 읽는다. id가 100개를 넘으면 100개씩 나눠 부른다. id가 없으면 부르지 않는다. 닿지 않거나 남의 것인 id는 표에서 빠지며 그것이 조회 실패는 아니다.
 - `JOIN`은 사용하지 않는다.
 

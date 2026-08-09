@@ -52,6 +52,10 @@ docker run --rm -v "$PWD/db/migrations:/flyway/sql:ro" \
 - `ai_jobs.backend`: 접수구가 요청을 받는 순간 정해지며 값이 없는 행을 두지 않는다. 대기하거나 실행 중인 잡은 관측 기록이 아직 없으므로 축으로 세려면 이 칸이 있어야 한다.
 - `agent_run_observations.backend`: 그 시도를 실제로 태운 축이며 실행이 끝난 뒤에 행과 함께 남는다.
 - `chat_threads.backend`: 그 스레드의 턴을 맡은 축이며 아직 정해지지 않았으면 비어 있다.
+- `recipe_applications.backend`: 그 적용 이력을 만든 축이며 값이 없는 행을 두지 않는다. 프로젝터와 자기보고 창구가 자기 축 상수를 적는다.
+- `search_outbox.backend`: 그 색인 반영 요청을 적재한 축이며 배출기가 자기 축의 행만 소진한다.
+
+축의 값을 적은 행을 읽는 자리는 모두 자기 축의 행만 본다. 그 자리의 목록은 `conformance/cases/recipe.ledger.json` 의 `axisScope` 가 갖는다.
 
 ## 레시피 도메인
 
@@ -59,6 +63,8 @@ docker run --rm -v "$PWD/db/migrations:/flyway/sql:ro" \
 - `recipe_applications`: 레시피 하나가 어느 태스크에 쓰였고 그 결과가 무엇이었는지를 한 행으로 담는다. `outcome` 이 비어 있는 행은 적용은 되었으나 아직 자기보고가 붙지 않은 것이다.
 
 레시피를 만드는 주체가 에이전트이므로 이 두 표는 에이전트 원장에 선다. 추적은 이 표를 읽지 않고 공개 `agent-api` 로만 묻는다.
+
+`recipe_applications` 의 기본 키는 `(backend, id)` 다. `id` 는 적용 사건이 싣고 오는 값이라 두 축이 같은 사건에서 같은 값을 얻으므로, 축을 앞에 두지 않으면 뒤에 투영한 축이 앞선 축의 행을 덮는다. 같은 태스크에 같은 레시피의 행이 둘 서지 않게 하는 것은 원장의 제약이 아니라 프로젝터의 검사이며 그 규칙은 `conformance/cases/recipe.projection.json` 의 `guards.alreadyOpen` 이 갖는다.
 
 ## 정리 제안 도메인
 
@@ -71,6 +77,8 @@ docker run --rm -v "$PWD/db/migrations:/flyway/sql:ro" \
 - `search_outbox`: 색인 반영 요청을 도메인 커밋과 같은 트랜잭션에 담는 표다. OpenSearch 쓰기가 트랜잭션에 참여하지 못하므로 행으로 남기고 배출기가 재시도한다.
 
 에이전트 원장이 소유한 색인 대상은 `recipe` 하나이며 `search_outbox_target_check` 가 그 값만 받는다. 태스크와 메모는 추적이 자기 원장의 같은 이름 표에서 배출한다. 배출 뒤의 단계는 `wire/search.index.json` 이 갖는다.
+
+이 표의 기본 키는 `id` 하나다. 아웃박스 행의 식별자는 적재하는 축이 스스로 만들므로 두 축이 같은 값을 얻지 않는다.
 
 ## 설정 도메인
 

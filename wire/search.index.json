@@ -1,5 +1,5 @@
 {
-    "meaning": "레시피 검색이 기대는 색인 하나와 그 색인까지 가는 단계의 정본이다. 두 구현체가 같은 문서 모양과 같은 매핑을 써야 한 색인을 두 축이 번갈아 채워도 검색 결과가 갈리지 않는다.",
+    "meaning": "레시피 검색이 기대는 색인 하나와 그 색인까지 가는 단계의 정본이다. 두 구현체가 같은 문서 모양과 같은 매핑을 써야 한 색인을 두 축이 함께 채워도 검색 결과가 갈리지 않는다.",
     "store": {
         "engine": "opensearch",
         "shared": "추적과 같은 OpenSearch 를 쓰되 색인은 나눈다. 이 계약은 recipes 색인 하나만 소유하고 events 와 tasks 와 memos 는 추적이 소유한다."
@@ -8,6 +8,10 @@
         "meaning": "원장 쓰기와 색인 반영을 한 커밋으로 묶을 수 없으므로 아웃박스 행을 남기고 배출기가 뒤에서 반영한다. 단계와 순서는 추적이 자기 원장에서 쓰는 것과 같다.",
         "outboxTable": "search_outbox",
         "outboxTarget": "recipe",
+        "processName": {
+            "meaning": "단계의 where 에 적힌 agent-projector 는 프로세스의 이름이다",
+            "detail": "두 축 모두 접수 창구와 같은 배포 단위 안에 진입점 하나를 따로 세운다. 저장소도 이미지도 따로 두지 않는다"
+        },
         "stages": [
             {
                 "name": "enqueue",
@@ -18,21 +22,40 @@
             {
                 "name": "drain",
                 "where": "agent-projector",
-                "does": "주기마다 search_outbox 를 배치로 읽어 대상 레시피를 원장에서 다시 조회하고 색인에 쓴 뒤 그 행을 지운다",
+                "does": "주기마다 search_outbox 에서 자기 축이 적재한 행만 배치로 읽어 대상 레시피를 원장에서 다시 조회하고 색인에 쓴 뒤 그 행을 지운다",
+                "axisFilter": "질의는 backend 가 자기 축인 행만 본다. 축을 거르지 않으면 한 축이 상대 축이 적재한 행을 가져가 그 행을 지운다",
                 "batchSize": 100,
+                "intervalMs": 2000,
+                "intervalReason": "주기를 두 구현체가 각자 적으면 같은 쓰기가 축마다 다른 시간 뒤에 검색에 보인다. 배치 크기와 함께 계약이 갖는다",
                 "concurrency": "배출기는 원장 자문 잠금 하나를 잡고 돌므로 replica 가 여럿이어도 한 번에 하나만 배출한다",
+                "advisoryLock": {
+                    "meaning": "배출기가 잡는 자문 잠금의 열쇠이며 축마다 다른 값을 갖는다",
+                    "reason": "두 축이 같은 열쇠를 잡으면 한 축이 잠금을 쥔 동안 다른 축의 배출기가 아무것도 하지 못한다. 두 축을 나란히 띄운 배치에서 한 축의 색인만 채워진다",
+                    "base": 8140101,
+                    "axisOffset": {
+                        "ts": 0,
+                        "python": 1
+                    },
+                    "derivation": "열쇠는 base 에 자기 축의 axisOffset 을 더한 값이다. 구현체는 완성된 수를 상수로 적지 않는다",
+                    "byAxis": {
+                        "ts": 8140101,
+                        "python": 8140102
+                    },
+                    "scope": "잠금은 트랜잭션에 매이며 원장 하나 안에서만 뜻을 갖는다"
+                },
                 "onFailure": "그 행의 attempts 를 하나 올리고 last_error 를 적은 뒤 남긴다. 다음 주기가 같은 행을 다시 집는다"
             },
             {
                 "name": "index",
                 "where": "opensearch",
-                "does": "레시피 식별자를 문서 식별자로 삼아 recipes 별칭에 문서 하나를 덮어쓴다",
-                "reason": "문서 식별자가 원장의 식별자와 같으므로 같은 행을 여러 번 배출해도 문서가 늘지 않는다"
+                "does": "축과 레시피 식별자를 이은 값을 문서 식별자로 삼아 recipes 별칭에 문서 하나를 덮어쓴다",
+                "reason": "문서 식별자가 축과 원장의 식별자에서 오므로 같은 축이 같은 행을 여러 번 배출해도 문서가 늘지 않고 다른 축의 문서를 덮지도 않는다"
             }
         ],
         "deletion": {
             "meaning": "지워진 레시피와 애초에 없던 레시피를 배출기가 구분하지 않는다",
             "rule": "배출 시점에 조회로 잡히지 않는 대상은 색인에서 문서를 지운다",
+            "documentId": "지우는 문서의 식별자도 색인할 때와 같은 규칙으로 만든다. 축을 빼고 지우면 어느 문서도 지워지지 않는다",
             "reason": "지운 레시피는 deleted_at 이 채워져 조회에 잡히지 않으므로 없는 것과 같은 처리가 곧 옳은 처리다"
         },
         "noTopic": {
@@ -42,16 +65,57 @@
             "notTheProjectorTopic": "에이전트가 읽는 토픽이 따로 있으나 그것은 적용 이력을 만드는 경로이며 이 색인 경로와 다르다. 그 토픽은 wire/topics.json 의 ledgerEvents 가 갖는다."
         }
     },
+    "bodyRule": {
+        "meaning": "이 파일의 어느 자리가 OpenSearch 에 그대로 실리는 본문이고 어느 자리가 사람이 읽는 산문인지를 가른다",
+        "reason": "표시가 없으면 두 구현체가 각자 판단한다. 한 축이 산문을 본문에 실으면 OpenSearch 가 그 요청을 거절해 색인이 서지 않는다",
+        "verbatim": ["settings"],
+        "verbatimRule": "settings 는 색인을 세우는 요청의 본문에 그대로 실린다. 이 아래에는 산문을 두지 않는다",
+        "derived": ["document"],
+        "derivedRule": "document 는 본문이 아니라 선언이다. 구현체가 fields 의 mappingKeys 로 매핑을 만들고 proseKeys 는 보내지 않는다",
+        "mappingKeys": ["type", "analyzer"],
+        "proseKeys": ["from", "meaning", "valueFormat"],
+        "proseKeyNaming": "산문의 이름은 매핑이 받는 이름과 겹치지 않게 짓는다. format 처럼 매핑이 실제로 받는 이름을 산문에 쓰면 한 축이 그것을 본문에 실어도 이름만으로는 잘못을 알 수 없다"
+    },
     "indices": {
         "recipes": {
             "alias": "recipes",
             "index": "recipes-v2",
-            "documentId": "레시피 원장의 id 를 그대로 쓴다",
+            "documentId": {
+                "meaning": "문서 하나를 가리키는 식별자이며 축과 레시피 원장의 id 를 콜론 하나로 잇는다",
+                "template": "{axis}:{recipeId}",
+                "placeholder": "{axis}",
+                "placeholderValue": "http/agent-api.openapi.yaml 의 AgentAxis 값 하나이며 구현체는 자기 축 상수를 넣는다",
+                "reason": "식별자가 레시피의 id 뿐이면 두 축이 같은 레시피를 색인할 때 뒤에 쓴 축이 앞선 축의 문서를 덮는다",
+                "recipeIdIsNotParsed": "적중이 내는 recipeId 는 문서의 recipeId 칸에서 읽는다. 식별자를 다시 잘라 쓰면 두 구현체가 자르는 규칙을 각자 정한다"
+            },
+            "axisSeparation": {
+                "meaning": "한 색인에 두 축의 문서가 함께 서므로 서로 덮지 않는 것과 서로 적중에 섞이지 않는 것을 따로 정한다",
+                "byDocumentId": "덮어쓰기는 문서 식별자가 막는다",
+                "byQuery": "적중 섞임은 질의의 axisFilter 가 막는다",
+                "aliasIsShared": "별칭은 축마다 나누지 않고 recipes 하나로 둔다. 배포마다 색인 이름이 달라지면 운영자가 보는 이름과 문서가 사는 자리가 배포마다 달라진다",
+                "physicalIndexUnchanged": "색인의 실체도 recipes-v2 그대로 둔다. 별칭을 옮기는 절차가 없으므로 실체의 이름을 올리면 새 색인이 비어 있는 채로 서고 쓰기는 여전히 앞선 실체로 간다",
+                "staleDocuments": "앞선 규칙으로 쓰인 문서는 backend 칸이 없어 axisFilter 에 걸리지 않으므로 검색 결과에 나오지 않는다. 그 레시피가 다시 배출되면 새 식별자의 문서가 서고 앞선 문서는 남는다. 남은 문서를 지우는 절차는 계약이 정하지 않는다"
+            },
+            "bootstrap": {
+                "meaning": "색인을 세우는 절차이며 두 축이 같은 색인을 동시에 세워도 한쪽이 실패하지 않게 순서를 정한다",
+                "where": "agent-projector",
+                "steps": [
+                    "물리 색인이 있는지 조회하고 있으면 아무것도 하지 않고 끝낸다",
+                    "별칭이 이미 어느 색인에 붙어 있으면 새 색인에 그 별칭을 붙이지 않는다",
+                    "색인을 만들고 거절 사유가 resource_already_exists_exception 이면 성공으로 본다"
+                ],
+                "startupOrder": ["색인을 세운다", "배출기를 시작한다", "투영을 시작한다"],
+                "startupOrderReason": "색인이 서기 전에 배출기가 문서를 쓰면 OpenSearch 가 동적 매핑으로 칸을 만들어 계약이 정한 분석기가 걸리지 않는다",
+                "aliasReason": "한 별칭이 두 색인을 가리키면 그 별칭으로 가는 쓰기와 뒤의 별칭 교체가 모두 막힌다",
+                "existsReason": "존재 확인과 생성 사이에 상대 축이 같은 색인을 세울 수 있으므로 첫 걸음만으로는 경합이 남는다",
+                "lookupFailure": "존재 조회가 404 가 아닌 실패로 끝나면 없는 것으로 읽지 않고 그 실패를 올린다. 실패를 없음으로 읽으면 그다음 판단이 거짓을 근거로 삼는다",
+                "onFailure": "색인을 세우지 못하면 배경 작업 프로세스만 종료한다. 접수 창구는 계속 답하며 색인에 기대지 않는 창구가 함께 멈추지 않는다"
+            },
+            "analysisReason": "표준 분석기는 한글 음절 뭉치를 토큰 하나로 색인해 부분 문자열을 찾지 못하므로 두 글자 ngram 으로 색인하고 질의한다",
             "settings": {
                 "number_of_shards": 1,
                 "number_of_replicas": 0,
                 "analysis": {
-                    "meaning": "표준 분석기는 한글 음절 뭉치를 토큰 하나로 색인해 부분 문자열을 찾지 못하므로 두 글자 ngram 으로 색인하고 질의한다",
                     "analyzer": {
                         "substring": {
                             "type": "custom",
@@ -72,6 +136,16 @@
             "document": {
                 "meaning": "색인에 실리는 칸의 정본이며 원장 행의 어느 칸에서 오는지와 매핑 종류를 함께 적는다. 원장 행 전부를 싣지 않으므로 여기 없는 칸은 검색으로 찾을 수 없다.",
                 "fields": {
+                    "recipeId": {
+                        "from": "recipes.id",
+                        "type": "keyword",
+                        "meaning": "적중이 내는 식별자이며 문서 식별자에 축이 붙었으므로 원장의 값을 문서에 따로 싣는다"
+                    },
+                    "backend": {
+                        "from": "그 문서를 색인한 축",
+                        "type": "keyword",
+                        "meaning": "이 문서를 만든 축이며 값의 목록은 AgentAxis 가 갖는다. 검색이 이 칸으로 자기 축의 문서만 본다"
+                    },
                     "userId": {
                         "from": "recipes.user_id",
                         "type": "keyword",
@@ -98,7 +172,7 @@
                     "updatedAt": {
                         "from": "recipes.updated_at",
                         "type": "date",
-                        "format": "RFC 3339 문자열로 싣는다"
+                        "valueFormat": "RFC 3339 문자열로 싣는다"
                     }
                 }
             },
@@ -107,6 +181,8 @@
                 "matchFields": ["title", "intent", "description", "useWhen", "summaryMd"],
                 "minimumShouldMatch": "30%",
                 "ownerFilter": "userId 가 부른 사용자와 같은 문서만 본다",
+                "axisFilter": "backend 가 부른 축과 같은 문서만 본다",
+                "axisFilterReason": "두 축이 같은 레시피를 각자 색인하므로 축을 거르지 않으면 한 질의가 같은 레시피를 두 번 낸다. 한 축만 선 배포에서는 상대 축의 문서가 없어 이 조건이 결과를 바꾸지 않는다",
                 "statusFilter": "status 가 active 인 문서만 본다",
                 "statusReason": "아직 결정을 기다리는 후보가 검색에 섞이면 모델이 사용자가 채택하지 않은 절차를 따른다",
                 "relativeScoreCutoffRatio": 0.4,

@@ -10,7 +10,7 @@
         "defaultValue": "local"
     },
     "surface": "http/agent-api.openapi.yaml",
-    "ledger": "db/migrations/V0013__recipe.sql · db/migrations/V0014__task-cleanup.sql",
+    "ledger": "db/migrations/V0013__recipe.sql · db/migrations/V0014__task-cleanup.sql · db/migrations/V0016__recipe-axis.sql",
     "shapes": {
         "recipe": {
             "meaning": "레시피 원장 행 하나이며 조회와 상태 변경이 모두 이 칸을 낸다. 적용 통계는 창구가 따로 싣는 값이라 이 모양에 없다",
@@ -89,6 +89,7 @@
                 "successRate"
             ],
             "valueRules": {
+                "applicationCount": "자기 축이 만든 적용 행만 센다. 세는 자리는 axisScope 의 listStats 와 detailStats 다",
                 "successRate": "decidedCount 가 0 이면 0 이고 아니면 결과가 completed 인 적용의 비율이다. 자기보고가 붙지 않은 적용은 분모에 들지 않는다"
             }
         },
@@ -105,6 +106,7 @@
                 "createdAt"
             ],
             "valueRules": {
+                "id": "사건이 실은 값이므로 같은 값의 행이 축마다 하나씩 설 수 있다. 한 응답에는 자기 축의 행만 담기므로 응답 안에서는 이 값이 행 하나를 가리킨다",
                 "injectedVia": "도구가 레시피를 끌어와 만든 행은 pull 이고 자기보고가 즉석에서 만든 행은 manual 이다",
                 "outcome": "자기보고가 아직 붙지 않은 행은 비어 있다"
             }
@@ -468,6 +470,73 @@
             "/api/agent/cleanup/suggestions/{id}/dismiss"
         ],
         "parentException": "채택이 읽는 부모가 남의 것이면 거절하지 않고 부모가 없는 것으로 보아 채택만 한다"
+    },
+    "axisScope": {
+        "meaning": "적용 이력과 색인 적재 행은 축을 갖는다. 그 행을 읽는 자리가 모두 자기 축의 행만 보아야 두 축을 나란히 띄운 배치에서 값이 겹쳐 세어지지 않는다.",
+        "rule": "질의는 backend 가 자기 축인 행만 본다",
+        "constant": "축의 값은 요청이 싣지 않고 구현체의 축 상수에서 온다. 요청이 축을 고르게 하면 한 축이 상대 축의 이력을 읽는 길이 열린다",
+        "notInResponse": "응답에 축을 싣지 않는다. 한 배포의 응답은 이미 자기 축의 행만 담으므로 축을 실으면 한 축만 선 배포의 응답이 지금과 달라진다",
+        "silentWhenMissed": "한 자리라도 축을 빠뜨리면 두 축을 나란히 띄운 배치에서만 값이 두 배가 되고 한 축만 선 배포에서는 드러나지 않는다. 그래서 자리를 여기에 열거하고 검사기가 목록을 대조한다",
+        "ledgerTables": ["recipe_applications", "search_outbox"],
+        "sites": [
+            {
+                "id": "detailApplications",
+                "name": "단건 조회가 내는 적용 이력 목록",
+                "source": "recipe_applications",
+                "window": { "method": "GET", "path": "/api/agent/recipes/{id}" },
+                "reads": "그 레시피의 적용 행을 모아 applications 로 낸다",
+                "breaksWithout": "두 축이 만든 같은 태스크의 행이 한 목록에 두 번 실린다"
+            },
+            {
+                "id": "detailStats",
+                "name": "단건 조회가 내는 적용 통계",
+                "source": "recipe_applications",
+                "window": { "method": "GET", "path": "/api/agent/recipes/{id}" },
+                "reads": "그 레시피의 적용 행에서 applicationCount 와 decidedCount 와 successRate 를 센다",
+                "breaksWithout": "분자와 분모가 두 축의 행을 함께 세어 성공률이 어느 축의 값도 아니게 된다"
+            },
+            {
+                "id": "listStats",
+                "name": "목록 조회가 레시피마다 붙이는 적용 통계",
+                "source": "recipe_applications",
+                "window": { "method": "GET", "path": "/api/agent/recipes" },
+                "reads": "레시피마다 그 레시피의 적용 행을 모아 stats 를 센다",
+                "breaksWithout": "목록의 모든 레시피에서 통계가 두 축의 합이 된다"
+            },
+            {
+                "id": "outcomeOpenApplication",
+                "name": "자기보고가 찾는 열린 적용 이력",
+                "source": "recipe_applications",
+                "window": { "method": "POST", "path": "/api/agent/recipes/{id}/outcome" },
+                "reads": "그 태스크의 적용 행을 모아 이 레시피의 행을 고르고 없으면 injectedVia 가 manual 인 행을 만든다",
+                "breaksWithout": "상대 축이 만든 행에 결과를 적어 자기 축의 이력은 결과 없이 남는다"
+            },
+            {
+                "id": "projectionAlreadyOpen",
+                "name": "프로젝터가 행을 두 번 만들지 않으려고 보는 자리",
+                "source": "recipe_applications",
+                "case": "conformance/cases/recipe.projection.json 의 guards.alreadyOpen",
+                "reads": "그 태스크의 적용 행을 모아 같은 레시피의 행이 있는지 본다",
+                "breaksWithout": "상대 축이 먼저 만든 행 때문에 이 축이 자기 행을 만들지 못한다"
+            },
+            {
+                "id": "recipeSearch",
+                "name": "검색이 색인에 거는 조건",
+                "source": "recipes",
+                "window": { "method": "GET", "path": "/api/agent/recipes/search" },
+                "reads": "질의가 axisFilter 로 자기 축이 색인한 문서만 본다",
+                "breaksWithout": "같은 레시피가 축마다 한 번씩 적중해 상한 안에 다른 레시피가 들어오지 못한다",
+                "declaration": "wire/search.index.json 의 indices.recipes.query.axisFilter"
+            },
+            {
+                "id": "searchOutboxDrain",
+                "name": "배출기가 소진할 행을 고르는 자리",
+                "source": "search_outbox",
+                "reads": "created_at 이 오래된 행부터 배치로 읽어 색인에 반영하고 그 행을 지운다",
+                "breaksWithout": "한 축이 상대 축이 적재한 행을 가져가 지우므로 상대 축의 색인 문서가 갱신되지 않는다",
+                "declaration": "wire/search.index.json 의 pipeline.stages 의 drain"
+            }
+        ]
     },
     "rejections": [
         {
