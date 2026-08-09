@@ -1838,55 +1838,6 @@ components:
         그대로 값이다. 워크플로와 로컬 실행기를 가르는 JobExecutor 와 다른 구분이므로 축의
         값에는 local 이 없다.
 
-    RuleJobUsage:
-      type: object
-      description: >-
-        로컬 실행기가 태운 관측이다. 이 창구가 실행기의 유일한 통로이므로 여기서 싣지 않으면
-        그 잡의 usage 는 영원히 비고 화면이 워크플로 축의 잡만 비용을 보여 준다.
-        워크플로 축이 원장에 적는 키와 이름을 맞춰 화면이 축을 가리지 않는다.
-        모델을 부르기 전에 끊긴 실행은 잰 것이 없으므로 값이 null 이다.
-      required: [model, durationMs, costUsd, numTurns]
-      properties:
-        model: { type: [string, "null"] }
-        durationMs: { type: [integer, "null"] }
-        costUsd: { type: [number, "null"] }
-        numTurns: { type: [integer, "null"] }
-        inputTokens: { type: [integer, "null"] }
-        outputTokens: { type: [integer, "null"] }
-        cacheReadTokens: { type: [integer, "null"] }
-        cacheCreationTokens: { type: [integer, "null"] }
-
-    RuleJobStep:
-      type: object
-      description: >-
-        로컬 실행기가 남기는 궤적 한 줄이며 조회가 내는 JobStep 에서 attempt 를 뺀 모양이다.
-        시도 회차는 원장이 세므로 실행기가 싣지 않는다.
-      required: [seq, role, content, truncated, toolCalls]
-      properties:
-        seq: { type: integer, minimum: 0 }
-        role:
-          type: string
-          enum: [system, user, assistant, tool, orchestration]
-        content: { type: string }
-        truncated: { type: boolean }
-        toolCalls:
-          type: array
-          items: { type: object }
-        toolName: { type: string }
-        toolCallId: { type: string }
-        inputTokens: { type: integer }
-        outputTokens: { type: integer }
-        cacheReadTokens: { type: integer }
-        cacheCreationTokens: { type: integer }
-        stopReason: { type: string }
-        nodeName: { type: string }
-        eventKind:
-          type: string
-          enum: [node.started, node.completed, node.failed, route.selected, validation.failed]
-        durationMs: { type: integer }
-
-
-
     Job:
       type: object
       description: >-
