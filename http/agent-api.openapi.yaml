@@ -1522,13 +1522,6 @@ components:
       schema: { type: string }
 
   responses:
-    JobLeaseHeld:
-      description: 다른 실행기가 리스를 쥐고 있다
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/ErrorEnvelope"
-
     InvalidRequest:
       description: 본문이 스키마를 만족하지 않는다
       content:
@@ -1766,26 +1759,13 @@ components:
         kind:
           $ref: "#/components/schemas/JobKind"
         input:
+          type: object
           description: 잡 종류마다 다른 도메인 입력이며 실행 문맥은 워커가 직접 조립한다
-          oneOf:
-            - $ref: "#/components/schemas/RuleGenerationJobInput"
-            - type: object
           default: {}
         idempotencyKey:
           type: string
           minLength: 1
           maxLength: 200
-
-    RuleGenerationJobInput:
-      type: object
-      required: [taskId, anchorEventId]
-      description: 규칙 생성은 그 태스크에 속한 근거 이벤트 하나를 지목해야 접수된다
-      properties:
-        taskId: { type: string, minLength: 1 }
-        anchorEventId: { type: string, minLength: 1 }
-        focus: { type: string }
-        maxRules: { type: integer, minimum: 1 }
-        intent: { type: string }
 
     SettingKey:
       type: string
@@ -1857,24 +1837,6 @@ components:
         실행 하나를 태운 구현체를 가리키는 축이며 배포가 선언하고 사람이 화면에서 고르는 이름이
         그대로 값이다. 워크플로와 로컬 실행기를 가르는 JobExecutor 와 다른 구분이므로 축의
         값에는 local 이 없다.
-
-    RuleJobLeaseEnvelope:
-      allOf:
-        - $ref: "#/components/schemas/SuccessEnvelope"
-        - type: object
-          required: [data]
-          properties:
-            data:
-              $ref: "#/components/schemas/RuleJobLease"
-
-    RuleJobLease:
-      type: object
-      description: 리스를 쥔 실행기와 그 수명이며 실행기가 이 값으로 계속 쥐고 있는지 판정한다.
-      required: [held, leaseOwner, leaseExpiresAt]
-      properties:
-        held: { type: boolean, description: 부른 실행기가 지금도 리스를 쥐고 있는지다 }
-        leaseOwner: { type: string, nullable: true }
-        leaseExpiresAt: { type: string, format: date-time, nullable: true }
 
     RuleJobUsage:
       type: object
