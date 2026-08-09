@@ -10,6 +10,7 @@
 | --- | --- |
 | HTTP 표면 | `http/agent-api.openapi.yaml`, `http/tracer-dependency.openapi.yaml` |
 | wire와 이벤트 | `wire/envelope.json`, `headers.json`, `topics.json`, `job.kinds.json` |
+| 검색 색인 | `wire/search.index.json` |
 | 실행 원장 | `db/migrations/*.sql`, `db/schema.md` |
 | 워크플로 | `workflow/queues.yaml` |
 | 에이전트 규격 | `agent/{chat,recipe-scan,task-cleanup,title-suggestion}/` |
@@ -48,6 +49,10 @@ python conformance/runner/verify.py http://127.0.0.1:8800
 - 도구가 열리는 표면 넷의 이름 목록이 `agent/chat/tool.json`의 `surface`와 같은가
 - 대화 실행의 대기 줄이 원장 하나에 있고 축으로 갈리는가
 - 공급자 요청 식별자와 첫 토큰까지의 시간이 값 규칙을 갖는가
+- 레시피와 정리 제안의 원장 표를 migration이 세우고 케이스가 적은 창구를 표면이 여는가
+- 검색이 뒤지는 칸과 얇은 적중의 칸이 색인 문서에 있고 아웃박스가 받는 대상이 한 벌인가
+- 낡음 판정의 사례가 비교 규칙과 같은 답을 내는가
+- 에이전트 프로젝터가 읽는 토픽과 소비자 그룹이 한 벌이고 투영이 원장의 칸을 빠짐없이 채우는가
 
 두 검사기의 출력은 글자로 같습니다. 한쪽만 보는 자리가 생기면 그 자리는 계약이 강제하지 않는 것과 같으므로, 검사를 더할 때 두 검사기에 같은 검사를 넣습니다.
 
@@ -85,7 +90,7 @@ tracer-agent-contract/
 │   └── schema.md
 ├── http/                        OpenAPI 3.1 표면
 ├── tracer/                      추적 API 질의 조건
-├── wire/                        봉투·헤더·토픽·잡 종류
+├── wire/                        봉투·헤더·토픽·잡 종류·검색 색인
 ├── workflow/                    큐 선언
 └── VERSION                      계약 판
 ```

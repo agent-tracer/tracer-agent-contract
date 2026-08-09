@@ -5,13 +5,15 @@
 ## 계약 영역
 
 - `http/` — OpenAPI 3.1 HTTP 표면
-- `wire/` — 봉투·헤더·토픽·잡 종류
+- `wire/` — 봉투·헤더·토픽·잡 종류·검색 색인
 - `db/` — 실행 원장 migration과 스키마
 - `workflow/` — Temporal 큐 선언
 - `agent/` — 에이전트별 도구·출력·프롬프트 규격과 `shared/`의 공유 계약
 - `tracer/` — 추적 API 질의 조건
 - `conformance/` — 케이스·강제 수준·Node/Python 검사기
 - `VERSION` — 계약 판
+
+레시피와 정리 제안의 원장은 에이전트 원장입니다. 그래서 그 표의 DDL은 `db/`가, 창구는 `http/agent-api.openapi.yaml`이, 검색 색인은 `wire/search.index.json`이, 사건에서 적용 이력을 만드는 프로젝터는 `conformance/cases/recipe.projection.json`이 갖습니다. 추적에 남는 것은 태스크의 조건부 보관 하나이며 `http/tracer-dependency.openapi.yaml`이 갖습니다.
 
 `agent/shared/`는 두 구현체가 같은 절차를 밟아야 하는 규칙을 갖습니다.
 
