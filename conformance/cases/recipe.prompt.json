@@ -207,12 +207,12 @@
           "maxRedispatchRounds"
         ],
         "mustContain": [
-          "the conditions under which this recipe applies",
-          "what had to be in place before this work could start.",
-          "what actually existed once the work finished",
-          "list of {symptom, action, evidence, stepOrder?}",
-          "the eventIds that actually show that step being carried out",
-          "Optionally add why (what the file contributes to this workflow) and loadWhen",
+          "at most 6 conditions, each at most 200 characters, under which this recipe",
+          "naming what had to be in",
+          "naming what actually existed",
+          "at most 10 entries of {symptom, action, evidence, stepOrder?}",
+          "eventIds that actually show that step being carried out",
+          "and loadWhen (the point in the workflow at which it",
           "Do NOT invent a use_when, an output, or a recovery the trajectory did not show"
         ]
       }
