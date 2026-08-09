@@ -678,6 +678,14 @@ def main() -> None:
     ]
     if unpriced_models:
         raise SystemExit(f"실행 한도가 단가를 모르는 모델을 가리킨다 — {', '.join(unpriced_models)}")
+    model_envelope = read_shared("execution.limits.json")["modelEnvelope"]
+    envelope_models = sorted(k for k in model_envelope if k not in ("meaning", "appliesToReason"))
+    shared_budget = sorted(read_shared("model.envelope.json").get("sharedOutputBudget", {}).get("appliesTo", []))
+    if envelope_models != shared_budget:
+        raise SystemExit(
+            f"모델 봉투를 덮는 모델이 출력 예산을 나눠 쓰는 모델과 다르다 — {', '.join(envelope_models)}"
+        )
+
     # 허용 목록 밖의 모델을 기본으로 두면 그 종류는 자기가 거절하는 값으로 실행한다.
     disallowed_defaults = [
         f"{kind}: {model}"

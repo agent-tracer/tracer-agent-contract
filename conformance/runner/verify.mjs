@@ -643,6 +643,16 @@ if (unpricedLimitModels.length > 0) {
     const named = unpricedLimitModels.map(({ kind, model }) => `${kind}: ${model}`).join(", ");
     throw new Error(`실행 한도가 단가를 모르는 모델을 가리킨다 — ${named}`);
 }
+const modelEnvelope = readShared("execution.limits.json").modelEnvelope;
+const ENVELOPE_PROSE = ["meaning", "appliesToReason"];
+const envelopeModels = Object.keys(modelEnvelope).filter((key) => !ENVELOPE_PROSE.includes(key));
+const sharedBudget = readShared("model.envelope.json").sharedOutputBudget?.appliesTo ?? [];
+if ([...envelopeModels].sort().join() !== [...sharedBudget].sort().join()) {
+    throw new Error(
+        `모델 봉투를 덮는 모델이 출력 예산을 나눠 쓰는 모델과 다르다 — ${envelopeModels.join(", ")}`,
+    );
+}
+
 // 허용 목록 밖의 모델을 기본으로 두면 그 종류는 자기가 거절하는 값으로 실행한다.
 const disallowedDefaults = Object.entries(executionLimits)
     .flatMap(([kind, limits]) => [limits.defaultModel, limits.fallbackModel].map((model) => ({ kind, model })))
