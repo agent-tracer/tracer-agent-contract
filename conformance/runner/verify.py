@@ -152,29 +152,67 @@ RETIRED_ATTRIBUTES = [
 
 
 
-def schema_numbers_missing_from_prompt(agent_id: str) -> list[int]:
-    """모델이 지켜야 하는 수치는 스키마에만 두면 모델에게 닿지 않으므로 프롬프트 본문에도 있어야 한다."""
-    seen: set[int] = set()
-    numbers: list[int] = []
+LIMIT_PROXIMITY = 160
+"""칸 이름과 그 수 사이에 이만큼 안에서 만나야 그 수가 그 칸을 말한 것으로 본다."""
 
-    def walk(node: object) -> None:
+
+def schema_limit_sites(agent_id: str) -> list[tuple[str, int]]:
+    """스키마가 상한을 건 자리마다 그 상한이 걸린 칸의 이름과 수를 낸다."""
+    sites: dict[str, tuple[str, int]] = {}
+
+    def walk(node: object, field: str | None) -> None:
         if isinstance(node, list):
             for entry in node:
-                walk(entry)
+                walk(entry, field)
             return
         if not isinstance(node, dict):
             return
-        for key in ("maxLength", "maxItems", "minItems"):
-            value = node.get(key)
-            if isinstance(value, int) and not isinstance(value, bool) and value > 1 and value not in seen:
-                seen.add(value)
-                numbers.append(value)
-        for entry in node.values():
-            walk(entry)
+        for keyword in ("maxLength", "maxItems"):
+            value = node.get(keyword)
+            if isinstance(value, int) and not isinstance(value, bool) and value > 1 and field is not None:
+                sites[f"{field}:{value}"] = (field, value)
+        for key, nested in node.items():
+            if key in ("properties", "$defs") and isinstance(nested, dict):
+                for name, child in nested.items():
+                    walk(child, name)
+                continue
+            walk(nested, field)
 
-    walk(read_agent_output(agent_id)["schema"])
-    body = json.dumps(read_agent_prompt(agent_id), ensure_ascii=False)
-    return [value for value in numbers if not re.search(rf"\b{value}\b", body)]
+    walk(read_agent_output(agent_id)["schema"], None)
+    return list(sites.values())
+
+
+def prompt_body(agent_id: str) -> str:
+    """모델이 실제로 읽는 프롬프트 본문이며 실행이 채우는 자리표시자를 계약의 값으로 채워 둔다."""
+    lines: list[str] = []
+    for fragment in read_agent_prompt(agent_id)["fragments"].values():
+        content = fragment.get("content")
+        if isinstance(content, list):
+            lines.extend(content)
+        for variant in (fragment.get("byLanguage") or {}).values():
+            lines.extend(variant)
+    body = "\n".join(lines)
+    for name, value in (read_agent_tools(agent_id).get("limits") or {}).items():
+        body = body.replace(f"${{{name}}}", str(value))
+    return body
+
+
+def states_limit(body: str, field: str, value: int) -> bool:
+    """칸의 이름과 그 수가 서로 가까이 있으면 그 수가 그 칸을 말한 것으로 본다. 문장은 두 순서로 모두 쓰인다."""
+    name = re.escape(field)
+    gap = f"[\\s\\S]{{0,{LIMIT_PROXIMITY}}}?"
+    after = re.search(rf"\b{name}\b{gap}\b{value}\b", body)
+    before = re.search(rf"\b{value}\b{gap}\b{name}\b", body)
+    return bool(after or before)
+
+
+def schema_limits_missing_from_prompt(agent_id: str) -> list[str]:
+    """모델이 지켜야 하는 상한은 스키마에만 두면 모델에게 닿지 않으므로 프롬프트 본문에도 있어야 한다.
+
+    수만 세면 같은 수를 쓰는 다른 칸이 서로를 통과시키므로 칸의 이름 곁에서 그 수를 찾는다.
+    """
+    body = prompt_body(agent_id)
+    return [f"{field} 의 {value}" for field, value in schema_limit_sites(agent_id) if not states_limit(body, field, value)]
 
 
 def confirm_tools_called_immediate(agent_id: str, confirm_tools: list[str]) -> list[str]:
@@ -384,9 +422,9 @@ def main() -> None:
         )
         raise SystemExit(f"도구의 표면과 적합성이 적은 목록이 다르다 — {detail}")
     promptless_limits = [
-        f"{agent} 의 {value}"
+        f"{agent} 의 {site}"
         for agent in AGENTS
-        for value in schema_numbers_missing_from_prompt(agent)
+        for site in schema_limits_missing_from_prompt(agent)
     ]
     if promptless_limits:
         detail = " · ".join(promptless_limits)

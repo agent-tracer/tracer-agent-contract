@@ -129,25 +129,65 @@ const RETIRED_ATTRIBUTES = [
 ];
 
 
-/** 모델이 지켜야 하는 수치는 스키마에만 두면 모델에게 닿지 않으므로 프롬프트 본문에도 있어야 한다. */
-function schemaNumbersMissingFromPrompt(agentId) {
-    const seen = new Set();
-    const numbers = [];
-    const walk = (node) => {
+/** 칸 이름과 그 수 사이에 이만큼 안에서 만나야 그 수가 그 칸을 말한 것으로 본다. */
+const LIMIT_PROXIMITY = 160;
+
+/** 스키마가 상한을 건 자리마다 그 상한이 걸린 칸의 이름과 수를 낸다. */
+function schemaLimitSites(agentId) {
+    const sites = new Map();
+    const walk = (node, field) => {
         if (node === null || typeof node !== "object") return;
-        if (Array.isArray(node)) return node.forEach(walk);
-        for (const key of ["maxLength", "maxItems", "minItems"]) {
-            const value = node[key];
-            if (typeof value === "number" && value > 1 && !seen.has(value)) {
-                seen.add(value);
-                numbers.push(value);
+        if (Array.isArray(node)) return node.forEach((item) => walk(item, field));
+        for (const keyword of ["maxLength", "maxItems"]) {
+            const value = node[keyword];
+            if (typeof value === "number" && value > 1 && field !== null) {
+                sites.set(`${field}:${value}`, { field, value });
             }
         }
-        Object.values(node).forEach(walk);
+        for (const [key, nested] of Object.entries(node)) {
+            if ((key === "properties" || key === "$defs") && nested !== null && typeof nested === "object") {
+                for (const [name, child] of Object.entries(nested)) walk(child, name);
+                continue;
+            }
+            walk(nested, field);
+        }
     };
-    walk(readAgentOutput(agentId).schema);
-    const body = JSON.stringify(readAgentPrompt(agentId));
-    return numbers.filter((value) => !new RegExp(`\\b${value}\\b`, "u").test(body));
+    walk(readAgentOutput(agentId).schema, null);
+    return [...sites.values()];
+}
+
+/** 모델이 실제로 읽는 프롬프트 본문이며 실행이 채우는 자리표시자를 계약의 값으로 채워 둔다. */
+function promptBody(agentId) {
+    const lines = [];
+    for (const fragment of Object.values(readAgentPrompt(agentId).fragments)) {
+        if (Array.isArray(fragment.content)) lines.push(...fragment.content);
+        for (const variant of Object.values(fragment.byLanguage ?? {})) lines.push(...variant);
+    }
+    let body = lines.join("\n");
+    for (const [name, value] of Object.entries(readAgentTools(agentId).limits ?? {})) {
+        body = body.replaceAll(`\${${name}}`, String(value));
+    }
+    return body;
+}
+
+/**
+ * 모델이 지켜야 하는 상한은 스키마에만 두면 모델에게 닿지 않으므로 프롬프트 본문에도 있어야 한다.
+ * 수만 세면 같은 수를 쓰는 다른 칸이 서로를 통과시키므로 칸의 이름 곁에서 그 수를 찾는다.
+ */
+function schemaLimitsMissingFromPrompt(agentId) {
+    const body = promptBody(agentId);
+    return schemaLimitSites(agentId)
+        .filter(({ field, value }) => !statesLimit(body, field, value))
+        .map(({ field, value }) => `${field} 의 ${value}`);
+}
+
+/** 칸의 이름과 그 수가 서로 이 거리 안에 있으면 그 수가 그 칸을 말한 것으로 본다. 문장은 두 순서로 모두 쓰인다. */
+function statesLimit(body, field, value) {
+    const name = field.replaceAll(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+    const gap = `[\\s\\S]{0,${LIMIT_PROXIMITY}}?`;
+    const after = new RegExp(`\\b${name}\\b${gap}\\b${value}\\b`, "u");
+    const before = new RegExp(`\\b${value}\\b${gap}\\b${name}\\b`, "u");
+    return after.test(body) || before.test(body);
 }
 
 const version = readVersion();
@@ -334,7 +374,7 @@ if (brokenRequiredByAction.length > 0) {
     throw new Error(`action 이 요구하는 인자의 표가 어긋난다 — ${brokenRequiredByAction.join(" · ")}`);
 }
 const promptlessLimits = AGENTS.flatMap((agent) =>
-    schemaNumbersMissingFromPrompt(agent).map((value) => `${agent} 의 ${value}`),
+    schemaLimitsMissingFromPrompt(agent).map((site) => `${agent} 의 ${site}`),
 );
 if (promptlessLimits.length > 0) {
     throw new Error(`스키마가 요구하는 수치를 프롬프트가 모델에게 알리지 않는다 — ${promptlessLimits.join(" · ")}`);
