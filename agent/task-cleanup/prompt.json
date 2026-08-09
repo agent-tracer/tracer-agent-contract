@@ -31,7 +31,7 @@
             ]
         },
         "suggestionRules": {
-            "version": "v0.0.1",
+            "version": "v0.0.2",
             "content": [
                 "  - One suggestion per task id, and only task ids a reviewer reported on. Never invent an id.",
                 "  - Quality over quantity. Returning an empty list is a correct answer when every reviewed candidate",
@@ -40,19 +40,21 @@
                 "    since creation\", \"only a Read with no edits and no conclusion\").",
                 "  - evidenceEventIds: up to ${maxEvidenceEventIds} IDs, exactly as the reviewer cited them.",
                 "  - Task ids and the \"kind\" enum stay literal; only the rationale follows the output language.",
-                "Hard limits the output is rejected for exceeding: at most 50 suggestions in one response, and at most 100 evidence event ids on each suggestion."
+                "Hard limits the output is rejected for exceeding: at most ${maxSuggestions} suggestions in one response, and at most ${maxEvidenceEventIds} evidence event ids on each suggestion."
             ],
             "placeholders": [
+                "maxSuggestions",
                 "maxEvidenceEventIds"
             ]
         },
         "redispatchProtocol": {
-            "version": "v0.0.1",
+            "version": "v0.0.2",
             "content": [
                 "When a reviewer report is missing or too thin to judge a candidate you believe matters, you may ask",
                 "for one more round of review instead of deciding. Return a redispatch request — a list of",
-                "{taskId, weight} entries naming candidates to (re)inspect — and leave suggestions empty; those",
-                "candidates are reopened and their reports come back to you. You get at most ${maxRedispatchRounds} such",
+                "{taskId, depth} entries naming candidates to (re)inspect, where depth is one of shallow, normal, or",
+                "deep — and leave suggestions empty; those candidates are reopened and their reports come back to",
+                "you. Name each task at most once. You get at most ${maxRedispatchRounds} such",
                 "round; after it, decide from what you have. Redispatch only for a candidate a reviewer can actually",
                 "settle, not to re-read a report you already hold. Return either suggestions or a redispatch request,",
                 "never both."
