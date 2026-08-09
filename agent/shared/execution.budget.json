@@ -25,6 +25,26 @@
       "reason": "전문가에게 넘기지 않고 종합이 갖는 바닥 턴이며 달러는 따로 떼지 않는다."
     }
   },
+  "runnerRetry": {
+    "meaning": "실행기가 한 번의 질의를 다시 부르는 자리이며 층이 둘이다. 두 층은 서로 다른 것을 세므로 같은 칸을 쓰지 않는다.",
+    "layers": "transient 는 공급자가 잠시 받지 못한 것이고 schemaViolation 은 모델이 규격을 어긴 것이다. 하나를 고칠 때 다른 하나가 따라 움직이면 안 된다.",
+    "transient": {
+      "attempts": 2,
+      "initialDelayMs": 500,
+      "backoffFactor": 2.0,
+      "jitter": true,
+      "appliesTo": "error.subtypes.json 의 상위 분류 transient 와 provider 의 retryable 인 값이다.",
+      "reason": "이 자리에서 다시 부르면 그 시도가 쌓은 문맥과 이미 지불한 토큰을 지킨다. 활동을 실패시키면 오케스트레이터가 생성을 통째로 다시 태운다.",
+      "onExhausted": "소진되면 그대로 던져 위층의 재시도 판정에 맡긴다."
+    },
+    "schemaViolation": {
+      "attempts": 1,
+      "directive": "Your previous output did not satisfy the output schema. Send the same answer again, corrected so every field satisfies the schema. Do not call any tool and do not add commentary.",
+      "reason": "모델이 규격을 한 번 어겼다고 그 시도를 산출 없이 끝내면 그때까지 지불한 토큰이 전부 버려진다.",
+      "notReservation": "reservation.repair 는 검증기가 거절한 산출을 도메인 사유와 함께 되받는 자리이고 이것은 스키마를 못 넘긴 산출을 되받는 자리다. 층이 다르므로 수를 따로 센다.",
+      "accounting": "다시 부른 호출의 비용과 턴은 그 실행의 장부에 더한다. 더하지 않으면 예산이 지불한 것보다 적게 세어 상한이 늦게 걸린다."
+    }
+  },
   "turnLedger": {
     "meaning": "실행 하나가 갖는 턴의 총량과 그 소진 규칙이다.",
     "totalIsWholeExecution": true,

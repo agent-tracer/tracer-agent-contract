@@ -664,6 +664,14 @@ def main() -> None:
         f"{len(scope_token['payload']['fields'])}개 칸을 "
         f"{scope_token['signature']['algorithm']} 으로 서명한다"
     )
+    # 두 층이 같은 수를 쓰면 한쪽을 고칠 때 다른 쪽이 따라 움직이므로 자리가 나뉘어 있는지 본다.
+    runner_retry = read_shared("execution.budget.json")["runnerRetry"]
+    for layer in ("transient", "schemaViolation"):
+        if not isinstance(runner_retry.get(layer, {}).get("attempts"), int):
+            raise SystemExit(f"실행기 재시도의 {layer} 층이 횟수를 적지 않는다")
+    if not runner_retry["schemaViolation"]["directive"].strip():
+        raise SystemExit("규격을 어긴 산출을 되받는 지시가 비어 있다")
+
     # 재생 상한이 요약 트리거보다 작으면 정상 흐름이 늘 상한에 닿아 신호가 되지 못한다.
     chat_summary = read_json("agent/chat/summary.json")
     if chat_summary["consumption"]["maxReplayMessages"] <= chat_summary["production"]["trigger"]["messages"]:

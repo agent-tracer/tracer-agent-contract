@@ -627,6 +627,17 @@ console.log(
     `실행에 매인 자격은 ${scopeToken.prefix} 로 시작해 ${scopeToken.payload.fields.length}개 칸을 ` +
         `${scopeToken.signature.algorithm} 으로 서명한다`,
 );
+// 두 층이 같은 수를 쓰면 한쪽을 고칠 때 다른 쪽이 따라 움직이므로 자리가 나뉘어 있는지 본다.
+const runnerRetry = readShared("execution.budget.json").runnerRetry;
+for (const layer of ["transient", "schemaViolation"]) {
+    if (!(runnerRetry[layer]?.attempts >= 0)) {
+        throw new Error(`실행기 재시도의 ${layer} 층이 횟수를 적지 않는다`);
+    }
+}
+if (runnerRetry.schemaViolation.directive.trim().length === 0) {
+    throw new Error("규격을 어긴 산출을 되받는 지시가 비어 있다");
+}
+
 // 재생 상한이 요약 트리거보다 작으면 정상 흐름이 늘 상한에 닿아 신호가 되지 못한다.
 const chatSummary = readJson("agent/chat/summary.json");
 if (!(chatSummary.consumption.maxReplayMessages > chatSummary.production.trigger.messages)) {
