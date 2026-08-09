@@ -3,9 +3,5 @@
         "name": "x-monitor-user",
         "defaultValue": "local",
         "meaning": "자기신고 사용자 식별자이며 비었거나 공백뿐이면 기본값으로 읽는다"
-    },
-    "leaseOwner": {
-        "name": "x-monitor-lease-owner",
-        "meaning": "잡 리스를 쥔 실행기의 식별자이며 리스를 회수당한 실행기가 잡을 종결시키지 못하게 한다"
     }
 }
