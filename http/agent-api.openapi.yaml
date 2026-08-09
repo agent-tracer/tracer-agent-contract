@@ -5,6 +5,8 @@ info:
   description: >-
     에이전트 서비스가 브라우저에 여는 표면이다. 구현이 둘이므로 두 구현이 모두 만족하는
     부분만 여기 적고, 한쪽에만 있거나 모양이 갈리는 것은 conformance/cases/divergence.json이 적는다.
+    x-mcp-tool 이 붙은 창구는 플러그인의 같은 이름 MCP 도구가 부르는 자리이며, 그 도구는
+    에이전트 상류가 선언되지 않은 배포에서 등록되지 않는다.
 
 servers:
   - url: /
@@ -18,6 +20,10 @@ tags:
     description: 에이전트 실행에 쓰는 설정값의 조회와 저장과 삭제
   - name: envelope
     description: 실행 시도 하나가 쓸 모델과 자격과 단가와 한도
+  - name: recipe
+    description: 레시피 원장의 조회와 검색과 상태 변경과 자기보고
+  - name: cleanup
+    description: 태스크 정리 제안의 조회와 해소
   - name: health
     description: 신원 없이 열리는 프로브
 
@@ -665,6 +671,7 @@ paths:
     post:
       operationId: enqueueJob
       tags: [job]
+      x-mcp-tool: request_recipe_scan
       summary: 잡 에이전트 실행 하나를 접수한다
       parameters:
         - $ref: "#/components/parameters/UserHeader"
@@ -1045,6 +1052,423 @@ paths:
         "400":
           $ref: "#/components/responses/InvalidRequest"
 
+  /api/agent/recipes:
+    get:
+      operationId: listRecipes
+      tags: [recipe]
+      summary: 이 사용자의 레시피를 상태로 걸러 조회한다
+      description: >-
+        지워진 레시피는 어느 상태로 물어도 나오지 않는다. 상한이 없고 레시피 전문을 그대로 실으므로
+        일의 종류로 하나를 고르는 자리에는 검색 창구를 쓴다.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/RecipeStatus"
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 상태를 실으면 그 상태만, 실지 않으면 상태 선언 순서로 이어 붙여 낸다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [items, taskTitles]
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/RecipeWithStats"
+                          taskTitles:
+                            type: object
+                            description: 레시피가 인용한 태스크의 식별자를 제목으로 푸는 표이며 제목을 찾지 못한 식별자는 실리지 않는다
+                            additionalProperties: { type: string }
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+
+  /api/agent/recipes/search:
+    get:
+      operationId: searchRecipes
+      tags: [recipe]
+      x-mcp-tool: search_recipes
+      summary: 레시피를 본문 유사도로 검색한다
+      description: >-
+        고정 경로가 레시피 식별자 경로보다 앞서 잡히므로 search 라는 식별자는 이 창구에 닿는다.
+        채택된 레시피만 대상이며 적중은 고르기에 필요한 칸만 싣는다. 색인과 질의 조건은
+        wire/search.index.json 이 갖는다.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 3
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 점수가 높은 것부터 낸다. 공백뿐인 질의는 빈 목록이며 거절이 아니다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [items]
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/RecipeSearchHit"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+
+  /api/agent/recipes/{id}:
+    get:
+      operationId: getRecipe
+      tags: [recipe]
+      x-mcp-tool: get_recipe
+      summary: 레시피 하나를 전문과 적용 이력까지 조회한다
+      parameters:
+        - $ref: "#/components/parameters/RecipeId"
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 레시피와 그 통계와 적용 이력을 실었다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [recipe, stats, applications]
+                        properties:
+                          recipe:
+                            $ref: "#/components/schemas/Recipe"
+                          stats:
+                            $ref: "#/components/schemas/RecipeStats"
+                          applications:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/RecipeApplication"
+        "404":
+          $ref: "#/components/responses/RecipeNotFound"
+    patch:
+      operationId: editRecipe
+      tags: [recipe]
+      summary: 채택된 레시피의 본문을 사용자가 고친다
+      description: >-
+        고칠 수 있는 칸은 넷이며 하나 이상을 실어야 한다. 고치면 판이 하나 오르고 사람이 고쳤다는
+        표시가 남는다. 채택되지 않은 레시피는 고칠 수 없다.
+      parameters:
+        - $ref: "#/components/parameters/RecipeId"
+        - $ref: "#/components/parameters/UserHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecipeEditBody"
+      responses:
+        "200":
+          description: 고친 레시피를 실었다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [recipe]
+                        properties:
+                          recipe:
+                            $ref: "#/components/schemas/Recipe"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "404":
+          $ref: "#/components/responses/RecipeNotFound"
+        "409":
+          $ref: "#/components/responses/RecipeStateConflict"
+    delete:
+      operationId: deleteRecipe
+      tags: [recipe]
+      summary: 보류하거나 폐기한 레시피를 지운다
+      description: 행을 지우지 않고 지운 시각을 적는다. 조회와 검색은 그 뒤로 이 레시피를 내지 않는다.
+      parameters:
+        - $ref: "#/components/parameters/RecipeId"
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 지웠다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [deleted, id]
+                        properties:
+                          deleted: { type: boolean, const: true }
+                          id: { type: string }
+        "400":
+          $ref: "#/components/responses/RecipeNotDeletable"
+        "404":
+          $ref: "#/components/responses/RecipeNotFound"
+
+  /api/agent/recipes/{id}/accept:
+    post:
+      operationId: acceptRecipe
+      tags: [recipe]
+      summary: 후보 레시피를 채택한다
+      description: >-
+        고쳐 쓰는 부모가 있고 그 부모가 같은 사용자의 것이면 부모를 대체됨으로 함께 옮긴다.
+        후보가 아닌 레시피는 채택할 수 없다.
+      parameters:
+        - $ref: "#/components/parameters/RecipeId"
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 채택한 레시피를 실었다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [recipe]
+                        properties:
+                          recipe:
+                            $ref: "#/components/schemas/Recipe"
+        "404":
+          $ref: "#/components/responses/RecipeNotFound"
+        "409":
+          $ref: "#/components/responses/RecipeStateConflict"
+
+  /api/agent/recipes/{id}/dismiss:
+    post:
+      operationId: dismissRecipe
+      tags: [recipe]
+      summary: 후보 레시피를 보류한다
+      parameters:
+        - $ref: "#/components/parameters/RecipeId"
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 보류한 레시피를 실었다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [recipe]
+                        properties:
+                          recipe:
+                            $ref: "#/components/schemas/Recipe"
+        "404":
+          $ref: "#/components/responses/RecipeNotFound"
+        "409":
+          $ref: "#/components/responses/RecipeStateConflict"
+
+  /api/agent/recipes/{id}/retire:
+    post:
+      operationId: retireRecipe
+      tags: [recipe]
+      summary: 쓰이던 레시피를 폐기한다
+      description: 채택된 레시피만 폐기할 수 있다. 폐기는 해소 시각을 새로 적지 않는다.
+      parameters:
+        - $ref: "#/components/parameters/RecipeId"
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 폐기한 레시피를 실었다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [recipe]
+                        properties:
+                          recipe:
+                            $ref: "#/components/schemas/Recipe"
+        "404":
+          $ref: "#/components/responses/RecipeNotFound"
+        "409":
+          $ref: "#/components/responses/RecipeStateConflict"
+
+  /api/agent/recipes/{id}/outcome:
+    post:
+      operationId: reportRecipeOutcome
+      tags: [recipe]
+      x-mcp-tool: report_recipe_outcome
+      summary: 레시피를 쓴 결과를 자기보고한다
+      description: >-
+        이 태스크에 이 레시피의 적용 이력이 이미 있으면 그 행에 결과를 적고, 없으면 손으로 실은
+        적용 이력 하나를 만들어 적는다. 같은 태스크에 다시 보고하면 앞의 결과를 덮는다.
+      parameters:
+        - $ref: "#/components/parameters/RecipeId"
+        - $ref: "#/components/parameters/UserHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecipeOutcomeBody"
+      responses:
+        "200":
+          description: 결과를 적은 적용 이력을 실었다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [application]
+                        properties:
+                          application:
+                            $ref: "#/components/schemas/RecipeApplication"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+        "404":
+          $ref: "#/components/responses/RecipeNotFound"
+
+  /api/agent/cleanup/suggestions:
+    get:
+      operationId: listCleanupSuggestions
+      tags: [cleanup]
+      summary: 이 사용자의 정리 제안을 상태로 걸러 조회한다
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/CleanupSuggestionStatus"
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: >-
+            상태를 실으면 그 상태만, 실지 않으면 상태 선언 순서로 이어 붙여 낸다. 대기 중인 행은
+            태스크와 종류의 쌍으로 한 벌만 남긴다.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/CleanupSuggestionList"
+        "400":
+          $ref: "#/components/responses/InvalidRequest"
+
+  /api/agent/cleanup/suggestions/{id}/accept:
+    post:
+      operationId: acceptCleanupSuggestion
+      tags: [cleanup]
+      summary: 정리 제안을 수용하고 그 태스크의 보관을 추적에 요청한다
+      description: >-
+        제안을 수용으로 적은 뒤 추적의 조건부 보관 창구를 부르며 제안이 관측한 마지막 사건 시각을
+        조건으로 싣는다. 추적이 그 뒤의 활동을 보면 이 창구는 409 cleanup.stale 을 내고 제안의
+        수용을 되돌린다. 이미 수용된 제안은 아무것도 바꾸지 않고 그대로 낸다.
+      parameters:
+        - $ref: "#/components/parameters/CleanupSuggestionId"
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 수용한 제안을 실었다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [suggestion]
+                        properties:
+                          suggestion:
+                            $ref: "#/components/schemas/CleanupSuggestion"
+        "404":
+          $ref: "#/components/responses/CleanupSuggestionNotFound"
+        "409":
+          $ref: "#/components/responses/CleanupStale"
+
+  /api/agent/cleanup/suggestions/{id}/dismiss:
+    post:
+      operationId: dismissCleanupSuggestion
+      tags: [cleanup]
+      summary: 정리 제안을 기각한다
+      description: 기각은 태스크를 건드리지 않으므로 추적을 부르지 않는다.
+      parameters:
+        - $ref: "#/components/parameters/CleanupSuggestionId"
+        - $ref: "#/components/parameters/UserHeader"
+      responses:
+        "200":
+          description: 기각한 제안을 실었다
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - type: object
+                    required: [data]
+                    properties:
+                      data:
+                        type: object
+                        required: [suggestion]
+                        properties:
+                          suggestion:
+                            $ref: "#/components/schemas/CleanupSuggestion"
+        "404":
+          $ref: "#/components/responses/CleanupSuggestionNotFound"
+
 components:
   parameters:
     ThreadId:
@@ -1079,6 +1503,16 @@ components:
       required: true
       schema:
         $ref: "#/components/schemas/SettingKey"
+    RecipeId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    CleanupSuggestionId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
 
     UserHeader:
       name: x-monitor-user
@@ -1201,6 +1635,82 @@ components:
                 error:
                   code: chat.execution-idempotency-conflict
                   message: Client request id was already used with different chat input
+
+    RecipeNotFound:
+      description: 레시피가 없다. 남의 레시피도 존재를 알리지 않으므로 같은 응답이다
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            ok: false
+            error:
+              code: not_found
+              message: Recipe not found
+    RecipeStateConflict:
+      description: >-
+        그 상태의 레시피에는 걸 수 없는 전이다. 채택과 보류는 후보에만 걸고 폐기와 편집은 채택된
+        것에만 건다.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          examples:
+            notCandidate:
+              value:
+                ok: false
+                error:
+                  code: recipe.not-candidate
+                  message: Recipe is not a candidate
+            notActive:
+              value:
+                ok: false
+                error:
+                  code: recipe.not-active
+                  message: Recipe is not active
+    RecipeNotDeletable:
+      description: 본문이 스키마를 만족하지 않거나 지울 수 없는 상태의 레시피를 지우려 한다
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          examples:
+            notDeletable:
+              value:
+                ok: false
+                error:
+                  code: recipe.not-deletable
+                  message: Recipe is not deletable
+            validation:
+              value:
+                ok: false
+                error:
+                  code: validation_error
+                  message: Invalid request
+    CleanupSuggestionNotFound:
+      description: 정리 제안이 없다. 남의 제안도 존재를 알리지 않으므로 같은 응답이다
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            ok: false
+            error:
+              code: not_found
+              message: Cleanup suggestion not found
+    CleanupStale:
+      description: >-
+        제안이 관측한 마지막 사건 뒤에 그 태스크에 활동이 있었다. 추적이 조건부 보관을 이 코드로
+        거절하며 에이전트는 제안의 수용을 되돌리고 같은 코드를 부른 쪽에 낸다.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            ok: false
+            error:
+              code: cleanup.stale
+              message: Task has activity since the suggestion observed it
   schemas:
     SuccessEnvelope:
       type: object
@@ -1896,3 +2406,388 @@ components:
       description: 밀리초 세 자리를 갖는 UTC 시각이다
       pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
       examples: ["2026-01-01T00:00:00.000Z"]
+
+    RecipeStatus:
+      type: string
+      enum: [candidate, active, dismissed, superseded, retired]
+
+    RecipeOutcome:
+      type: string
+      enum: [completed, abandoned, superseded]
+      description: 레시피를 쓴 실행이 어떻게 끝났는지에 대한 에이전트의 자기보고다
+
+    RecipeEditor:
+      type: string
+      enum: [agent, user]
+      description: 이 레시피를 마지막으로 고친 주체이며 사람이 고친 것과 자동으로 만들어진 것을 구분한다
+
+    RecipeInjectedVia:
+      type: string
+      enum: [pull, manual]
+      description: 이 적용이 어떻게 시작되었는지이며 pull 은 도구로 끌어온 것이고 manual 은 자기보고가 만든 것이다
+
+    RecipeFileRole:
+      type: string
+      enum: [read, write, both]
+
+    RecipeVerifyTool:
+      type: string
+      enum: [command, file-read, file-write, web]
+
+    RecipeCorrection:
+      type: object
+      required: [whatAgentDid, howCorrected, evidence]
+      properties:
+        whatAgentDid: { type: string, minLength: 1, maxLength: 500 }
+        howCorrected: { type: string, minLength: 1, maxLength: 500 }
+        evidence:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: { type: string, minLength: 1 }
+          description: 이 지적을 뒷받침하는 이벤트 식별자다
+
+    RecipePitfall:
+      type: object
+      required: [pitfall, whyNonObvious, evidence]
+      properties:
+        pitfall: { type: string, minLength: 1, maxLength: 500 }
+        whyNonObvious: { type: string, minLength: 1, maxLength: 500 }
+        evidence:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: { type: string, minLength: 1 }
+
+    RecipeVerify:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [kind, commandMatches]
+          properties:
+            kind: { type: string, const: command }
+            commandMatches:
+              type: array
+              minItems: 1
+              maxItems: 20
+              items: { type: string, minLength: 1, maxLength: 200 }
+        - type: object
+          additionalProperties: false
+          required: [kind, pattern]
+          properties:
+            kind: { type: string, const: pattern }
+            pattern: { type: string, minLength: 1, maxLength: 500 }
+        - type: object
+          additionalProperties: false
+          required: [kind, tool]
+          properties:
+            kind: { type: string, const: action }
+            tool:
+              $ref: "#/components/schemas/RecipeVerifyTool"
+
+    RecipeStep:
+      type: object
+      required: [order, action]
+      properties:
+        order:
+          type: integer
+          minimum: 1
+          maximum: 50
+          description: 절차의 순서가 곧 의미이므로 1부터 빈칸 없이 이어진다
+        action: { type: string, minLength: 1, maxLength: 200 }
+        rationale:
+          type: [string, "null"]
+          maxLength: 300
+        verify:
+          oneOf:
+            - $ref: "#/components/schemas/RecipeVerify"
+            - type: "null"
+        evidence:
+          type: array
+          maxItems: 50
+          default: []
+          items: { type: string, minLength: 1 }
+          description: 이 단계를 보여 준 이벤트 식별자이며 관측되지 않은 단계는 비운다
+
+    RecipeTouchedFile:
+      type: object
+      required: [path, role]
+      properties:
+        path: { type: string, minLength: 1 }
+        role:
+          $ref: "#/components/schemas/RecipeFileRole"
+        why:
+          type: [string, "null"]
+          maxLength: 200
+          description: 이 파일을 읽거나 쓰는 이유다
+        loadWhen:
+          type: [string, "null"]
+          maxLength: 200
+          description: 이 파일을 여는 시점이며 절차의 어느 단계에서 필요한지를 적는다
+
+    RecipeRecovery:
+      type: object
+      required: [symptom, action, evidence]
+      description: 증상과 조치의 쌍이며 지적과 같은 근거를 요구한다
+      properties:
+        symptom: { type: string, minLength: 1, maxLength: 500 }
+        action: { type: string, minLength: 1, maxLength: 500 }
+        evidence:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: { type: string, minLength: 1 }
+        stepOrder:
+          type: [integer, "null"]
+          minimum: 1
+          maximum: 50
+          description: 이 복구가 걸리는 단계이며 비면 절차 전체에 걸린다
+
+    RecipeSlice:
+      type: object
+      required: [taskId, turnIds, eventIds]
+      properties:
+        taskId: { type: string, minLength: 1, maxLength: 64 }
+        turnIds:
+          type: array
+          items: { type: string, minLength: 1 }
+        eventIds:
+          type: array
+          items: { type: string, minLength: 1 }
+
+    Recipe:
+      type: object
+      description: 레시피 원장 행 하나이며 조회와 상태 변경이 모두 이 모양을 낸다
+      required:
+        - id
+        - userId
+        - status
+        - title
+        - intent
+        - description
+        - summaryMd
+        - request
+        - corrections
+        - pitfalls
+        - governingRules
+        - steps
+        - touchedFiles
+        - contributingSlices
+        - rationale
+        - useWhen
+        - inputs
+        - outputs
+        - recovery
+        - language
+        - rev
+        - parentRecipeId
+        - sourceJobId
+        - userEdited
+        - lastEditedBy
+        - error
+        - createdAt
+        - updatedAt
+        - resolvedAt
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        status:
+          $ref: "#/components/schemas/RecipeStatus"
+        title: { type: string }
+        intent: { type: string }
+        description: { type: string }
+        summaryMd: { type: string }
+        request: { type: string }
+        corrections:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecipeCorrection"
+        pitfalls:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecipePitfall"
+        governingRules:
+          type: array
+          items: { type: string }
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecipeStep"
+        touchedFiles:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecipeTouchedFile"
+        contributingSlices:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecipeSlice"
+        rationale: { type: [string, "null"] }
+        useWhen:
+          type: array
+          items: { type: string }
+        inputs:
+          type: array
+          items: { type: string }
+        outputs:
+          type: array
+          items: { type: string }
+        recovery:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecipeRecovery"
+        language: { type: [string, "null"] }
+        rev:
+          type: integer
+          minimum: 1
+        parentRecipeId: { type: [string, "null"] }
+        sourceJobId:
+          type: [string, "null"]
+          description: 이 레시피를 낸 잡 실행의 식별자이며 원장의 잡을 가리키나 외래 키로 묶지 않는다
+        userEdited: { type: boolean }
+        lastEditedBy:
+          $ref: "#/components/schemas/RecipeEditor"
+        error: { type: [string, "null"] }
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        updatedAt:
+          $ref: "#/components/schemas/Timestamp"
+        resolvedAt:
+          oneOf:
+            - $ref: "#/components/schemas/Timestamp"
+            - type: "null"
+
+    RecipeStats:
+      type: object
+      required: [applicationCount, decidedCount, successRate]
+      description: applicationCount 는 자기보고 여부와 무관한 적용 행의 총 수이고 decidedCount 는 그중 자기보고가 붙은 수다
+      properties:
+        applicationCount:
+          type: integer
+          minimum: 0
+        decidedCount:
+          type: integer
+          minimum: 0
+        successRate:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: 자기보고가 붙은 적용 가운데 completed 의 비율이며 붙은 것이 없으면 0 이다
+
+    RecipeWithStats:
+      allOf:
+        - $ref: "#/components/schemas/Recipe"
+        - type: object
+          required: [stats]
+          properties:
+            stats:
+              $ref: "#/components/schemas/RecipeStats"
+
+    RecipeApplication:
+      type: object
+      description: 레시피 하나가 태스크 하나에 쓰인 이력이며 결과는 에이전트의 자기보고로 채워진다
+      required: [id, userId, recipeId, taskId, injectedVia, outcome, note, createdAt]
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        recipeId: { type: string }
+        taskId: { type: string }
+        injectedVia:
+          $ref: "#/components/schemas/RecipeInjectedVia"
+        outcome:
+          oneOf:
+            - $ref: "#/components/schemas/RecipeOutcome"
+            - type: "null"
+        note: { type: [string, "null"] }
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+
+    RecipeSearchHit:
+      type: object
+      description: 검색이 내는 얇은 적중이며 단계와 지적은 싣지 않고 조회 창구로 미룬다
+      required: [recipeId, title, intent, description, useWhen, score]
+      properties:
+        recipeId: { type: string }
+        title: { type: string }
+        intent: { type: string }
+        description: { type: string }
+        useWhen:
+          type: array
+          items: { type: string }
+          description: 적용 조건은 고르기 전에 보여야 하는 판단 정보이므로 얇은 적중에도 실린다
+        score:
+          type: number
+          description: 색인이 매긴 관련도이며 값의 절대 크기가 아니라 적중 사이의 순서에 뜻이 있다
+
+    RecipeEditBody:
+      type: object
+      description: 채택된 레시피에서 사람이 고칠 수 있는 칸이며 하나 이상을 실어야 한다
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        title: { type: string, minLength: 1, maxLength: 120 }
+        intent: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, minLength: 1, maxLength: 400 }
+        summaryMd: { type: string, minLength: 1, maxLength: 4000 }
+
+    RecipeOutcomeBody:
+      type: object
+      required: [taskId, outcome]
+      additionalProperties: false
+      properties:
+        taskId: { type: string, minLength: 1 }
+        outcome:
+          $ref: "#/components/schemas/RecipeOutcome"
+        note: { type: string, minLength: 1, maxLength: 2000 }
+
+    CleanupSuggestionKind:
+      type: string
+      enum: [archive]
+
+    CleanupSuggestionStatus:
+      type: string
+      enum: [pending, accepted, dismissed]
+
+    CleanupSuggestion:
+      type: object
+      description: 정리 제안 원장 행 하나이며 조회와 해소가 모두 이 모양을 낸다
+      required:
+        - id
+        - userId
+        - jobId
+        - taskId
+        - kind
+        - currentValue
+        - proposedValue
+        - rationale
+        - status
+        - error
+        - createdAt
+        - resolvedAt
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        jobId: { type: string }
+        taskId: { type: string }
+        kind:
+          $ref: "#/components/schemas/CleanupSuggestionKind"
+        currentValue: { type: [string, "null"] }
+        proposedValue: { type: [string, "null"] }
+        rationale: { type: string }
+        status:
+          $ref: "#/components/schemas/CleanupSuggestionStatus"
+        error: { type: [string, "null"] }
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        resolvedAt:
+          oneOf:
+            - $ref: "#/components/schemas/Timestamp"
+            - type: "null"
+
+    CleanupSuggestionList:
+      type: object
+      required: [suggestions]
+      properties:
+        suggestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CleanupSuggestion"

@@ -6,6 +6,8 @@ info:
     에이전트 서비스가 추적 API에 요구하는 부분집합이다. 추적 API의 전체 표면이 아니라
     에이전트가 없으면 실행할 수 없는 창구만 적는다. 응답은 모두 성공 봉투나 오류 봉투로 오며
     에이전트는 400 미만을 성공으로 보고 봉투를 벗겨 읽는다.
+    레시피와 정리 제안의 원장은 에이전트가 소유하므로 그 창구는 여기 없고
+    http/agent-api.openapi.yaml 이 갖는다.
 
 servers:
   - url: /
@@ -13,8 +15,6 @@ servers:
 tags:
   - name: tool
     description: 대화 에이전트의 도구가 읽거나 부르는 표면
-  - name: output
-    description: 산출물을 만드는 표면이며 대시보드도 같은 본문으로 부른다
 
 paths:
   /api/v1/tasks:
@@ -439,178 +439,35 @@ paths:
           $ref: "#/components/responses/Failure"
         "5XX":
           $ref: "#/components/responses/Failure"
-
-  /api/v1/recipes:
-    get:
-      operationId: list_recipes
-      tags: [tool]
-      summary: 레시피를 조회한다
-      x-confirmation-gate: none
-      parameters:
-        - name: status
-          in: query
-          required: false
-          schema: { type: string }
-      responses:
-        "2XX":
-          $ref: "#/components/responses/Success"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-    post:
-      operationId: create_recipes
-      tags: [output]
-      summary: 레시피 후보를 한 벌로 만든다
-      description: >-
-        한 호출이 후보 전부와 그 색인 적재를 한 트랜잭션으로 쓴다. 부분만 남는 상태가 없으므로
-        부르는 쪽은 성공과 실패 둘만 본다. sourceJobId를 실으면 그 값으로 이미 만들어진 후보가
-        있는지 먼저 보고, 있으면 아무것도 쓰지 않고 그것을 낸다.
-      x-confirmation-gate: confirm
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/RecipeCreateBody"
-      responses:
-        "201":
-          description: 후보를 만들었다
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessEnvelope"
-                  - type: object
-                    required: [data]
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/RecipeList"
-        "200":
-          description: 같은 sourceJobId로 이미 만들어진 후보를 그대로 낸다
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessEnvelope"
-                  - type: object
-                    required: [data]
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/RecipeList"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-
-  /api/v1/recipes/search:
-    get:
-      operationId: search_recipes
-      tags: [tool]
-      summary: 레시피를 본문 유사도로 검색한다
-      x-confirmation-gate: none
-      parameters:
-        - name: q
-          in: query
-          required: true
-          schema: { type: string }
-        - name: limit
-          in: query
-          required: false
-          schema: { type: string }
-      responses:
-        "2XX":
-          $ref: "#/components/responses/Success"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-
-  /api/v1/recipes/{recipeId}:
-    get:
-      operationId: get_recipe
-      tags: [tool]
-      summary: 레시피 하나를 전문으로 조회한다
-      description: 검색이 낸 얇은 적중에서 고른 레시피 하나의 단계·주의점·적용 이력을 정리해 낸다. 남의 것은 404다
-      x-confirmation-gate: none
-      parameters:
-        - name: recipeId
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        "2XX":
-          $ref: "#/components/responses/Success"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-
-  /api/v1/task-cleanup/suggestions:
-    get:
-      operationId: list_cleanup_suggestions
-      tags: [tool]
-      summary: 정리 제안을 조회한다
-      x-confirmation-gate: none
-      parameters:
-        - name: status
-          in: query
-          required: false
-          schema: { type: string }
-      responses:
-        "2XX":
-          $ref: "#/components/responses/Success"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-    post:
-      operationId: create_cleanup_suggestions
-      tags: [output]
-      summary: 정리 제안을 한 벌로 만든다
-      description: >-
-        한 호출이 제안 전부를 한 트랜잭션으로 쓴다. 같은 태스크와 종류에 대기 중인 제안이 이미
-        있으면 그 행의 근거와 사유를 새 것으로 고치고 새 행을 만들지 않으므로, 같은 본문을 다시
-        보내도 대기 행의 수가 늘지 않는다.
-      x-confirmation-gate: confirm
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CleanupSuggestionCreateBody"
-      responses:
-        "201":
-          description: 제안을 만들었거나 대기 중인 제안을 고쳤다
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessEnvelope"
-                  - type: object
-                    required: [data]
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/CleanupSuggestionList"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-
   /api/v1/tasks/{taskId}/archive:
     post:
       operationId: archive_task
       tags: [tool]
-      summary: 태스크를 보관한다
+      summary: 태스크를 보관하며 조건을 실으면 그 조건에서만 보관한다
+      description: >-
+        보관은 멱등이며 이미 보관된 태스크를 다시 보관해도 성공이다. ifNoActivitySince 를 실으면
+        추적이 자기 원장의 마지막 사건 시각과 그 값을 비교해, 실은 시각보다 뒤에 도착한 사건이
+        하나라도 있으면 보관하지 않고 cleanup.stale 로 거절한다. 마지막 사건 시각이 실은 값과
+        같으면 새 활동이 아니므로 보관한다. 마지막 사건이 아예 없는 태스크는 어느 값을 실어도
+        새 활동이 없는 것이며, 조건을 null 로 실으면 사건이 하나라도 있는 태스크는 새 활동으로
+        본다. 조건을 싣지 않으면 마지막 사건을 보지 않고 보관한다.
       x-confirmation-gate: confirm
       parameters:
         - name: taskId
           in: path
           required: true
           schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskArchiveBody"
       responses:
         "2XX":
           $ref: "#/components/responses/Success"
+        "409":
+          $ref: "#/components/responses/CleanupStale"
         "4XX":
           $ref: "#/components/responses/Failure"
         "5XX":
@@ -830,102 +687,6 @@ paths:
           $ref: "#/components/responses/Failure"
         "5XX":
           $ref: "#/components/responses/Failure"
-
-  /api/v1/recipes/{recipeId}/accept:
-    post:
-      operationId: accept_recipe
-      tags: [tool]
-      summary: 레시피를 채택한다
-      x-confirmation-gate: confirm
-      parameters:
-        - name: recipeId
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        "2XX":
-          $ref: "#/components/responses/Success"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-
-  /api/v1/recipes/{recipeId}/dismiss:
-    post:
-      operationId: dismiss_recipe
-      tags: [tool]
-      summary: 레시피를 보류한다
-      x-confirmation-gate: confirm
-      parameters:
-        - name: recipeId
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        "2XX":
-          $ref: "#/components/responses/Success"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-
-  /api/v1/recipes/{recipeId}/retire:
-    post:
-      operationId: retire_recipe
-      tags: [tool]
-      summary: 레시피를 폐기한다
-      x-confirmation-gate: confirm
-      parameters:
-        - name: recipeId
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        "2XX":
-          $ref: "#/components/responses/Success"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-
-  /api/v1/task-cleanup/suggestions/{suggestionId}/accept:
-    post:
-      operationId: accept_cleanup
-      tags: [tool]
-      summary: 정리 제안을 수용한다
-      x-confirmation-gate: confirm
-      parameters:
-        - name: suggestionId
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        "2XX":
-          $ref: "#/components/responses/Success"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-
-  /api/v1/task-cleanup/suggestions/{suggestionId}/dismiss:
-    post:
-      operationId: dismiss_cleanup
-      tags: [tool]
-      summary: 정리 제안을 기각한다
-      x-confirmation-gate: confirm
-      parameters:
-        - name: suggestionId
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        "2XX":
-          $ref: "#/components/responses/Success"
-        "4XX":
-          $ref: "#/components/responses/Failure"
-        "5XX":
-          $ref: "#/components/responses/Failure"
-
 components:
   responses:
     Success:
@@ -940,6 +701,19 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorEnvelope"
+    CleanupStale:
+      description: >-
+        실은 조건이 깨졌다. 그 태스크에 조건의 시각보다 뒤에 도착한 사건이 있으므로 보관하지
+        않았다. 부른 쪽은 이 거절을 받고 자기 원장에 적은 수용을 되돌린다.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            ok: false
+            error:
+              code: cleanup.stale
+              message: Task has activity since the suggestion observed it
 
   schemas:
     SuccessEnvelope:
@@ -972,438 +746,15 @@ components:
       type: string
       format: date-time
 
-    Author:
-      type: string
-      enum: [agent, user]
-      description: 이 산출물을 만든 주체이며 사람이 고친 것과 자동으로 만들어진 것을 구분한다
-
-    RecipeStatus:
-      type: string
-      enum: [candidate, active, dismissed, superseded, retired]
-
-    RecipeFileRole:
-      type: string
-      enum: [read, write, both]
-
-    RecipeVerifyTool:
-      type: string
-      enum: [command, file-read, file-write, web]
-
-    RecipeCorrection:
+    TaskArchiveBody:
       type: object
-      required: [whatAgentDid, howCorrected, evidence]
+      description: 보관을 거는 조건이며 본문을 통째로 생략하면 조건 없이 보관한다
+      additionalProperties: false
       properties:
-        whatAgentDid: { type: string, minLength: 1, maxLength: 500 }
-        howCorrected: { type: string, minLength: 1, maxLength: 500 }
-        evidence:
-          type: array
-          minItems: 1
-          maxItems: 50
-          items: { type: string, minLength: 1 }
-          description: 이 지적을 뒷받침하는 이벤트 식별자다
-
-    RecipePitfall:
-      type: object
-      required: [pitfall, whyNonObvious, evidence]
-      properties:
-        pitfall: { type: string, minLength: 1, maxLength: 500 }
-        whyNonObvious: { type: string, minLength: 1, maxLength: 500 }
-        evidence:
-          type: array
-          minItems: 1
-          maxItems: 50
-          items: { type: string, minLength: 1 }
-
-    RecipeVerify:
-      oneOf:
-        - type: object
-          additionalProperties: false
-          required: [kind, commandMatches]
-          properties:
-            kind: { type: string, const: command }
-            commandMatches:
-              type: array
-              minItems: 1
-              maxItems: 20
-              items: { type: string, minLength: 1, maxLength: 200 }
-        - type: object
-          additionalProperties: false
-          required: [kind, pattern]
-          properties:
-            kind: { type: string, const: pattern }
-            pattern: { type: string, minLength: 1, maxLength: 500 }
-        - type: object
-          additionalProperties: false
-          required: [kind, tool]
-          properties:
-            kind: { type: string, const: action }
-            tool:
-              $ref: "#/components/schemas/RecipeVerifyTool"
-
-    RecipeStep:
-      type: object
-      required: [order, action]
-      properties:
-        order:
-          type: integer
-          minimum: 1
-          maximum: 50
-          description: 절차의 순서가 곧 의미이므로 1부터 빈칸 없이 이어진다
-        action: { type: string, minLength: 1, maxLength: 200 }
-        rationale:
-          type: [string, "null"]
-          maxLength: 300
-        verify:
+        ifNoActivitySince:
           oneOf:
-            - $ref: "#/components/schemas/RecipeVerify"
+            - $ref: "#/components/schemas/Timestamp"
             - type: "null"
-        evidence:
-          type: array
-          maxItems: 50
-          default: []
-          items: { type: string, minLength: 1 }
-          description: 이 단계를 보여 준 이벤트 식별자이며 관측되지 않은 단계는 비운다
-
-    RecipeTouchedFile:
-      type: object
-      required: [path, role]
-      properties:
-        path: { type: string, minLength: 1 }
-        role:
-          $ref: "#/components/schemas/RecipeFileRole"
-        why:
-          type: [string, "null"]
-          maxLength: 200
-          description: 이 파일을 읽거나 쓰는 이유다
-        loadWhen:
-          type: [string, "null"]
-          maxLength: 200
-          description: 이 파일을 여는 시점이며 절차의 어느 단계에서 필요한지를 적는다
-
-    RecipeRecovery:
-      type: object
-      required: [symptom, action, evidence]
-      description: 증상과 조치의 쌍이며 지적과 같은 근거를 요구한다
-      properties:
-        symptom: { type: string, minLength: 1, maxLength: 500 }
-        action: { type: string, minLength: 1, maxLength: 500 }
-        evidence:
-          type: array
-          minItems: 1
-          maxItems: 50
-          items: { type: string, minLength: 1 }
-        stepOrder:
-          type: [integer, "null"]
-          minimum: 1
-          maximum: 50
-          description: 이 복구가 걸리는 단계이며 비면 절차 전체에 걸린다
-
-    RecipeSlice:
-      type: object
-      required: [taskId, turnIds, eventIds]
-      properties:
-        taskId: { type: string, minLength: 1, maxLength: 64 }
-        turnIds:
-          type: array
-          items: { type: string, minLength: 1 }
-        eventIds:
-          type: array
-          items: { type: string, minLength: 1 }
-
-    RecipeDraft:
-      type: object
-      description: 아직 원장에 없는 레시피 하나이며 식별자와 상태와 판은 창구가 정한다
-      required:
-        - title
-        - intent
-        - description
-        - summaryMd
-        - request
-        - contributingSlices
-        - rationale
-      properties:
-        title: { type: string, minLength: 1, maxLength: 120 }
-        intent: { type: string, minLength: 1, maxLength: 200 }
-        description: { type: string, minLength: 1, maxLength: 400 }
-        summaryMd: { type: string, minLength: 1, maxLength: 4000 }
-        request: { type: string, minLength: 1, maxLength: 2000 }
-        rationale: { type: string, minLength: 1, maxLength: 500 }
-        useWhen:
-          type: array
-          maxItems: 6
-          default: []
-          items: { type: string, minLength: 1, maxLength: 200 }
-          description: 이 레시피가 걸리는 조건이며 검색이 이 칸을 읽어 고르기 전에 보여 준다
-        inputs:
-          type: array
-          maxItems: 6
-          default: []
-          items: { type: string, minLength: 1, maxLength: 200 }
-        outputs:
-          type: array
-          maxItems: 6
-          default: []
-          items: { type: string, minLength: 1, maxLength: 200 }
-        recovery:
-          type: array
-          maxItems: 10
-          default: []
-          items:
-            $ref: "#/components/schemas/RecipeRecovery"
-        corrections:
-          type: array
-          maxItems: 20
-          default: []
-          items:
-            $ref: "#/components/schemas/RecipeCorrection"
-        pitfalls:
-          type: array
-          maxItems: 20
-          default: []
-          items:
-            $ref: "#/components/schemas/RecipePitfall"
-        governingRules:
-          type: array
-          maxItems: 50
-          default: []
-          items: { type: string, minLength: 1 }
-        steps:
-          type: array
-          maxItems: 20
-          default: []
-          items:
-            $ref: "#/components/schemas/RecipeStep"
-        touchedFiles:
-          type: array
-          maxItems: 30
-          default: []
-          items:
-            $ref: "#/components/schemas/RecipeTouchedFile"
-        contributingSlices:
-          type: array
-          minItems: 1
-          maxItems: 20
-          items:
-            $ref: "#/components/schemas/RecipeSlice"
-        language:
-          type: [string, "null"]
-          minLength: 1
-          maxLength: 16
-        parentRecipeId:
-          type: [string, "null"]
-          minLength: 1
-          maxLength: 200
-          description: 이 레시피가 고쳐 쓰는 레시피이며 그 레시피의 상태는 채택 시점에 움직인다
-        parentRecipeSeenRev:
-          type: integer
-          minimum: 1
           description: >-
-            부르는 쪽이 본 부모의 판이다. 지금 원장의 판과 다르면 부모를 잃은 채로 만들어지며
-            그것이 거절 사유는 아니다.
-
-    RecipeCreateBody:
-      type: object
-      required: [recipes, author]
-      properties:
-        recipes:
-          type: array
-          minItems: 1
-          maxItems: 20
-          items:
-            $ref: "#/components/schemas/RecipeDraft"
-        author:
-          $ref: "#/components/schemas/Author"
-        sourceJobId:
-          type: [string, "null"]
-          minLength: 1
-          maxLength: 200
-          description: 이 한 벌을 낸 실행의 식별자이며 같은 값으로 두 번 부르면 앞의 것을 낸다
-
-    Recipe:
-      type: object
-      description: 레시피 원장 행 하나이며 조회와 생성과 상태 변경이 모두 이 모양을 낸다
-      required:
-        - id
-        - userId
-        - status
-        - title
-        - intent
-        - description
-        - summaryMd
-        - request
-        - corrections
-        - pitfalls
-        - governingRules
-        - steps
-        - touchedFiles
-        - contributingSlices
-        - rationale
-        - useWhen
-        - inputs
-        - outputs
-        - recovery
-        - language
-        - rev
-        - parentRecipeId
-        - sourceJobId
-        - userEdited
-        - lastEditedBy
-        - error
-        - createdAt
-        - updatedAt
-        - resolvedAt
-      properties:
-        id: { type: string }
-        userId: { type: string }
-        status:
-          $ref: "#/components/schemas/RecipeStatus"
-        title: { type: string }
-        intent: { type: string }
-        description: { type: string }
-        summaryMd: { type: string }
-        request: { type: string }
-        corrections:
-          type: array
-          items:
-            $ref: "#/components/schemas/RecipeCorrection"
-        pitfalls:
-          type: array
-          items:
-            $ref: "#/components/schemas/RecipePitfall"
-        governingRules:
-          type: array
-          items: { type: string }
-        steps:
-          type: array
-          items:
-            $ref: "#/components/schemas/RecipeStep"
-        touchedFiles:
-          type: array
-          items:
-            $ref: "#/components/schemas/RecipeTouchedFile"
-        contributingSlices:
-          type: array
-          items:
-            $ref: "#/components/schemas/RecipeSlice"
-        rationale: { type: [string, "null"] }
-        useWhen:
-          type: array
-          items: { type: string }
-        inputs:
-          type: array
-          items: { type: string }
-        outputs:
-          type: array
-          items: { type: string }
-        recovery:
-          type: array
-          items:
-            $ref: "#/components/schemas/RecipeRecovery"
-        language: { type: [string, "null"] }
-        rev:
-          type: integer
-          minimum: 1
-        parentRecipeId: { type: [string, "null"] }
-        sourceJobId: { type: [string, "null"] }
-        userEdited: { type: boolean }
-        lastEditedBy:
-          $ref: "#/components/schemas/Author"
-        error: { type: [string, "null"] }
-        createdAt:
-          $ref: "#/components/schemas/Timestamp"
-        updatedAt:
-          $ref: "#/components/schemas/Timestamp"
-        resolvedAt:
-          oneOf:
-            - $ref: "#/components/schemas/Timestamp"
-            - type: "null"
-
-    RecipeList:
-      type: object
-      required: [recipes]
-      properties:
-        recipes:
-          type: array
-          description: 요청에 실린 순서를 그대로 지킨다
-          items:
-            $ref: "#/components/schemas/Recipe"
-
-    CleanupSuggestionKind:
-      type: string
-      enum: [archive]
-
-    CleanupSuggestionStatus:
-      type: string
-      enum: [pending, accepted, dismissed]
-
-    CleanupSuggestionDraft:
-      type: object
-      description: 아직 원장에 없는 정리 제안 하나이며 대조할 값과 관측 시각은 창구가 정한다
-      required: [taskId, kind, rationale]
-      properties:
-        taskId: { type: string, minLength: 1, maxLength: 64 }
-        kind:
-          $ref: "#/components/schemas/CleanupSuggestionKind"
-        rationale: { type: string, minLength: 1, maxLength: 500 }
-
-    CleanupSuggestionCreateBody:
-      type: object
-      required: [suggestions]
-      properties:
-        suggestions:
-          type: array
-          minItems: 1
-          maxItems: 50
-          items:
-            $ref: "#/components/schemas/CleanupSuggestionDraft"
-        jobId:
-          type: string
-          minLength: 1
-          maxLength: 200
-          description: 이 한 벌을 낸 실행의 식별자이며 싣지 않으면 빈 문자열로 적힌다
-
-    CleanupSuggestion:
-      type: object
-      description: 정리 제안 원장 행 하나이며 조회와 생성과 해소가 모두 이 모양을 낸다
-      required:
-        - id
-        - userId
-        - jobId
-        - taskId
-        - kind
-        - currentValue
-        - proposedValue
-        - rationale
-        - status
-        - error
-        - createdAt
-        - resolvedAt
-      properties:
-        id: { type: string }
-        userId: { type: string }
-        jobId: { type: string }
-        taskId: { type: string }
-        kind:
-          $ref: "#/components/schemas/CleanupSuggestionKind"
-        currentValue: { type: [string, "null"] }
-        proposedValue: { type: [string, "null"] }
-        rationale: { type: string }
-        status:
-          $ref: "#/components/schemas/CleanupSuggestionStatus"
-        error: { type: [string, "null"] }
-        createdAt:
-          $ref: "#/components/schemas/Timestamp"
-        resolvedAt:
-          oneOf:
-            - $ref: "#/components/schemas/Timestamp"
-            - type: "null"
-
-    CleanupSuggestionList:
-      type: object
-      required: [suggestions]
-      properties:
-        suggestions:
-          type: array
-          description: 요청에 실린 순서를 그대로 지킨다
-          items:
-            $ref: "#/components/schemas/CleanupSuggestion"
+            부르는 쪽이 그 태스크에서 본 마지막 사건의 시각이다. 추적은 이 시각보다 뒤에 도착한
+            사건이 있으면 보관하지 않는다.

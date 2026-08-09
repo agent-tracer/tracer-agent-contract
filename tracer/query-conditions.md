@@ -2,7 +2,7 @@
 
 이 문서는 강제되는 제약이 아니라 조회 동작을 설명하는 기록이다. TypeScript 구현이 정본이며 정본의 조회 조건이 바뀌면 이 문서가 따라 바뀐다. Python 구현은 자기 질의를 적을 때 이것을 본다.
 
-1장부터 10장까지는 에이전트의 도구가 추적 API에 요구하는 조회이고, 11장부터는 에이전트가 자기 원장에 여는 조회다. 두 표면의 소유는 `http/tracer-dependency.openapi.yaml`과 `http/agent-api.openapi.yaml`이 가른다.
+1장부터 8장까지는 에이전트의 도구가 추적 API에 요구하는 조회이고, 9장부터는 에이전트가 자기 원장에 여는 조회다. 두 표면의 소유는 `http/tracer-dependency.openapi.yaml`과 `http/agent-api.openapi.yaml`이 가른다.
 
 ## 공통 표기
 
@@ -87,15 +87,15 @@
 - 부착 개수 조회: `task_tags`에서 `user_id = :userId`. 정렬·상한 지정 없음. 읽은 행을 application 메모리에서 `tag_id`별로 센다.
 - 두 조회는 병렬 실행하며 `JOIN`은 사용하지 않는다. tag마다 집계한 개수를 붙이고, 대응 행이 없으면 0을 쓴다.
 
-## 9. `GET /api/v1/recipes`
+## 9. `GET /api/agent/recipes`
 
 - recipe 조회: `recipes`에서 `user_id = :userId AND status = :status AND deleted_at IS NULL`, `updated_at DESC`. 상한 지정 없음.
 - `status`가 있으면 위 조회를 한 번 실행한다. 없으면 정의된 모든 recipe status별로 병렬 조회하고 status 정의 순서대로 결과 배열을 이어 붙인다. 전체 결과에 대한 재정렬은 없다.
 - 각 recipe의 통계 조회: `recipe_applications`에서 `recipe_id = :recipeId`, `created_at DESC`. 상한 지정 없음. recipe마다 한 번씩 실행한다.
-- 인용 task 제목 조회: recipe에서 모은 중복 없는 task id가 있으면 `tasks`에서 `user_id = :userId AND id IN (:...taskIds)`. 정렬·상한 지정 없음. id가 없으면 실행하지 않는다.
+- 인용 task 제목은 질의가 아니다. `tasks`는 추적 원장의 표이므로 recipe에서 모은 중복 없는 task id마다 추적의 `GET /api/v1/tasks/{taskId}`를 부르고 제목을 읽는다. id가 없으면 부르지 않는다. 닿지 않거나 남의 것인 id는 표에서 빠지며 그것이 조회 실패는 아니다.
 - `JOIN`은 사용하지 않는다.
 
-## 10. `GET /api/v1/task-cleanup/suggestions`
+## 10. `GET /api/agent/cleanup/suggestions`
 
 - 조회: `task_cleanup_suggestions`에서 `user_id = :userId AND status = :status`, `created_at DESC`. 상한 지정 없음.
 - `status`가 있으면 한 번 실행한다. 없으면 정의된 모든 cleanup suggestion status별로 병렬 조회하고 status 정의 순서대로 배열을 이어 붙인다. 전체 결과에 대한 재정렬은 없다.

@@ -276,7 +276,7 @@
             "args": {}
         },
         "find_recipes": {
-            "surface": "read",
+            "surface": "agentRead",
             "description": "Find recipes (reusable workflows distilled from past tasks) by free text, ranked by relevance. Each hit is deliberately thin — recipeId, title, intent, description and score — so you can weigh several without carrying their steps. Use this whenever the user describes a kind of work rather than naming a recipe, then call get_recipe on the one you chose. It searches only recipes the user has accepted, so a candidate awaiting their decision never appears here: reach for list_recipes with a status when the question is about candidates. Nothing matching does not mean the user has no recipe on the subject.",
             "args": {
                 "q": {
@@ -297,7 +297,7 @@
             }
         },
         "get_recipe": {
-            "surface": "read",
+            "surface": "agentRead",
             "description": "Get one recipe in full by recipeId: its intent, description, ordered steps, pitfalls, governing rules, touched files, status and application stats. Call this after find_recipes to explain or follow a single workflow, instead of pulling every recipe with list_recipes.",
             "args": {
                 "recipeId": {
@@ -310,7 +310,7 @@
             }
         },
         "list_recipes": {
-            "surface": "read",
+            "surface": "agentRead",
             "description": "List the user's recipes in full (intent, steps, pitfalls, touched files, application stats), optionally filtered by status (candidate/active/dismissed/superseded/retired). This is the only way to see recipes that are not active, so use it for \"what candidates are waiting\" or \"how many are active\" — questions about the set itself. To answer a question about a kind of work, use find_recipes and then get_recipe: this listing has no limit and every recipe it returns stays in your context in full.",
             "args": {
                 "status": {
@@ -328,7 +328,7 @@
             }
         },
         "list_cleanup_suggestions": {
-            "surface": "read",
+            "surface": "agentRead",
             "description": "List task-cleanup suggestions produced for the user, optionally filtered by status (pending/accepted/dismissed). Each names the task it targets, the proposed change, and the rationale. Use this to report what cleanup the system has proposed.",
             "args": {
                 "status": {
@@ -1337,7 +1337,7 @@
             },
             "find_recipes": {
                 "method": "GET",
-                "path": "/api/v1/recipes/search",
+                "path": "/api/agent/recipes/search",
                 "pathArgs": [],
                 "query": {
                     "q": "q",
@@ -1348,7 +1348,7 @@
             },
             "get_recipe": {
                 "method": "GET",
-                "path": "/api/v1/recipes/{recipeId}",
+                "path": "/api/agent/recipes/{recipeId}",
                 "pathArgs": [
                     "recipeId"
                 ],
@@ -1358,7 +1358,7 @@
             },
             "list_recipes": {
                 "method": "GET",
-                "path": "/api/v1/recipes",
+                "path": "/api/agent/recipes",
                 "pathArgs": [],
                 "query": {
                     "status": "status"
@@ -1368,7 +1368,7 @@
             },
             "list_cleanup_suggestions": {
                 "method": "GET",
-                "path": "/api/v1/task-cleanup/suggestions",
+                "path": "/api/agent/cleanup/suggestions",
                 "pathArgs": [],
                 "query": {
                     "status": "status"
@@ -1616,7 +1616,7 @@
             "propose_recipe_write": {
                 "accept": {
                     "method": "POST",
-                    "path": "/api/v1/recipes/{recipeId}/accept",
+                    "path": "/api/agent/recipes/{recipeId}/accept",
                     "pathArgs": [
                         "recipeId"
                     ],
@@ -1626,7 +1626,7 @@
                 },
                 "dismiss": {
                     "method": "POST",
-                    "path": "/api/v1/recipes/{recipeId}/dismiss",
+                    "path": "/api/agent/recipes/{recipeId}/dismiss",
                     "pathArgs": [
                         "recipeId"
                     ],
@@ -1636,7 +1636,7 @@
                 },
                 "retire": {
                     "method": "POST",
-                    "path": "/api/v1/recipes/{recipeId}/retire",
+                    "path": "/api/agent/recipes/{recipeId}/retire",
                     "pathArgs": [
                         "recipeId"
                     ],
@@ -1648,7 +1648,7 @@
             "propose_cleanup_write": {
                 "accept": {
                     "method": "POST",
-                    "path": "/api/v1/task-cleanup/suggestions/{suggestionId}/accept",
+                    "path": "/api/agent/cleanup/suggestions/{suggestionId}/accept",
                     "pathArgs": [
                         "suggestionId"
                     ],
@@ -1658,7 +1658,7 @@
                 },
                 "dismiss": {
                     "method": "POST",
-                    "path": "/api/v1/task-cleanup/suggestions/{suggestionId}/dismiss",
+                    "path": "/api/agent/cleanup/suggestions/{suggestionId}/dismiss",
                     "pathArgs": [
                         "suggestionId"
                     ],
